@@ -5,13 +5,11 @@
   "workspaces": [
     "apps/*"
   ],
-  "scripts": {
-    "dev:website": "npm run dev --workspace=website",
-    "dev:erp": "npm run dev --workspace=erp -- --port 3001",
-    "build:website": "npm run build --workspace=website",
-    "build:erp": "npm run build --workspace=erp",
-    "build": "npm run build --workspace=website && npm run build --workspace=erp"
-  },
+ "scripts": {
+  "dev": "npm --workspace web run dev",
+  "build": "npm --workspace web run build",
+  "start": "npm --workspace web run start"
+},
   "dependencies": {
     "firebase": "^13.0.0"
   }
