@@ -99,3 +99,4 @@ export function calcShippingFromSettings(
   }
   return Math.max(0, Number(settings.shippingCharge) || 0);
 }
+ 
