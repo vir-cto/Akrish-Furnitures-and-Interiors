@@ -1625,3 +1625,4 @@ export async function clearCart(userId: string): Promise<void> {
     updatedAt: serverTimestamp(),
   });
 }
+ 
