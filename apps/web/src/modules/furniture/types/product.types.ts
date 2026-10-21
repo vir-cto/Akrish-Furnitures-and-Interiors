@@ -158,3 +158,4 @@ export function getEffectiveSellingPrice(
   if (pct <= 0) return base;
   return Math.round(base * (1 - pct / 100));
 }
+ 
