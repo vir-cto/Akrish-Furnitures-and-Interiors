@@ -3280,6 +3280,422 @@
 //   );
 // }
 
+// "use client";
+
+// import Link from "next/link";
+// import { useEffect, useState } from "react";
+// import {
+//   ArrowRight,
+//   Check,
+//   ChevronRight,
+//   Home,
+//   Palette,
+//   Ruler,
+//   Sofa,
+//   Sparkles,
+//   Loader2,
+//   LayoutGrid,
+// } from "lucide-react";
+// import { collection, getDocs } from "firebase/firestore";
+// import { db } from "@/lib/firebase";
+
+// interface FeaturedProduct {
+//   id: string;
+//   name: string;
+//   category: string;
+//   price: number;
+//   image?: string;
+//   imageUrl?: string;
+//   featured?: boolean;
+// }
+
+// interface CategoryItem {
+//   title: string;
+//   count: number;
+//   href: string;
+// }
+
+// const HERO_IMAGE =
+//   "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1600&q=85";
+
+// function formatCurrency(value: number) {
+//   return new Intl.NumberFormat("en-IN", {
+//     style: "currency",
+//     currency: "INR",
+//     maximumFractionDigits: 0,
+//   }).format(value);
+// }
+
+// const categoryIcons: Record<string, typeof Sofa> = {
+//   "Living Room": Sofa,
+//   "Dining Room": Home,
+//   Bedroom: Sparkles,
+//   Office: Ruler,
+//   default: LayoutGrid,
+// };
+
+// export default function HomePage() {
+//   const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>(
+//     []
+//   );
+//   const [categories, setCategories] = useState<CategoryItem[]>([]);
+//   const [loading, setLoading] = useState(true);
+
+//   useEffect(() => {
+//     const fetchData = async () => {
+//       try {
+//         setLoading(true);
+
+//         const snapshot = await getDocs(collection(db, "furniture_products"));
+
+//         const allProducts = snapshot.docs
+//           .map((docSnap) => {
+//             const data = docSnap.data();
+//             const status = String(data.status || "In Stock");
+//             const active = data.active !== false && status !== "Inactive";
+
+//             return {
+//               id: docSnap.id,
+//               name: data.name || "Product",
+//               category: data.category || "Other",
+//               price: Number(data.sellingPrice ?? data.price ?? 0),
+//               image: data.imageUrl || data.image || "",
+//               imageUrl: data.imageUrl || data.image || "",
+//               featured: data.featured === true,
+//               active,
+//             };
+//           })
+//           .filter((p) => p.active);
+
+//         const categoryMap: Record<string, number> = {};
+//         allProducts.forEach((p) => {
+//           if (p.category) {
+//             categoryMap[p.category] = (categoryMap[p.category] || 0) + 1;
+//           }
+//         });
+
+//         const dynamicCategories: CategoryItem[] = Object.entries(categoryMap)
+//           .map(([title, count]) => ({
+//             title,
+//             count,
+//             href: `/products?category=${encodeURIComponent(title)}`,
+//           }))
+//           .sort((a, b) => b.count - a.count);
+
+//         setCategories(dynamicCategories);
+
+//         let featured = allProducts.filter((p) => p.featured).slice(0, 4);
+//         if (featured.length < 4) {
+//           const remaining = allProducts
+//             .filter((p) => !p.featured)
+//             .slice(0, 4 - featured.length);
+//           featured = [...featured, ...remaining];
+//         }
+
+//         setFeaturedProducts(featured.slice(0, 4));
+//       } catch (err) {
+//         console.error("Failed to load homepage data:", err);
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+
+//     fetchData();
+//   }, []);
+
+//   const totalProducts = categories.reduce((sum, c) => sum + c.count, 0);
+
+//   return (
+//     <main className="min-h-screen bg-[#f7f9f8]">
+//       {/* Hero */}
+//       <section className="relative overflow-hidden bg-slate-950 text-white">
+//         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_35%)]" />
+
+//         <div className="relative mx-auto max-w-6xl px-3 py-8 sm:px-6 sm:py-14 lg:px-8 lg:py-20">
+//           <div className="grid grid-cols-2 items-center gap-3 sm:gap-8 lg:gap-12">
+//             {/* LEFT */}
+//             <div className="min-w-0">
+//               <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[10px] font-medium text-slate-300 sm:mb-4 sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs">
+//                 <Sparkles size={12} className="sm:h-[13px] sm:w-[13px]" />
+//                 Furniture
+//               </div>
+
+//               <h1 className="text-[20px] font-bold leading-snug tracking-tight sm:text-3xl sm:leading-tight lg:text-5xl xl:text-6xl">
+//                 Create spaces you will love to live in.
+//               </h1>
+
+//               <p className="mt-2.5 line-clamp-4 text-[13px] leading-5 text-slate-300 sm:mt-4 sm:line-clamp-none sm:text-sm sm:leading-6 lg:text-base lg:leading-7">
+//                 Discover thoughtfully selected furniture and interior solutions
+//                 designed to bring comfort, functionality and timeless style to
+//                 your space.
+//               </p>
+
+//               <div className="mt-3.5 grid grid-cols-2 gap-2 sm:mt-6 sm:max-w-md sm:gap-3">
+//                 <Link
+//                   href="/products"
+//                   className="inline-flex min-h-[38px] items-center justify-center gap-1 rounded-lg bg-white px-2 py-2 text-center text-[11px] font-semibold leading-tight text-slate-950 transition hover:bg-slate-100 sm:min-h-[44px] sm:gap-2 sm:px-4 sm:py-3 sm:text-sm"
+//                 >
+//                   <span className="truncate">Explore furniture</span>
+//                   <ArrowRight size={13} className="shrink-0 sm:h-4 sm:w-4" />
+//                 </Link>
+
+//                 <Link
+//                   href="/account"
+//                   className="inline-flex min-h-[38px] items-center justify-center rounded-lg border border-white/20 px-2 py-2 text-center text-[11px] font-semibold leading-tight text-white transition hover:bg-white/10 sm:min-h-[44px] sm:px-4 sm:py-3 sm:text-sm"
+//                 >
+//                   My account
+//                 </Link>
+//               </div>
+
+//               <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-6 sm:max-w-md sm:gap-4">
+//                 <div>
+//                   <p className="text-base font-bold sm:text-2xl">
+//                     {loading ? "..." : `${totalProducts}+`}
+//                   </p>
+//                   <p className="mt-0.5 text-[10px] text-slate-400 sm:text-xs">
+//                     Furniture options
+//                   </p>
+//                 </div>
+//                 <div>
+//                   <p className="text-base font-bold sm:text-2xl">
+//                     {loading ? "..." : `${categories.length}+`}
+//                   </p>
+//                   <p className="mt-0.5 text-[10px] text-slate-400 sm:text-xs">
+//                     Room categories
+//                   </p>
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* RIGHT */}
+//             <div className="relative min-w-0 self-stretch">
+//               <div className="h-full min-h-[220px] overflow-hidden rounded-xl border border-white/10 shadow-2xl shadow-black/40 sm:min-h-[320px] sm:rounded-2xl lg:min-h-[420px] lg:rounded-3xl">
+//                 <div className="relative h-full min-h-[220px] w-full sm:min-h-[320px] lg:min-h-[420px]">
+//                   {/* eslint-disable-next-line @next/next/no-img-element */}
+//                   <img
+//                     src={HERO_IMAGE}
+//                     alt="Modern living room with stylish furniture"
+//                     className="absolute inset-0 h-full w-full object-cover object-center"
+//                   />
+//                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/15 to-transparent" />
+//                   <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-5">
+//                     <p className="text-xs font-semibold text-white drop-shadow sm:text-sm">
+//                       Curated interiors
+//                     </p>
+//                     <p className="mt-0.5 hidden text-xs text-white/75 sm:block">
+//                       Designed for modern Indian homes
+//                     </p>
+//                   </div>
+//                 </div>
+//               </div>
+
+//               <div className="absolute -bottom-2 left-0 hidden items-center gap-2 rounded-lg border border-white/10 bg-slate-900/90 p-2 shadow-xl backdrop-blur sm:-bottom-3 sm:flex sm:rounded-xl sm:p-3">
+//                 <div className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-slate-900 sm:h-9 sm:w-9 sm:rounded-lg">
+//                   <Check size={14} className="sm:h-4 sm:w-4" />
+//                 </div>
+//                 <div>
+//                   <p className="text-[10px] font-semibold text-white sm:text-xs">
+//                     Quality focused
+//                   </p>
+//                   <p className="text-[8px] text-slate-400 sm:text-[10px]">
+//                     Selected for your space
+//                   </p>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//       </section>
+
+//       {/* Categories */}
+//       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+//         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end sm:gap-4">
+//           <div>
+//             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 sm:text-xs">
+//               Explore
+//             </p>
+//             <h2 className="mt-1.5 text-xl font-bold tracking-tight text-slate-900 sm:mt-2 sm:text-3xl">
+//               Shop by room
+//             </h2>
+//             <p className="mt-1.5 max-w-xl text-xs text-slate-500 sm:mt-2 sm:text-sm">
+//               Find furniture that fits naturally into every part of your home or
+//               workspace.
+//             </p>
+//           </div>
+
+//           <Link
+//             href="/products"
+//             className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 hover:text-slate-950"
+//           >
+//             View all
+//             <ChevronRight size={16} />
+//           </Link>
+//         </div>
+
+//         {loading ? (
+//           <div className="mt-10 flex justify-center sm:mt-12">
+//             <Loader2 className="h-7 w-7 animate-spin text-slate-400" />
+//           </div>
+//         ) : categories.length > 0 ? (
+//           <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-7 sm:gap-4 lg:grid-cols-4">
+//             {categories.map((category) => {
+//               const Icon =
+//                 categoryIcons[category.title] || categoryIcons.default;
+
+//               return (
+//                 <Link
+//                   key={category.title}
+//                   href={category.href}
+//                   className="group rounded-xl border border-slate-200 bg-white p-3.5 transition active:scale-[0.98] hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md sm:rounded-2xl sm:p-5"
+//                 >
+//                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-700 transition group-hover:bg-slate-900 group-hover:text-white sm:h-11 sm:w-11 sm:rounded-xl">
+//                     <Icon size={18} strokeWidth={1.7} className="sm:hidden" />
+//                     <Icon
+//                       size={21}
+//                       strokeWidth={1.7}
+//                       className="hidden sm:block"
+//                     />
+//                   </div>
+
+//                   <h3 className="mt-3 text-sm font-bold leading-snug text-slate-900 sm:mt-5 sm:text-base">
+//                     {category.title}
+//                   </h3>
+
+//                   <p className="mt-1 text-[10px] leading-4 text-slate-500 sm:mt-2 sm:text-xs sm:leading-5">
+//                     {category.count} product{category.count !== 1 ? "s" : ""}
+//                   </p>
+
+//                   <div className="mt-3 flex items-center gap-1 text-[10px] font-semibold text-slate-600 sm:mt-5 sm:text-xs">
+//                     Explore
+//                     <ArrowRight
+//                       size={12}
+//                       className="transition group-hover:translate-x-1 sm:h-3.5 sm:w-3.5"
+//                     />
+//                   </div>
+//                 </Link>
+//               );
+//             })}
+//           </div>
+//         ) : (
+//           <div className="mt-8 rounded-2xl border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500 sm:mt-10 sm:py-12">
+//             No categories available yet.
+//           </div>
+//         )}
+//       </section>
+
+//       {/* Featured products */}
+//       <section className="border-y border-slate-200 bg-white">
+//         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+//           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end sm:gap-4">
+//             <div>
+//               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 sm:text-xs">
+//                 Featured
+//               </p>
+//               <h2 className="mt-1.5 text-xl font-bold tracking-tight text-slate-900 sm:mt-2 sm:text-3xl">
+//                 Selected for modern furniture
+//               </h2>
+//             </div>
+
+//             <Link
+//               href="/products"
+//               className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 hover:text-slate-950"
+//             >
+//               Browse collection
+//               <ArrowRight size={16} />
+//             </Link>
+//           </div>
+
+//           {loading ? (
+//             <div className="mt-10 flex justify-center sm:mt-12">
+//               <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+//             </div>
+//           ) : featuredProducts.length > 0 ? (
+//             <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-7 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
+//               {featuredProducts.map((product) => (
+//                 <Link
+//                   key={product.id}
+//                   href={`/products/${product.id}`}
+//                   className="group overflow-hidden rounded-xl border border-slate-200 bg-[#f7f9f8] transition active:scale-[0.98] hover:-translate-y-0.5 hover:shadow-md sm:rounded-2xl"
+//                 >
+//                   <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-slate-100">
+//                     {product.image || product.imageUrl ? (
+//                       // eslint-disable-next-line @next/next/no-img-element
+//                       <img
+//                         src={product.image || product.imageUrl}
+//                         alt={product.name}
+//                         className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+//                       />
+//                     ) : (
+//                       <Sofa
+//                         size={36}
+//                         strokeWidth={1}
+//                         className="text-slate-300 transition group-hover:text-slate-400 sm:h-14 sm:w-14"
+//                       />
+//                     )}
+//                   </div>
+
+//                   <div className="p-2.5 sm:p-5">
+//                     <p className="truncate text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:text-[10px] sm:tracking-[0.15em]">
+//                       {product.category}
+//                     </p>
+//                     <h3 className="mt-1 line-clamp-2 text-xs font-bold leading-snug text-slate-900 sm:mt-1.5 sm:text-base">
+//                       {product.name}
+//                     </h3>
+//                     <div className="mt-2 flex items-center justify-between gap-1 sm:mt-4">
+//                       <p className="text-sm font-bold text-slate-900 sm:text-lg">
+//                         {formatCurrency(product.price)}
+//                       </p>
+//                       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition group-hover:bg-slate-900 group-hover:text-white sm:h-8 sm:w-8">
+//                         <ArrowRight
+//                           size={13}
+//                           className="sm:h-[15px] sm:w-[15px]"
+//                         />
+//                       </span>
+//                     </div>
+//                   </div>
+//                 </Link>
+//               ))}
+//             </div>
+//           ) : (
+//             <div className="mt-8 rounded-2xl border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500 sm:mt-10 sm:py-12">
+//               No featured products available yet.
+//               <br />
+//               <Link
+//                 href="/products"
+//                 className="mt-2 inline-block font-semibold text-slate-800"
+//               >
+//                 Browse all products →
+//               </Link>
+//             </div>
+//           )}
+//         </div>
+//       </section>
+
+//       {/* Final CTA */}
+//       <section className="border-t border-slate-200 bg-white">
+//         <div className="mx-auto max-w-6xl px-4 py-10 text-center sm:px-6 sm:py-12 lg:px-8">
+//           <Palette size={25} className="mx-auto text-slate-500" />
+//           <h2 className="mt-4 text-xl font-bold text-slate-900 sm:text-2xl">
+//             Ready to transform your space?
+//           </h2>
+//           <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-500">
+//             Explore our furniture collection and find pieces that complement
+//             your interior.
+//           </p>
+//           <Link
+//             href="/products"
+//             className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-slate-900 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+//           >
+//             Shop furniture
+//             <ArrowRight size={17} />
+//           </Link>
+//         </div>
+//       </section>
+//     </main>
+//   );
+// }
+
+
 "use client";
 
 import Link from "next/link";
@@ -3298,12 +3714,20 @@ import {
 } from "lucide-react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import {
+  canApplyAgeingDiscount,
+  getEffectiveSellingPrice,
+} from "@/services/cartService";
 
 interface FeaturedProduct {
   id: string;
   name: string;
   category: string;
+  /** Payable / effective price */
   price: number;
+  listPrice: number;
+  discountPercent: number;
+  hasDiscount: boolean;
   image?: string;
   imageUrl?: string;
   featured?: boolean;
@@ -3354,11 +3778,36 @@ export default function HomePage() {
             const status = String(data.status || "In Stock");
             const active = data.active !== false && status !== "Inactive";
 
+            const listPrice = Number(data.sellingPrice ?? data.price ?? 0);
+            const discountPercent = Math.min(
+              100,
+              Math.max(0, Number(data.discountPercent) || 0)
+            );
+            const hasDiscount = canApplyAgeingDiscount({
+              createdAt: data.createdAt as
+                | { toMillis?: () => number }
+                | null
+                | undefined,
+              publishedAt: data.publishedAt as
+                | { toMillis?: () => number }
+                | null
+                | undefined,
+              discountPercent,
+            });
+            const effectivePrice = getEffectiveSellingPrice(
+              listPrice,
+              discountPercent,
+              hasDiscount
+            );
+
             return {
               id: docSnap.id,
               name: data.name || "Product",
               category: data.category || "Other",
-              price: Number(data.sellingPrice ?? data.price ?? 0),
+              price: effectivePrice,
+              listPrice,
+              discountPercent: hasDiscount ? discountPercent : 0,
+              hasDiscount,
               image: data.imageUrl || data.image || "",
               imageUrl: data.imageUrl || data.image || "",
               featured: data.featured === true,
@@ -3413,7 +3862,6 @@ export default function HomePage() {
 
         <div className="relative mx-auto max-w-6xl px-3 py-8 sm:px-6 sm:py-14 lg:px-8 lg:py-20">
           <div className="grid grid-cols-2 items-center gap-3 sm:gap-8 lg:gap-12">
-            {/* LEFT */}
             <div className="min-w-0">
               <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[10px] font-medium text-slate-300 sm:mb-4 sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs">
                 <Sparkles size={12} className="sm:h-[13px] sm:w-[13px]" />
@@ -3467,7 +3915,6 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* RIGHT */}
             <div className="relative min-w-0 self-stretch">
               <div className="h-full min-h-[220px] overflow-hidden rounded-xl border border-white/10 shadow-2xl shadow-black/40 sm:min-h-[320px] sm:rounded-2xl lg:min-h-[420px] lg:rounded-3xl">
                 <div className="relative h-full min-h-[220px] w-full sm:min-h-[320px] lg:min-h-[420px]">
@@ -3617,7 +4064,7 @@ export default function HomePage() {
                   href={`/products/${product.id}`}
                   className="group overflow-hidden rounded-xl border border-slate-200 bg-[#f7f9f8] transition active:scale-[0.98] hover:-translate-y-0.5 hover:shadow-md sm:rounded-2xl"
                 >
-                  <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-slate-100">
+                  <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-slate-100">
                     {product.image || product.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -3632,6 +4079,11 @@ export default function HomePage() {
                         className="text-slate-300 transition group-hover:text-slate-400 sm:h-14 sm:w-14"
                       />
                     )}
+                    {product.hasDiscount && (
+                      <span className="absolute left-2 top-2 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm sm:left-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-[10px]">
+                        {product.discountPercent}% OFF
+                      </span>
+                    )}
                   </div>
 
                   <div className="p-2.5 sm:p-5">
@@ -3641,10 +4093,23 @@ export default function HomePage() {
                     <h3 className="mt-1 line-clamp-2 text-xs font-bold leading-snug text-slate-900 sm:mt-1.5 sm:text-base">
                       {product.name}
                     </h3>
-                    <div className="mt-2 flex items-center justify-between gap-1 sm:mt-4">
-                      <p className="text-sm font-bold text-slate-900 sm:text-lg">
-                        {formatCurrency(product.price)}
-                      </p>
+                    <div className="mt-2 flex items-end justify-between gap-1 sm:mt-4">
+                      <div className="min-w-0">
+                        {product.hasDiscount ? (
+                          <>
+                            <p className="text-[10px] text-slate-400 line-through sm:text-xs">
+                              {formatCurrency(product.listPrice)}
+                            </p>
+                            <p className="text-sm font-bold text-slate-900 sm:text-lg">
+                              {formatCurrency(product.price)}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-sm font-bold text-slate-900 sm:text-lg">
+                            {formatCurrency(product.price)}
+                          </p>
+                        )}
+                      </div>
                       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition group-hover:bg-slate-900 group-hover:text-white sm:h-8 sm:w-8">
                         <ArrowRight
                           size={13}

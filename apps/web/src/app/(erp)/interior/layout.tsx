@@ -11174,6 +11174,7 @@ import {
   Sofa,
   LayoutDashboard,
   Home,
+  ArrowLeftIcon
 } from "lucide-react";
 import {
   collection,
@@ -11790,7 +11791,7 @@ export default function ERPLayout({
             onClick={() => setSidebarOpen(false)}
             className="mb-2 flex min-h-[40px] w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-[#f4fbf8] hover:text-[#176b57]"
           >
-            <Home size={16} className="shrink-0 text-[#176b57]" />
+            <ArrowLeftIcon size={16} className="shrink-0 text-[#176b57]" />
             Back to website
           </Link>
 
