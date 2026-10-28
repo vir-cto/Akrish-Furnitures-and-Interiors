@@ -7565,7 +7565,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 border-b border-[#e4e2da] bg-white pt-[env(safe-area-inset-top,0px)]">
       <div className="relative mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
         <div className="flex h-14 items-center justify-between gap-2 sm:h-20 sm:gap-3">
-          <Link
+          {/* <Link
             href="/"
             onClick={closeMobileMenu}
             className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3"
@@ -7575,6 +7575,28 @@ export default function Header() {
                 A
               </span>
             </div>
+
+            <div className="min-w-0">
+              <div className="truncate text-base font-bold leading-none text-[#17352f] sm:text-xl">
+                Akrish
+              </div>
+
+              <div className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.14em] text-[#9a5b18] sm:mt-1 sm:text-[10px] sm:tracking-[0.18em]">
+                Furniture & Interior
+              </div>
+            </div>
+          </Link> */}
+
+          <Link
+            href="/"
+            onClick={closeMobileMenu}
+            className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3"
+          >
+            <img
+              src="/Akrish.jpg"
+              alt="Akrish"
+              className="h-9 w-9 shrink-0 rounded-xl object-cover sm:h-11 sm:w-11"
+            />
 
             <div className="min-w-0">
               <div className="truncate text-base font-bold leading-none text-[#17352f] sm:text-xl">

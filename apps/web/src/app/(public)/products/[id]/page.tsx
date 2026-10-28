@@ -5358,13 +5358,1907 @@
 // }
 
 
+// "use client";
+
+// import Link from "next/link";
+// import { useParams, useRouter } from "next/navigation";
+// import { useEffect, useMemo, useState } from "react";
+// import {
+//   ArrowLeft,
+//   Heart,
+//   Loader2,
+//   ShoppingBag,
+//   Trash2,
+//   Truck,
+// } from "lucide-react";
+// import { doc, getDoc } from "firebase/firestore";
+// import { onAuthStateChanged } from "firebase/auth";
+// import { auth, db } from "@/lib/firebase";
+// import {
+//   addToCart as addToFirebaseCart,
+//   removeFromCart as removeFromFirebaseCart,
+//   getCart,
+//   getProductAgeDays,
+//   canApplyAgeingDiscount,
+//   getEffectiveSellingPrice,
+// } from "@/services/cartService";
+// import {
+//   getWishlist,
+//   addToWishlist,
+//   removeFromWishlist,
+// } from "@/services/wishlistService";
+
+// interface Product {
+//   id: string;
+//   name: string;
+//   category: string;
+//   description: string;
+//   listPrice: number;
+//   discountPercent: number;
+//   effectivePrice: number;
+//   hasDiscount: boolean;
+//   ageDays: number;
+//   material: string;
+//   dimensions: string;
+//   stock: number;
+//   image?: string;
+//   images: string[];
+//   leadTime?: string;
+//   leadTimeDays: number;
+// }
+
+// function parseLeadTimeDays(value: unknown, fallback = 7): number {
+//   if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+//     return Math.min(365, Math.floor(value));
+//   }
+//   const s = String(value ?? "").trim();
+//   if (!s || s === "—") return fallback;
+//   const nums = s.match(/\d+/g);
+//   if (!nums?.length) return fallback;
+//   const max = Math.max(
+//     ...nums.map((n) => parseInt(n, 10)).filter((n) => n > 0)
+//   );
+//   return Number.isFinite(max) ? Math.min(365, max) : fallback;
+// }
+
+// function addDays(base: Date, days: number): Date {
+//   const d = new Date(base);
+//   d.setHours(0, 0, 0, 0);
+//   d.setDate(d.getDate() + days);
+//   return d;
+// }
+
+// function formatDeliveryDate(date: Date): string {
+//   return date.toLocaleDateString("en-IN", {
+//     weekday: "short",
+//     day: "numeric",
+//     month: "short",
+//     year: "numeric",
+//   });
+// }
+
+// function formatCurrency(value: number) {
+//   return new Intl.NumberFormat("en-IN", {
+//     style: "currency",
+//     currency: "INR",
+//     maximumFractionDigits: 0,
+//   }).format(value);
+// }
+
+// function normalizeGallery(data: {
+//   images?: unknown;
+//   imageUrl?: string;
+//   image?: string;
+// }): string[] {
+//   const fromArr = Array.isArray(data.images)
+//     ? data.images.map((u) => String(u || "").trim()).filter(Boolean)
+//     : [];
+//   const primary = String(data.imageUrl || data.image || "").trim();
+//   const list = fromArr.length > 0 ? fromArr : primary ? [primary] : [];
+//   return Array.from(new Set(list));
+// }
+
+// export default function ProductDetailPage() {
+//   const params = useParams();
+//   const router = useRouter();
+//   const productId = (params?.id as string) || "";
+
+//   const [product, setProduct] = useState<Product | null>(null);
+//   const [loading, setLoading] = useState(true);
+//   const [authUid, setAuthUid] = useState<string | null>(null);
+//   const [inCart, setInCart] = useState(false);
+//   const [inWishlist, setInWishlist] = useState(false);
+//   const [busy, setBusy] = useState(false);
+//   const [wishBusy, setWishBusy] = useState(false);
+//   const [activeImage, setActiveImage] = useState(0);
+
+//   useEffect(() => {
+//     const unsub = onAuthStateChanged(auth, (user) => {
+//       setAuthUid(user?.uid ?? null);
+//     });
+//     return () => unsub();
+//   }, []);
+
+//   useEffect(() => {
+//     if (!productId) return;
+
+//     async function load() {
+//       setLoading(true);
+//       try {
+//         const snap = await getDoc(doc(db, "furniture_products", productId));
+
+//         if (snap.exists()) {
+//           const data = snap.data();
+//           const leadRaw = data.leadTime ?? data.leadTimeDays ?? "";
+//           const leadTimeDays = parseLeadTimeDays(leadRaw, 7);
+
+//           const listPrice = Number(data.sellingPrice ?? data.price ?? 0);
+//           const discountPercent = Math.min(
+//             100,
+//             Math.max(0, Number(data.discountPercent) || 0)
+//           );
+
+//           const ageDays = getProductAgeDays({
+//             createdAt: data.createdAt as
+//               | { toMillis?: () => number }
+//               | null
+//               | undefined,
+//             publishedAt: data.publishedAt as
+//               | { toMillis?: () => number }
+//               | null
+//               | undefined,
+//           });
+
+//           const hasDiscount = canApplyAgeingDiscount({
+//             createdAt: data.createdAt as
+//               | { toMillis?: () => number }
+//               | null
+//               | undefined,
+//             publishedAt: data.publishedAt as
+//               | { toMillis?: () => number }
+//               | null
+//               | undefined,
+//             discountPercent,
+//           });
+
+//           const effectivePrice = getEffectiveSellingPrice(
+//             listPrice,
+//             discountPercent,
+//             hasDiscount
+//           );
+
+//           const images = normalizeGallery(data);
+
+//           setProduct({
+//             id: snap.id,
+//             name: data.name || "Product",
+//             category: data.category || "Other",
+//             description: data.description || "",
+//             listPrice,
+//             discountPercent: hasDiscount ? discountPercent : 0,
+//             effectivePrice,
+//             hasDiscount,
+//             ageDays,
+//             material: data.material || "—",
+//             dimensions: data.dimensions || "—",
+//             stock: Number(data.stock ?? 0),
+//             image: images[0] || "",
+//             images,
+//             leadTime: String(leadRaw || "").trim() || undefined,
+//             leadTimeDays,
+//           });
+//           setActiveImage(0);
+//         } else {
+//           setProduct(null);
+//         }
+//       } catch (err) {
+//         console.error(err);
+//         setProduct(null);
+//       } finally {
+//         setLoading(false);
+//       }
+//     }
+
+//     load();
+//   }, [productId]);
+
+//   const expectedDelivery = useMemo(() => {
+//     if (!product) return null;
+//     return addDays(new Date(), product.leadTimeDays);
+//   }, [product]);
+
+//   const currentSrc = product
+//     ? product.images[activeImage] || product.images[0] || product.image || ""
+//     : "";
+
+//   useEffect(() => {
+//     if (!productId) return;
+//     let cancelled = false;
+
+//     async function sync() {
+//       if (!authUid) {
+//         if (!cancelled) {
+//           setInCart(false);
+//           setInWishlist(false);
+//         }
+//         return;
+//       }
+//       try {
+//         const [cart, wish] = await Promise.all([
+//           getCart(authUid),
+//           getWishlist(authUid),
+//         ]);
+//         if (cancelled) return;
+//         setInCart(
+//           Boolean(cart?.items?.some((i) => i.productId === productId))
+//         );
+//         setInWishlist(
+//           Boolean(wish?.items?.some((i) => i.productId === productId))
+//         );
+//       } catch {
+//         if (!cancelled) {
+//           setInCart(false);
+//           setInWishlist(false);
+//         }
+//       }
+//     }
+
+//     sync();
+//     window.addEventListener("cartUpdated", sync);
+//     window.addEventListener("wishlistUpdated", sync);
+//     return () => {
+//       cancelled = true;
+//       window.removeEventListener("cartUpdated", sync);
+//       window.removeEventListener("wishlistUpdated", sync);
+//     };
+//   }, [productId, authUid]);
+
+//   const toggleCart = async () => {
+//     if (!product) return;
+//     if (!authUid) {
+//       router.push("/sign-in");
+//       return;
+//     }
+//     setBusy(true);
+//     try {
+//       if (inCart) {
+//         await removeFromFirebaseCart(authUid, product.id);
+//         setInCart(false);
+//       } else {
+//         const cart = await getCart(authUid);
+//         const already = cart?.items?.some((i) => i.productId === product.id);
+//         if (!already) {
+//           await addToFirebaseCart(authUid, {
+//             productId: product.id,
+//             name: product.name,
+//             price: product.effectivePrice,
+//             listPrice: product.listPrice,
+//             discountPercent: product.hasDiscount
+//               ? product.discountPercent
+//               : undefined,
+//             quantity: 1,
+//             image: product.image || product.images[0] || "",
+//             category: product.category,
+//             leadTimeDays: product.leadTimeDays,
+//           });
+//         }
+//         setInCart(true);
+//       }
+//       window.dispatchEvent(new Event("cartUpdated"));
+//     } catch (err) {
+//       console.error("Cart toggle failed", err);
+//     } finally {
+//       setBusy(false);
+//     }
+//   };
+
+//   const toggleWishlist = async () => {
+//     if (!product) return;
+//     if (!authUid) {
+//       router.push("/sign-in");
+//       return;
+//     }
+//     setWishBusy(true);
+//     try {
+//       if (inWishlist) {
+//         await removeFromWishlist(authUid, product.id);
+//         setInWishlist(false);
+//       } else {
+//         await addToWishlist(authUid, {
+//           productId: product.id,
+//           name: product.name,
+//           price: product.effectivePrice,
+//           image: product.image || product.images[0] || "",
+//           category: product.category,
+//         });
+//         setInWishlist(true);
+//       }
+//       window.dispatchEvent(new Event("wishlistUpdated"));
+//     } catch (err) {
+//       console.error("Wishlist toggle failed", err);
+//     } finally {
+//       setWishBusy(false);
+//     }
+//   };
+
+//   if (loading) {
+//     return (
+//       <main className="flex min-h-[50vh] items-center justify-center bg-[#f7f9f8]">
+//         <Loader2 className="h-8 w-8 animate-spin text-[#176b5b]" />
+//       </main>
+//     );
+//   }
+
+//   if (!product) {
+//     return (
+//       <main className="min-h-screen bg-[#f7f9f8] px-4 py-16 text-center">
+//         <p className="text-slate-600">Product not found.</p>
+//         <Link
+//           href="/products"
+//           className="mt-4 inline-block font-semibold text-[#176b5b]"
+//         >
+//           Back to products
+//         </Link>
+//       </main>
+//     );
+//   }
+
+//   return (
+//     <main className="min-h-screen bg-[#f7f9f8]">
+//       <div className="mx-auto w-full max-w-6xl px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
+//         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white sm:rounded-2xl">
+//           <div className="grid grid-cols-[minmax(140px,42%)_1fr] gap-0 sm:grid-cols-[minmax(200px,40%)_1fr] lg:grid-cols-2">
+//             {/* Gallery */}
+//             <div className="relative flex flex-col bg-slate-100 lg:min-h-[480px] lg:p-6">
+//               <div className="relative flex aspect-square items-center justify-center overflow-hidden lg:aspect-auto lg:min-h-[400px]">
+//                 {currentSrc ? (
+//                   // eslint-disable-next-line @next/next/no-img-element
+//                   <img
+//                     src={currentSrc}
+//                     alt={`${product.name} – view ${activeImage + 1}`}
+//                     className="h-full w-full object-cover lg:max-h-[480px] lg:rounded-xl"
+//                   />
+//                 ) : (
+//                   <div className="p-2 text-center">
+//                     <ShoppingBag
+//                       size={36}
+//                       className="mx-auto text-slate-300 lg:h-14 lg:w-14"
+//                     />
+//                   </div>
+//                 )}
+
+//                 <Link
+//                   href="/products"
+//                   aria-label="Back to products"
+//                   title="Back to products"
+//                   className="absolute left-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-md transition hover:bg-white hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-[#176b5b] focus:ring-offset-2"
+//                 >
+//                   <ArrowLeft size={18} />
+//                 </Link>
+
+//                 {product.hasDiscount && (
+//                   <span className="absolute left-3 top-16 z-10 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm sm:text-xs">
+//                     {product.discountPercent}% OFF
+//                   </span>
+//                 )}
+
+//                 <button
+//                   type="button"
+//                   disabled={wishBusy}
+//                   onClick={toggleWishlist}
+//                   className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm disabled:opacity-50 sm:right-3 sm:top-3 sm:h-9 sm:w-9 lg:right-6 lg:top-6 lg:h-10 lg:w-10"
+//                   aria-label={
+//                     inWishlist ? "Remove from wishlist" : "Add to wishlist"
+//                   }
+//                 >
+//                   <Heart
+//                     size={14}
+//                     className={
+//                       inWishlist
+//                         ? "fill-current text-red-500 sm:h-4 sm:w-4"
+//                         : "text-slate-600 sm:h-4 sm:w-4"
+//                     }
+//                   />
+//                 </button>
+//               </div>
+
+//               {product.images.length > 1 && (
+//                 <div className="flex gap-2 overflow-x-auto px-2 py-2 scrollbar-thin lg:px-0">
+//                   {product.images.map((src, i) => (
+//                     <button
+//                       key={`${src}-${i}`}
+//                       type="button"
+//                       onClick={() => setActiveImage(i)}
+//                       className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 transition sm:h-16 sm:w-16 ${
+//                         i === activeImage
+//                           ? "border-[#176b5b] ring-1 ring-[#176b5b]"
+//                           : "border-white/80 opacity-80 hover:opacity-100"
+//                       }`}
+//                       aria-label={`View ${i + 1}`}
+//                     >
+//                       {/* eslint-disable-next-line @next/next/no-img-element */}
+//                       <img
+//                         src={src}
+//                         alt=""
+//                         className="h-full w-full object-cover"
+//                       />
+//                     </button>
+//                   ))}
+//                 </div>
+//               )}
+//             </div>
+
+//             {/* Mobile title / price */}
+//             <div className="flex flex-col justify-center p-3 sm:p-5 lg:hidden">
+//               <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400 sm:text-[10px]">
+//                 {product.category}
+//               </p>
+//               <h1 className="mt-1 line-clamp-3 text-sm font-bold leading-snug text-slate-900 sm:text-lg">
+//                 {product.name}
+//               </h1>
+//               {product.hasDiscount ? (
+//                 <div className="mt-2">
+//                   <p className="text-xs text-slate-400 line-through">
+//                     {formatCurrency(product.listPrice)}
+//                   </p>
+//                   <p className="text-lg font-bold text-slate-900 sm:text-xl">
+//                     {formatCurrency(product.effectivePrice)}
+//                   </p>
+//                   <span className="mt-0.5 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+//                     {product.discountPercent}% off
+//                   </span>
+//                 </div>
+//               ) : (
+//                 <p className="mt-2 text-lg font-bold text-slate-900 sm:text-xl">
+//                   {formatCurrency(product.effectivePrice)}
+//                 </p>
+//               )}
+//               <div className="mt-2 flex items-center gap-1.5 text-[10px] sm:text-xs">
+//                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+//                 <span className="font-medium text-emerald-700">
+//                   {product.stock} in stock
+//                 </span>
+//               </div>
+//             </div>
+
+//             {/* Details */}
+//             <div className="col-span-2 border-t border-slate-100 p-4 sm:p-6 lg:col-span-1 lg:border-t-0 lg:p-10">
+//               <div className="hidden lg:block">
+//                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+//                   {product.category}
+//                 </p>
+//                 <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">
+//                   {product.name}
+//                 </h1>
+//                 {product.hasDiscount ? (
+//                   <div className="mt-6">
+//                     <p className="text-base text-slate-400 line-through">
+//                       {formatCurrency(product.listPrice)}
+//                     </p>
+//                     <p className="text-3xl font-bold text-slate-900">
+//                       {formatCurrency(product.effectivePrice)}
+//                     </p>
+//                     <span className="mt-2 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+//                       {product.discountPercent}% off · discount
+//                     </span>
+//                   </div>
+//                 ) : (
+//                   <p className="mt-6 text-3xl font-bold text-slate-900">
+//                     {formatCurrency(product.effectivePrice)}
+//                   </p>
+//                 )}
+//               </div>
+
+//               <p className="text-sm leading-6 text-slate-600 lg:mt-6 lg:leading-7">
+//                 {product.description || "No description available."}
+//               </p>
+
+//               <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-7 sm:gap-3">
+//                 <div className="rounded-lg bg-slate-50 p-3 sm:p-4">
+//                   <p className="text-[10px] uppercase text-slate-400 sm:text-[11px]">
+//                     Material
+//                   </p>
+//                   <p className="mt-1 text-xs font-semibold text-slate-800 sm:text-sm">
+//                     {product.material}
+//                   </p>
+//                 </div>
+//                 <div className="rounded-lg bg-slate-50 p-3 sm:p-4">
+//                   <p className="text-[10px] uppercase text-slate-400 sm:text-[11px]">
+//                     Dimensions
+//                   </p>
+//                   <p className="mt-1 text-xs font-semibold text-slate-800 sm:text-sm">
+//                     {product.dimensions}
+//                   </p>
+//                 </div>
+//               </div>
+
+//               <div className="mt-4 hidden items-center gap-2 text-xs lg:flex">
+//                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
+//                 <span className="font-medium text-emerald-700">
+//                   {product.stock} units available
+//                 </span>
+//               </div>
+
+//               <p className="mt-4 text-[11px] text-slate-500 sm:mt-6 sm:text-xs">
+//                 Change quantity on the cart page after adding.
+//                 {product.hasDiscount
+//                   ? ` Price includes ${product.discountPercent}% discount.`
+//                   : ""}
+//               </p>
+
+//               <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3">
+//                 <button
+//                   type="button"
+//                   disabled={busy}
+//                   onClick={toggleCart}
+//                   className={`flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg px-2 py-3 text-xs font-semibold text-white transition disabled:opacity-60 sm:gap-2 sm:px-4 sm:text-sm ${
+//                     inCart
+//                       ? "bg-red-600 hover:bg-red-700"
+//                       : "bg-slate-900 hover:bg-slate-800"
+//                   }`}
+//                 >
+//                   {busy ? (
+//                     <Loader2 size={16} className="animate-spin" />
+//                   ) : inCart ? (
+//                     <>
+//                       <Trash2 size={15} className="shrink-0" />
+//                       <span className="truncate">Remove</span>
+//                     </>
+//                   ) : (
+//                     <>
+//                       <ShoppingBag size={15} className="shrink-0" />
+//                       <span className="truncate">Add to cart</span>
+//                     </>
+//                   )}
+//                 </button>
+//                 <Link
+//                   href="/cart"
+//                   className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-2 py-3 text-xs font-semibold text-slate-800 hover:bg-slate-50 sm:gap-2 sm:px-4 sm:text-sm"
+//                 >
+//                   <span className="truncate">Go to Cart</span>
+//                 </Link>
+//               </div>
+
+//               {!authUid && (
+//                 <p className="mt-3 text-xs text-slate-500">
+//                   <Link
+//                     href="/sign-in"
+//                     className="font-semibold text-[#176b5b] hover:underline"
+//                   >
+//                     Sign in
+//                   </Link>{" "}
+//                   to add this product to your cart.
+//                 </p>
+//               )}
+
+//               <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-3.5 sm:mt-7 sm:p-4">
+//                 <div className="flex gap-3">
+//                   <Truck
+//                     size={18}
+//                     className="mt-0.5 shrink-0 text-[#176b5b]"
+//                   />
+//                   <div>
+//                     <p className="text-sm font-semibold text-slate-900">
+//                       Estimated delivery
+//                     </p>
+//                     <p className="mt-1 text-xs leading-5 text-slate-600">
+//                       {expectedDelivery ? (
+//                         <>
+//                           By{" "}
+//                           <span className="font-semibold text-slate-800">
+//                             {formatDeliveryDate(expectedDelivery)}
+//                           </span>
+//                           {" · "}
+//                           {product.leadTimeDays} day
+//                           {product.leadTimeDays === 1 ? "" : "s"} lead time
+//                           {product.leadTime
+//                             ? ` (${product.leadTime})`
+//                             : ""}
+//                         </>
+//                       ) : (
+//                         "Delivery date confirmed at checkout."
+//                       )}
+//                     </p>
+//                     <p className="mt-1 text-[11px] text-slate-400">
+//                       Exact date may vary by location and order volume.
+//                     </p>
+//                   </div>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//         </section>
+//       </div>
+//     </main>
+//   );
+// }
+
+
+// "use client";
+
+// import Link from "next/link";
+// import { useParams, useRouter } from "next/navigation";
+// import { useEffect, useMemo, useState } from "react";
+// import {
+//   ArrowLeft,
+//   Heart,
+//   Loader2,
+//   ShoppingBag,
+//   Trash2,
+//   Truck,
+// } from "lucide-react";
+// import { doc, getDoc } from "firebase/firestore";
+// import { onAuthStateChanged } from "firebase/auth";
+// import { auth, db } from "@/lib/firebase";
+// import {
+//   addToCart as addToFirebaseCart,
+//   removeFromCart as removeFromFirebaseCart,
+//   getCart,
+//   getProductAgeDays,
+//   canApplyAgeingDiscount,
+//   getEffectiveSellingPrice,
+// } from "@/services/cartService";
+// import {
+//   getWishlist,
+//   addToWishlist,
+//   removeFromWishlist,
+// } from "@/services/wishlistService";
+// import ProductReviews from "@/components/product/ProductReviews";
+
+// interface Product {
+//   id: string;
+//   name: string;
+//   category: string;
+//   description: string;
+//   listPrice: number;
+//   discountPercent: number;
+//   effectivePrice: number;
+//   hasDiscount: boolean;
+//   ageDays: number;
+//   material: string;
+//   dimensions: string;
+//   stock: number;
+//   image?: string;
+//   images: string[];
+//   leadTime?: string;
+//   leadTimeDays: number;
+// }
+
+// function parseLeadTimeDays(value: unknown, fallback = 7): number {
+//   if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+//     return Math.min(365, Math.floor(value));
+//   }
+//   const s = String(value ?? "").trim();
+//   if (!s || s === "—") return fallback;
+//   const nums = s.match(/\d+/g);
+//   if (!nums?.length) return fallback;
+//   const max = Math.max(
+//     ...nums.map((n) => parseInt(n, 10)).filter((n) => n > 0)
+//   );
+//   return Number.isFinite(max) ? Math.min(365, max) : fallback;
+// }
+
+// function addDays(base: Date, days: number): Date {
+//   const d = new Date(base);
+//   d.setHours(0, 0, 0, 0);
+//   d.setDate(d.getDate() + days);
+//   return d;
+// }
+
+// function formatDeliveryDate(date: Date): string {
+//   return date.toLocaleDateString("en-IN", {
+//     weekday: "short",
+//     day: "numeric",
+//     month: "short",
+//     year: "numeric",
+//   });
+// }
+
+// function formatCurrency(value: number) {
+//   return new Intl.NumberFormat("en-IN", {
+//     style: "currency",
+//     currency: "INR",
+//     maximumFractionDigits: 0,
+//   }).format(value);
+// }
+
+// function normalizeGallery(data: {
+//   images?: unknown;
+//   imageUrl?: string;
+//   image?: string;
+// }): string[] {
+//   const fromArr = Array.isArray(data.images)
+//     ? data.images.map((u) => String(u || "").trim()).filter(Boolean)
+//     : [];
+//   const primary = String(data.imageUrl || data.image || "").trim();
+//   const list = fromArr.length > 0 ? fromArr : primary ? [primary] : [];
+//   return Array.from(new Set(list));
+// }
+
+// export default function ProductDetailPage() {
+//   const params = useParams();
+//   const router = useRouter();
+//   const productId = (params?.id as string) || "";
+
+//   const [product, setProduct] = useState<Product | null>(null);
+//   const [loading, setLoading] = useState(true);
+//   const [authUid, setAuthUid] = useState<string | null>(null);
+//   const [inCart, setInCart] = useState(false);
+//   const [inWishlist, setInWishlist] = useState(false);
+//   const [busy, setBusy] = useState(false);
+//   const [wishBusy, setWishBusy] = useState(false);
+//   const [activeImage, setActiveImage] = useState(0);
+
+//   useEffect(() => {
+//     const unsub = onAuthStateChanged(auth, (user) => {
+//       setAuthUid(user?.uid ?? null);
+//     });
+//     return () => unsub();
+//   }, []);
+
+//   useEffect(() => {
+//     if (!productId) return;
+
+//     async function load() {
+//       setLoading(true);
+//       try {
+//         const snap = await getDoc(doc(db, "furniture_products", productId));
+
+//         if (snap.exists()) {
+//           const data = snap.data();
+//           const leadRaw = data.leadTime ?? data.leadTimeDays ?? "";
+//           const leadTimeDays = parseLeadTimeDays(leadRaw, 7);
+
+//           const listPrice = Number(data.sellingPrice ?? data.price ?? 0);
+//           const discountPercent = Math.min(
+//             100,
+//             Math.max(0, Number(data.discountPercent) || 0)
+//           );
+
+//           const ageDays = getProductAgeDays({
+//             createdAt: data.createdAt as
+//               | { toMillis?: () => number }
+//               | null
+//               | undefined,
+//             publishedAt: data.publishedAt as
+//               | { toMillis?: () => number }
+//               | null
+//               | undefined,
+//           });
+
+//           const hasDiscount = canApplyAgeingDiscount({
+//             createdAt: data.createdAt as
+//               | { toMillis?: () => number }
+//               | null
+//               | undefined,
+//             publishedAt: data.publishedAt as
+//               | { toMillis?: () => number }
+//               | null
+//               | undefined,
+//             discountPercent,
+//           });
+
+//           const effectivePrice = getEffectiveSellingPrice(
+//             listPrice,
+//             discountPercent,
+//             hasDiscount
+//           );
+
+//           const images = normalizeGallery(data);
+
+//           setProduct({
+//             id: snap.id,
+//             name: data.name || "Product",
+//             category: data.category || "Other",
+//             description: data.description || "",
+//             listPrice,
+//             discountPercent: hasDiscount ? discountPercent : 0,
+//             effectivePrice,
+//             hasDiscount,
+//             ageDays,
+//             material: data.material || "—",
+//             dimensions: data.dimensions || "—",
+//             stock: Number(data.stock ?? 0),
+//             image: images[0] || "",
+//             images,
+//             leadTime: String(leadRaw || "").trim() || undefined,
+//             leadTimeDays,
+//           });
+//           setActiveImage(0);
+//         } else {
+//           setProduct(null);
+//         }
+//       } catch (err) {
+//         console.error(err);
+//         setProduct(null);
+//       } finally {
+//         setLoading(false);
+//       }
+//     }
+
+//     load();
+//   }, [productId]);
+
+//   const expectedDelivery = useMemo(() => {
+//     if (!product) return null;
+//     return addDays(new Date(), product.leadTimeDays);
+//   }, [product]);
+
+//   const currentSrc = product
+//     ? product.images[activeImage] || product.images[0] || product.image || ""
+//     : "";
+
+//   useEffect(() => {
+//     if (!productId) return;
+//     let cancelled = false;
+
+//     async function sync() {
+//       if (!authUid) {
+//         if (!cancelled) {
+//           setInCart(false);
+//           setInWishlist(false);
+//         }
+//         return;
+//       }
+//       try {
+//         const [cart, wish] = await Promise.all([
+//           getCart(authUid),
+//           getWishlist(authUid),
+//         ]);
+//         if (cancelled) return;
+//         setInCart(
+//           Boolean(cart?.items?.some((i) => i.productId === productId))
+//         );
+//         setInWishlist(
+//           Boolean(wish?.items?.some((i) => i.productId === productId))
+//         );
+//       } catch {
+//         if (!cancelled) {
+//           setInCart(false);
+//           setInWishlist(false);
+//         }
+//       }
+//     }
+
+//     sync();
+//     window.addEventListener("cartUpdated", sync);
+//     window.addEventListener("wishlistUpdated", sync);
+//     return () => {
+//       cancelled = true;
+//       window.removeEventListener("cartUpdated", sync);
+//       window.removeEventListener("wishlistUpdated", sync);
+//     };
+//   }, [productId, authUid]);
+
+//   const toggleCart = async () => {
+//     if (!product) return;
+//     if (!authUid) {
+//       router.push("/sign-in");
+//       return;
+//     }
+//     setBusy(true);
+//     try {
+//       if (inCart) {
+//         await removeFromFirebaseCart(authUid, product.id);
+//         setInCart(false);
+//       } else {
+//         const cart = await getCart(authUid);
+//         const already = cart?.items?.some((i) => i.productId === product.id);
+//         if (!already) {
+//           await addToFirebaseCart(authUid, {
+//             productId: product.id,
+//             name: product.name,
+//             price: product.effectivePrice,
+//             listPrice: product.listPrice,
+//             discountPercent: product.hasDiscount
+//               ? product.discountPercent
+//               : undefined,
+//             quantity: 1,
+//             image: product.image || product.images[0] || "",
+//             category: product.category,
+//             leadTimeDays: product.leadTimeDays,
+//           });
+//         }
+//         setInCart(true);
+//       }
+//       window.dispatchEvent(new Event("cartUpdated"));
+//     } catch (err) {
+//       console.error("Cart toggle failed", err);
+//     } finally {
+//       setBusy(false);
+//     }
+//   };
+
+//   const toggleWishlist = async () => {
+//     if (!product) return;
+//     if (!authUid) {
+//       router.push("/sign-in");
+//       return;
+//     }
+//     setWishBusy(true);
+//     try {
+//       if (inWishlist) {
+//         await removeFromWishlist(authUid, product.id);
+//         setInWishlist(false);
+//       } else {
+//         await addToWishlist(authUid, {
+//           productId: product.id,
+//           name: product.name,
+//           price: product.effectivePrice,
+//           image: product.image || product.images[0] || "",
+//           category: product.category,
+//         });
+//         setInWishlist(true);
+//       }
+//       window.dispatchEvent(new Event("wishlistUpdated"));
+//     } catch (err) {
+//       console.error("Wishlist toggle failed", err);
+//     } finally {
+//       setWishBusy(false);
+//     }
+//   };
+
+//   if (loading) {
+//     return (
+//       <main className="flex min-h-[50vh] items-center justify-center bg-[#f7f9f8]">
+//         <Loader2 className="h-8 w-8 animate-spin text-[#176b5b]" />
+//       </main>
+//     );
+//   }
+
+//   if (!product) {
+//     return (
+//       <main className="min-h-screen bg-[#f7f9f8] px-4 py-16 text-center">
+//         <p className="text-slate-600">Product not found.</p>
+//         <Link
+//           href="/products"
+//           className="mt-4 inline-block font-semibold text-[#176b5b]"
+//         >
+//           Back to products
+//         </Link>
+//       </main>
+//     );
+//   }
+
+//   return (
+//     <main className="min-h-screen bg-[#f7f9f8]">
+//       <div className="mx-auto w-full max-w-6xl px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
+//         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white sm:rounded-2xl">
+//           <div className="grid grid-cols-[minmax(140px,42%)_1fr] gap-0 sm:grid-cols-[minmax(200px,40%)_1fr] lg:grid-cols-2">
+//             {/* Gallery */}
+//             <div className="relative flex flex-col bg-slate-100 lg:min-h-[480px] lg:p-6">
+//               <div className="relative flex aspect-square items-center justify-center overflow-hidden lg:aspect-auto lg:min-h-[400px]">
+//                 {currentSrc ? (
+//                   // eslint-disable-next-line @next/next/no-img-element
+//                   <img
+//                     src={currentSrc}
+//                     alt={`${product.name} – view ${activeImage + 1}`}
+//                     className="h-full w-full object-cover lg:max-h-[480px] lg:rounded-xl"
+//                   />
+//                 ) : (
+//                   <div className="p-2 text-center">
+//                     <ShoppingBag
+//                       size={36}
+//                       className="mx-auto text-slate-300 lg:h-14 lg:w-14"
+//                     />
+//                   </div>
+//                 )}
+
+//                 <Link
+//                   href="/products"
+//                   aria-label="Back to products"
+//                   title="Back to products"
+//                   className="absolute left-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-md transition hover:bg-white hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-[#176b5b] focus:ring-offset-2"
+//                 >
+//                   <ArrowLeft size={18} />
+//                 </Link>
+
+//                 {product.hasDiscount && (
+//                   <span className="absolute left-3 top-16 z-10 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm sm:text-xs">
+//                     {product.discountPercent}% OFF
+//                   </span>
+//                 )}
+
+//                 <button
+//                   type="button"
+//                   disabled={wishBusy}
+//                   onClick={toggleWishlist}
+//                   className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm disabled:opacity-50 sm:right-3 sm:top-3 sm:h-9 sm:w-9 lg:right-6 lg:top-6 lg:h-10 lg:w-10"
+//                   aria-label={
+//                     inWishlist ? "Remove from wishlist" : "Add to wishlist"
+//                   }
+//                 >
+//                   <Heart
+//                     size={14}
+//                     className={
+//                       inWishlist
+//                         ? "fill-current text-red-500 sm:h-4 sm:w-4"
+//                         : "text-slate-600 sm:h-4 sm:w-4"
+//                     }
+//                   />
+//                 </button>
+//               </div>
+
+//               {product.images.length > 1 && (
+//                 <div className="flex gap-2 overflow-x-auto px-2 py-2 scrollbar-thin lg:px-0">
+//                   {product.images.map((src, i) => (
+//                     <button
+//                       key={`${src}-${i}`}
+//                       type="button"
+//                       onClick={() => setActiveImage(i)}
+//                       className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 transition sm:h-16 sm:w-16 ${
+//                         i === activeImage
+//                           ? "border-[#176b5b] ring-1 ring-[#176b5b]"
+//                           : "border-white/80 opacity-80 hover:opacity-100"
+//                       }`}
+//                       aria-label={`View ${i + 1}`}
+//                     >
+//                       {/* eslint-disable-next-line @next/next/no-img-element */}
+//                       <img
+//                         src={src}
+//                         alt=""
+//                         className="h-full w-full object-cover"
+//                       />
+//                     </button>
+//                   ))}
+//                 </div>
+//               )}
+//             </div>
+
+//             {/* Mobile title / price */}
+//             <div className="flex flex-col justify-center p-3 sm:p-5 lg:hidden">
+//               <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400 sm:text-[10px]">
+//                 {product.category}
+//               </p>
+//               <h1 className="mt-1 line-clamp-3 text-sm font-bold leading-snug text-slate-900 sm:text-lg">
+//                 {product.name}
+//               </h1>
+//               {product.hasDiscount ? (
+//                 <div className="mt-2">
+//                   <p className="text-xs text-slate-400 line-through">
+//                     {formatCurrency(product.listPrice)}
+//                   </p>
+//                   <p className="text-lg font-bold text-slate-900 sm:text-xl">
+//                     {formatCurrency(product.effectivePrice)}
+//                   </p>
+//                   <span className="mt-0.5 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+//                     {product.discountPercent}% off
+//                   </span>
+//                 </div>
+//               ) : (
+//                 <p className="mt-2 text-lg font-bold text-slate-900 sm:text-xl">
+//                   {formatCurrency(product.effectivePrice)}
+//                 </p>
+//               )}
+//               <div className="mt-2 flex items-center gap-1.5 text-[10px] sm:text-xs">
+//                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+//                 <span className="font-medium text-emerald-700">
+//                   {product.stock} in stock
+//                 </span>
+//               </div>
+//             </div>
+
+//             {/* Details */}
+//             <div className="col-span-2 border-t border-slate-100 p-4 sm:p-6 lg:col-span-1 lg:border-t-0 lg:p-10">
+//               <div className="hidden lg:block">
+//                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+//                   {product.category}
+//                 </p>
+//                 <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">
+//                   {product.name}
+//                 </h1>
+//                 {product.hasDiscount ? (
+//                   <div className="mt-6">
+//                     <p className="text-base text-slate-400 line-through">
+//                       {formatCurrency(product.listPrice)}
+//                     </p>
+//                     <p className="text-3xl font-bold text-slate-900">
+//                       {formatCurrency(product.effectivePrice)}
+//                     </p>
+//                     <span className="mt-2 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+//                       {product.discountPercent}% off · discount
+//                     </span>
+//                   </div>
+//                 ) : (
+//                   <p className="mt-6 text-3xl font-bold text-slate-900">
+//                     {formatCurrency(product.effectivePrice)}
+//                   </p>
+//                 )}
+//               </div>
+
+//               <p className="text-sm leading-6 text-slate-600 lg:mt-6 lg:leading-7">
+//                 {product.description || "No description available."}
+//               </p>
+
+//               <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-7 sm:gap-3">
+//                 <div className="rounded-lg bg-slate-50 p-3 sm:p-4">
+//                   <p className="text-[10px] uppercase text-slate-400 sm:text-[11px]">
+//                     Material
+//                   </p>
+//                   <p className="mt-1 text-xs font-semibold text-slate-800 sm:text-sm">
+//                     {product.material}
+//                   </p>
+//                 </div>
+//                 <div className="rounded-lg bg-slate-50 p-3 sm:p-4">
+//                   <p className="text-[10px] uppercase text-slate-400 sm:text-[11px]">
+//                     Dimensions
+//                   </p>
+//                   <p className="mt-1 text-xs font-semibold text-slate-800 sm:text-sm">
+//                     {product.dimensions}
+//                   </p>
+//                 </div>
+//               </div>
+
+//               <div className="mt-4 hidden items-center gap-2 text-xs lg:flex">
+//                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
+//                 <span className="font-medium text-emerald-700">
+//                   {product.stock} units available
+//                 </span>
+//               </div>
+
+//               <p className="mt-4 text-[11px] text-slate-500 sm:mt-6 sm:text-xs">
+//                 Change quantity on the cart page after adding.
+//                 {product.hasDiscount
+//                   ? ` Price includes ${product.discountPercent}% discount.`
+//                   : ""}
+//               </p>
+
+//               <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3">
+//                 <button
+//                   type="button"
+//                   disabled={busy}
+//                   onClick={toggleCart}
+//                   className={`flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg px-2 py-3 text-xs font-semibold text-white transition disabled:opacity-60 sm:gap-2 sm:px-4 sm:text-sm ${
+//                     inCart
+//                       ? "bg-red-600 hover:bg-red-700"
+//                       : "bg-slate-900 hover:bg-slate-800"
+//                   }`}
+//                 >
+//                   {busy ? (
+//                     <Loader2 size={16} className="animate-spin" />
+//                   ) : inCart ? (
+//                     <>
+//                       <Trash2 size={15} className="shrink-0" />
+//                       <span className="truncate">Remove</span>
+//                     </>
+//                   ) : (
+//                     <>
+//                       <ShoppingBag size={15} className="shrink-0" />
+//                       <span className="truncate">Add to cart</span>
+//                     </>
+//                   )}
+//                 </button>
+//                 <Link
+//                   href="/cart"
+//                   className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-2 py-3 text-xs font-semibold text-slate-800 hover:bg-slate-50 sm:gap-2 sm:px-4 sm:text-sm"
+//                 >
+//                   <span className="truncate">Go to Cart</span>
+//                 </Link>
+//               </div>
+
+//               {!authUid && (
+//                 <p className="mt-3 text-xs text-slate-500">
+//                   <Link
+//                     href="/sign-in"
+//                     className="font-semibold text-[#176b5b] hover:underline"
+//                   >
+//                     Sign in
+//                   </Link>{" "}
+//                   to add this product to your cart.
+//                 </p>
+//               )}
+
+//               <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-3.5 sm:mt-7 sm:p-4">
+//                 <div className="flex gap-3">
+//                   <Truck
+//                     size={18}
+//                     className="mt-0.5 shrink-0 text-[#176b5b]"
+//                   />
+//                   <div>
+//                     <p className="text-sm font-semibold text-slate-900">
+//                       Estimated delivery
+//                     </p>
+//                     <p className="mt-1 text-xs leading-5 text-slate-600">
+//                       {expectedDelivery ? (
+//                         <>
+//                           By{" "}
+//                           <span className="font-semibold text-slate-800">
+//                             {formatDeliveryDate(expectedDelivery)}
+//                           </span>
+//                           {" · "}
+//                           {product.leadTimeDays} day
+//                           {product.leadTimeDays === 1 ? "" : "s"} lead time
+//                           {product.leadTime
+//                             ? ` (${product.leadTime})`
+//                             : ""}
+//                         </>
+//                       ) : (
+//                         "Delivery date confirmed at checkout."
+//                       )}
+//                     </p>
+//                     <p className="mt-1 text-[11px] text-slate-400">
+//                       Exact date may vary by location and order volume.
+//                     </p>
+//                   </div>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//         </section>
+
+//         {/* Customer reviews */}
+//         <ProductReviews productId={product.id} productName={product.name} />
+//       </div>
+//     </main>
+//   );
+// }
+
+
+// "use client";
+
+// import Link from "next/link";
+// import { useParams, useRouter } from "next/navigation";
+// import { useEffect, useMemo, useState } from "react";
+// import {
+//   ArrowLeft,
+//   ChevronLeft,
+//   ChevronRight,
+//   Heart,
+//   Loader2,
+//   ShoppingBag,
+//   Trash2,
+//   Truck,
+// } from "lucide-react";
+// import { doc, getDoc } from "firebase/firestore";
+// import { onAuthStateChanged } from "firebase/auth";
+// import { auth, db } from "@/lib/firebase";
+// import {
+//   addToCart as addToFirebaseCart,
+//   removeFromCart as removeFromFirebaseCart,
+//   getCart,
+//   getProductAgeDays,
+//   canApplyAgeingDiscount,
+//   getEffectiveSellingPrice,
+// } from "@/services/cartService";
+// import {
+//   getWishlist,
+//   addToWishlist,
+//   removeFromWishlist,
+// } from "@/services/wishlistService";
+// import ProductReviews from "@/components/product/ProductReviews";
+
+// interface Product {
+//   id: string;
+//   name: string;
+//   category: string;
+//   description: string;
+//   listPrice: number;
+//   discountPercent: number;
+//   effectivePrice: number;
+//   hasDiscount: boolean;
+//   ageDays: number;
+//   material: string;
+//   dimensions: string;
+//   stock: number;
+//   image?: string;
+//   images: string[];
+//   leadTime?: string;
+//   leadTimeDays: number;
+// }
+
+// function parseLeadTimeDays(value: unknown, fallback = 7): number {
+//   if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+//     return Math.min(365, Math.floor(value));
+//   }
+//   const s = String(value ?? "").trim();
+//   if (!s || s === "—") return fallback;
+//   const nums = s.match(/\d+/g);
+//   if (!nums?.length) return fallback;
+//   const max = Math.max(
+//     ...nums.map((n) => parseInt(n, 10)).filter((n) => n > 0)
+//   );
+//   return Number.isFinite(max) ? Math.min(365, max) : fallback;
+// }
+
+// function addDays(base: Date, days: number): Date {
+//   const d = new Date(base);
+//   d.setHours(0, 0, 0, 0);
+//   d.setDate(d.getDate() + days);
+//   return d;
+// }
+
+// function formatDeliveryDate(date: Date): string {
+//   return date.toLocaleDateString("en-IN", {
+//     weekday: "short",
+//     day: "numeric",
+//     month: "short",
+//     year: "numeric",
+//   });
+// }
+
+// function formatCurrency(value: number) {
+//   return new Intl.NumberFormat("en-IN", {
+//     style: "currency",
+//     currency: "INR",
+//     maximumFractionDigits: 0,
+//   }).format(value);
+// }
+
+// function normalizeGallery(data: {
+//   images?: unknown;
+//   imageUrl?: string;
+//   image?: string;
+// }): string[] {
+//   const fromArr = Array.isArray(data.images)
+//     ? data.images.map((u) => String(u || "").trim()).filter(Boolean)
+//     : [];
+//   const primary = String(data.imageUrl || data.image || "").trim();
+//   const list = fromArr.length > 0 ? fromArr : primary ? [primary] : [];
+//   return Array.from(new Set(list));
+// }
+
+// export default function ProductDetailPage() {
+//   const params = useParams();
+//   const router = useRouter();
+//   const productId = (params?.id as string) || "";
+
+//   const [product, setProduct] = useState<Product | null>(null);
+//   const [loading, setLoading] = useState(true);
+//   const [authUid, setAuthUid] = useState<string | null>(null);
+//   const [inCart, setInCart] = useState(false);
+//   const [inWishlist, setInWishlist] = useState(false);
+//   const [busy, setBusy] = useState(false);
+//   const [wishBusy, setWishBusy] = useState(false);
+//   const [activeImage, setActiveImage] = useState(0);
+
+//   useEffect(() => {
+//     const unsub = onAuthStateChanged(auth, (user) => {
+//       setAuthUid(user?.uid ?? null);
+//     });
+//     return () => unsub();
+//   }, []);
+
+//   useEffect(() => {
+//     if (!productId) return;
+
+//     async function load() {
+//       setLoading(true);
+//       try {
+//         const snap = await getDoc(doc(db, "furniture_products", productId));
+
+//         if (snap.exists()) {
+//           const data = snap.data();
+//           const leadRaw = data.leadTime ?? data.leadTimeDays ?? "";
+//           const leadTimeDays = parseLeadTimeDays(leadRaw, 7);
+
+//           const listPrice = Number(data.sellingPrice ?? data.price ?? 0);
+//           const discountPercent = Math.min(
+//             100,
+//             Math.max(0, Number(data.discountPercent) || 0)
+//           );
+
+//           const ageDays = getProductAgeDays({
+//             createdAt: data.createdAt as
+//               | { toMillis?: () => number }
+//               | null
+//               | undefined,
+//             publishedAt: data.publishedAt as
+//               | { toMillis?: () => number }
+//               | null
+//               | undefined,
+//           });
+
+//           const hasDiscount = canApplyAgeingDiscount({
+//             createdAt: data.createdAt as
+//               | { toMillis?: () => number }
+//               | null
+//               | undefined,
+//             publishedAt: data.publishedAt as
+//               | { toMillis?: () => number }
+//               | null
+//               | undefined,
+//             discountPercent,
+//           });
+
+//           const effectivePrice = getEffectiveSellingPrice(
+//             listPrice,
+//             discountPercent,
+//             hasDiscount
+//           );
+
+//           const images = normalizeGallery(data);
+
+//           setProduct({
+//             id: snap.id,
+//             name: data.name || "Product",
+//             category: data.category || "Other",
+//             description: data.description || "",
+//             listPrice,
+//             discountPercent: hasDiscount ? discountPercent : 0,
+//             effectivePrice,
+//             hasDiscount,
+//             ageDays,
+//             material: data.material || "—",
+//             dimensions: data.dimensions || "—",
+//             stock: Number(data.stock ?? 0),
+//             image: images[0] || "",
+//             images,
+//             leadTime: String(leadRaw || "").trim() || undefined,
+//             leadTimeDays,
+//           });
+//           setActiveImage(0);
+//         } else {
+//           setProduct(null);
+//         }
+//       } catch (err) {
+//         console.error(err);
+//         setProduct(null);
+//       } finally {
+//         setLoading(false);
+//       }
+//     }
+
+//     load();
+//   }, [productId]);
+
+//   const expectedDelivery = useMemo(() => {
+//     if (!product) return null;
+//     return addDays(new Date(), product.leadTimeDays);
+//   }, [product]);
+
+//   const gallery = product?.images?.length
+//     ? product.images
+//     : product?.image
+//       ? [product.image]
+//       : [];
+//   const currentSrc = gallery[activeImage] || gallery[0] || "";
+
+//   const goPrev = () => {
+//     if (gallery.length < 2) return;
+//     setActiveImage((i) => (i <= 0 ? gallery.length - 1 : i - 1));
+//   };
+
+//   const goNext = () => {
+//     if (gallery.length < 2) return;
+//     setActiveImage((i) => (i >= gallery.length - 1 ? 0 : i + 1));
+//   };
+
+//   useEffect(() => {
+//     if (!productId) return;
+//     let cancelled = false;
+
+//     async function sync() {
+//       if (!authUid) {
+//         if (!cancelled) {
+//           setInCart(false);
+//           setInWishlist(false);
+//         }
+//         return;
+//       }
+//       try {
+//         const [cart, wish] = await Promise.all([
+//           getCart(authUid),
+//           getWishlist(authUid),
+//         ]);
+//         if (cancelled) return;
+//         setInCart(
+//           Boolean(cart?.items?.some((i) => i.productId === productId))
+//         );
+//         setInWishlist(
+//           Boolean(wish?.items?.some((i) => i.productId === productId))
+//         );
+//       } catch {
+//         if (!cancelled) {
+//           setInCart(false);
+//           setInWishlist(false);
+//         }
+//       }
+//     }
+
+//     sync();
+//     window.addEventListener("cartUpdated", sync);
+//     window.addEventListener("wishlistUpdated", sync);
+//     return () => {
+//       cancelled = true;
+//       window.removeEventListener("cartUpdated", sync);
+//       window.removeEventListener("wishlistUpdated", sync);
+//     };
+//   }, [productId, authUid]);
+
+//   const toggleCart = async () => {
+//     if (!product) return;
+//     if (!authUid) {
+//       router.push("/sign-in");
+//       return;
+//     }
+//     setBusy(true);
+//     try {
+//       if (inCart) {
+//         await removeFromFirebaseCart(authUid, product.id);
+//         setInCart(false);
+//       } else {
+//         const cart = await getCart(authUid);
+//         const already = cart?.items?.some((i) => i.productId === product.id);
+//         if (!already) {
+//           await addToFirebaseCart(authUid, {
+//             productId: product.id,
+//             name: product.name,
+//             price: product.effectivePrice,
+//             listPrice: product.listPrice,
+//             discountPercent: product.hasDiscount
+//               ? product.discountPercent
+//               : undefined,
+//             quantity: 1,
+//             image: product.image || product.images[0] || "",
+//             category: product.category,
+//             leadTimeDays: product.leadTimeDays,
+//           });
+//         }
+//         setInCart(true);
+//       }
+//       window.dispatchEvent(new Event("cartUpdated"));
+//     } catch (err) {
+//       console.error("Cart toggle failed", err);
+//     } finally {
+//       setBusy(false);
+//     }
+//   };
+
+//   const toggleWishlist = async () => {
+//     if (!product) return;
+//     if (!authUid) {
+//       router.push("/sign-in");
+//       return;
+//     }
+//     setWishBusy(true);
+//     try {
+//       if (inWishlist) {
+//         await removeFromWishlist(authUid, product.id);
+//         setInWishlist(false);
+//       } else {
+//         await addToWishlist(authUid, {
+//           productId: product.id,
+//           name: product.name,
+//           price: product.effectivePrice,
+//           image: product.image || product.images[0] || "",
+//           category: product.category,
+//         });
+//         setInWishlist(true);
+//       }
+//       window.dispatchEvent(new Event("wishlistUpdated"));
+//     } catch (err) {
+//       console.error("Wishlist toggle failed", err);
+//     } finally {
+//       setWishBusy(false);
+//     }
+//   };
+
+//   if (loading) {
+//     return (
+//       <main className="flex min-h-[50vh] items-center justify-center bg-[#f7f9f8]">
+//         <Loader2 className="h-8 w-8 animate-spin text-[#176b5b]" />
+//       </main>
+//     );
+//   }
+
+//   if (!product) {
+//     return (
+//       <main className="min-h-screen bg-[#f7f9f8] px-4 py-16 text-center">
+//         <p className="text-slate-600">Product not found.</p>
+//         <Link
+//           href="/products"
+//           className="mt-4 inline-block font-semibold text-[#176b5b]"
+//         >
+//           Back to products
+//         </Link>
+//       </main>
+//     );
+//   }
+
+//   return (
+//     <main className="min-h-screen bg-[#f7f9f8]">
+//       <div className="mx-auto w-full max-w-6xl px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
+//         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white sm:rounded-2xl">
+//           <div className="grid gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+//             {/* ========== Flipkart-style gallery ========== */}
+//             <div className="relative border-b border-slate-100 bg-white p-3 sm:p-4 lg:border-b-0 lg:border-r lg:p-5">
+//               <div className="flex flex-col gap-3 lg:flex-row lg:gap-3">
+//                 {/* Desktop: vertical thumbs (left) */}
+//                 {gallery.length > 1 && (
+//                   <div className="hidden max-h-[520px] w-[72px] shrink-0 flex-col gap-2 overflow-y-auto lg:flex">
+//                     {gallery.map((src, i) => (
+//                       <button
+//                         key={`desk-${src}-${i}`}
+//                         type="button"
+//                         onMouseEnter={() => setActiveImage(i)}
+//                         onClick={() => setActiveImage(i)}
+//                         className={`relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-md border-2 bg-slate-50 transition ${
+//                           i === activeImage
+//                             ? "border-[#176b5b] shadow-sm"
+//                             : "border-slate-200 hover:border-slate-300"
+//                         }`}
+//                         aria-label={`View image ${i + 1}`}
+//                       >
+//                         {/* eslint-disable-next-line @next/next/no-img-element */}
+//                         <img
+//                           src={src}
+//                           alt=""
+//                           className="h-full w-full object-cover"
+//                         />
+//                       </button>
+//                     ))}
+//                   </div>
+//                 )}
+
+//                 {/* Main image */}
+//                 <div className="relative min-w-0 flex-1">
+//                   <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[#f5f5f5] sm:aspect-[4/3] lg:aspect-square lg:min-h-[420px]">
+//                     {currentSrc ? (
+//                       // eslint-disable-next-line @next/next/no-img-element
+//                       <img
+//                         src={currentSrc}
+//                         alt={`${product.name} – view ${activeImage + 1}`}
+//                         className="h-full w-full object-contain"
+//                       />
+//                     ) : (
+//                       <ShoppingBag size={48} className="text-slate-300" />
+//                     )}
+
+//                     {/* Back */}
+//                     <Link
+//                       href="/products"
+//                       aria-label="Back to products"
+//                       className="absolute left-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-md transition hover:bg-white"
+//                     >
+//                       <ArrowLeft size={17} />
+//                     </Link>
+
+//                     {/* Wishlist */}
+//                     <button
+//                       type="button"
+//                       disabled={wishBusy}
+//                       onClick={toggleWishlist}
+//                       className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white shadow-md disabled:opacity-50"
+//                       aria-label={
+//                         inWishlist ? "Remove from wishlist" : "Add to wishlist"
+//                       }
+//                     >
+//                       <Heart
+//                         size={16}
+//                         className={
+//                           inWishlist
+//                             ? "fill-current text-red-500"
+//                             : "text-slate-600"
+//                         }
+//                       />
+//                     </button>
+
+//                     {product.hasDiscount && (
+//                       <span className="absolute left-3 top-14 z-10 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm sm:text-xs">
+//                         {product.discountPercent}% OFF
+//                       </span>
+//                     )}
+
+//                     {/* Prev / Next */}
+//                     {gallery.length > 1 && (
+//                       <>
+//                         <button
+//                           type="button"
+//                           onClick={goPrev}
+//                           className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-md hover:bg-white sm:left-3"
+//                           aria-label="Previous image"
+//                         >
+//                           <ChevronLeft size={18} />
+//                         </button>
+//                         <button
+//                           type="button"
+//                           onClick={goNext}
+//                           className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-md hover:bg-white sm:right-3"
+//                           aria-label="Next image"
+//                         >
+//                           <ChevronRight size={18} />
+//                         </button>
+//                       </>
+//                     )}
+
+//                     {/* Counter */}
+//                     {gallery.length > 1 && (
+//                       <span className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/55 px-2.5 py-0.5 text-[11px] font-medium text-white">
+//                         {activeImage + 1} / {gallery.length}
+//                       </span>
+//                     )}
+//                   </div>
+
+//                   {/* Mobile: horizontal thumbs */}
+//                   {gallery.length > 1 && (
+//                     <div className="mt-3 flex gap-2 overflow-x-auto pb-1 lg:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+//                       {gallery.map((src, i) => (
+//                         <button
+//                           key={`mob-${src}-${i}`}
+//                           type="button"
+//                           onClick={() => setActiveImage(i)}
+//                           className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 bg-slate-50 transition sm:h-[72px] sm:w-[72px] ${
+//                             i === activeImage
+//                               ? "border-[#176b5b] ring-1 ring-[#176b5b]/30"
+//                               : "border-slate-200 opacity-90"
+//                           }`}
+//                           aria-label={`View image ${i + 1}`}
+//                         >
+//                           {/* eslint-disable-next-line @next/next/no-img-element */}
+//                           <img
+//                             src={src}
+//                             alt=""
+//                             className="h-full w-full object-cover"
+//                           />
+//                         </button>
+//                       ))}
+//                     </div>
+//                   )}
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* ========== Product details ========== */}
+//             <div className="flex flex-col p-4 sm:p-6 lg:p-8">
+//               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 sm:text-xs">
+//                 {product.category}
+//               </p>
+//               <h1 className="mt-1.5 text-xl font-bold leading-snug text-slate-900 sm:text-2xl lg:text-3xl">
+//                 {product.name}
+//               </h1>
+
+//               {product.hasDiscount ? (
+//                 <div className="mt-4">
+//                   <p className="text-sm text-slate-400 line-through">
+//                     {formatCurrency(product.listPrice)}
+//                   </p>
+//                   <p className="text-2xl font-bold text-slate-900 sm:text-3xl">
+//                     {formatCurrency(product.effectivePrice)}
+//                   </p>
+//                   <span className="mt-1.5 inline-flex rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+//                     {product.discountPercent}% off
+//                   </span>
+//                 </div>
+//               ) : (
+//                 <p className="mt-4 text-2xl font-bold text-slate-900 sm:text-3xl">
+//                   {formatCurrency(product.effectivePrice)}
+//                 </p>
+//               )}
+
+//               <div className="mt-3 flex items-center gap-1.5 text-xs sm:text-sm">
+//                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
+//                 <span className="font-medium text-emerald-700">
+//                   {product.stock} in stock
+//                 </span>
+//               </div>
+
+//               <p className="mt-4 text-sm leading-6 text-slate-600 sm:mt-5">
+//                 {product.description || "No description available."}
+//               </p>
+
+//               <div className="mt-5 grid grid-cols-2 gap-2.5 sm:gap-3">
+//                 <div className="rounded-lg bg-slate-50 p-3 sm:p-4">
+//                   <p className="text-[10px] uppercase text-slate-400 sm:text-[11px]">
+//                     Material
+//                   </p>
+//                   <p className="mt-1 text-xs font-semibold text-slate-800 sm:text-sm">
+//                     {product.material}
+//                   </p>
+//                 </div>
+//                 <div className="rounded-lg bg-slate-50 p-3 sm:p-4">
+//                   <p className="text-[10px] uppercase text-slate-400 sm:text-[11px]">
+//                     Dimensions
+//                   </p>
+//                   <p className="mt-1 text-xs font-semibold text-slate-800 sm:text-sm">
+//                     {product.dimensions}
+//                   </p>
+//                 </div>
+//               </div>
+
+//               {/* <p className="mt-4 text-[11px] text-slate-500 sm:text-xs">
+//                 Change quantity on the cart page after adding.
+//                 {product.hasDiscount
+//                   ? ` Price includes ${product.discountPercent}% discount.`
+//                   : ""}
+//               </p> */}
+
+//               <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3">
+//                 <button
+//                   type="button"
+//                   disabled={busy}
+//                   onClick={toggleCart}
+//                   className={`flex min-h-[48px] items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold text-white transition disabled:opacity-60 ${
+//                     inCart
+//                       ? "bg-red-600 hover:bg-red-700"
+//                       : "bg-slate-900 hover:bg-slate-800"
+//                   }`}
+//                 >
+//                   {busy ? (
+//                     <Loader2 size={16} className="animate-spin" />
+//                   ) : inCart ? (
+//                     <>
+//                       <Trash2 size={16} className="shrink-0" />
+//                       Remove
+//                     </>
+//                   ) : (
+//                     <>
+//                       <ShoppingBag size={16} className="shrink-0" />
+//                       Add to cart
+//                     </>
+//                   )}
+//                 </button>
+//                 <Link
+//                   href="/cart"
+//                   className="flex min-h-[48px] items-center justify-center rounded-lg border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+//                 >
+//                   Go to Cart
+//                 </Link>
+//               </div>
+
+//               {!authUid && (
+//                 <p className="mt-3 text-xs text-slate-500">
+//                   <Link
+//                     href="/sign-in"
+//                     className="font-semibold text-[#176b5b] hover:underline"
+//                   >
+//                     Sign in
+//                   </Link>{" "}
+//                   to add this product to your cart.
+//                 </p>
+//               )}
+
+//               <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-3.5 sm:mt-6 sm:p-4">
+//                 <div className="flex gap-3">
+//                   <Truck
+//                     size={18}
+//                     className="mt-0.5 shrink-0 text-[#176b5b]"
+//                   />
+//                   <div>
+//                     <p className="text-sm font-semibold text-slate-900">
+//                       Estimated delivery
+//                     </p>
+//                     <p className="mt-1 text-xs leading-5 text-slate-600">
+//                       {expectedDelivery ? (
+//                         <>
+//                           By{" "}
+//                           <span className="font-semibold text-slate-800">
+//                             {formatDeliveryDate(expectedDelivery)}
+//                           </span>
+//                           {" · "}
+//                           {product.leadTimeDays} day
+//                           {product.leadTimeDays === 1 ? "" : "s"} lead time
+//                           {product.leadTime ? ` (${product.leadTime})` : ""}
+//                         </>
+//                       ) : (
+//                         "Delivery date confirmed at checkout."
+//                       )}
+//                     </p>
+//                     <p className="mt-1 text-[11px] text-slate-400">
+//                       Exact date may vary by location and order volume.
+//                     </p>
+//                   </div>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//         </section>
+
+//         <ProductReviews productId={product.id} productName={product.name} />
+//       </div>
+//     </main>
+//   );
+// }
+
+
 "use client";
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
   Heart,
   Loader2,
   ShoppingBag,
@@ -5387,6 +7281,7 @@ import {
   addToWishlist,
   removeFromWishlist,
 } from "@/services/wishlistService";
+import ProductReviews from "@/components/product/ProductReviews";
 
 interface Product {
   id: string;
@@ -5458,6 +7353,8 @@ function normalizeGallery(data: {
   return Array.from(new Set(list));
 }
 
+const ZOOM = 2.4;
+
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -5471,6 +7368,12 @@ export default function ProductDetailPage() {
   const [busy, setBusy] = useState(false);
   const [wishBusy, setWishBusy] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
+
+  // Flipkart-style zoom
+  const imgBoxRef = useRef<HTMLDivElement>(null);
+  const [zooming, setZooming] = useState(false);
+  const [lens, setLens] = useState({ x: 0, y: 0, w: 120, h: 120 });
+  const [bgPos, setBgPos] = useState({ x: 50, y: 50 });
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -5567,9 +7470,44 @@ export default function ProductDetailPage() {
     return addDays(new Date(), product.leadTimeDays);
   }, [product]);
 
-  const currentSrc = product
-    ? product.images[activeImage] || product.images[0] || product.image || ""
-    : "";
+  const gallery = product?.images?.length
+    ? product.images
+    : product?.image
+      ? [product.image]
+      : [];
+  const currentSrc = gallery[activeImage] || gallery[0] || "";
+
+  const goPrev = () => {
+    if (gallery.length < 2) return;
+    setZooming(false);
+    setActiveImage((i) => (i <= 0 ? gallery.length - 1 : i - 1));
+  };
+
+  const goNext = () => {
+    if (gallery.length < 2) return;
+    setZooming(false);
+    setActiveImage((i) => (i >= gallery.length - 1 ? 0 : i + 1));
+  };
+
+  const onZoomMove = (e: MouseEvent<HTMLDivElement>) => {
+    const box = imgBoxRef.current;
+    if (!box || !currentSrc) return;
+
+    const rect = box.getBoundingClientRect();
+    const lensW = Math.min(140, rect.width / ZOOM);
+    const lensH = Math.min(140, rect.height / ZOOM);
+
+    let x = e.clientX - rect.left - lensW / 2;
+    let y = e.clientY - rect.top - lensH / 2;
+    x = Math.max(0, Math.min(x, rect.width - lensW));
+    y = Math.max(0, Math.min(y, rect.height - lensH));
+
+    const pctX = ((x + lensW / 2) / rect.width) * 100;
+    const pctY = ((y + lensH / 2) / rect.height) * 100;
+
+    setLens({ x, y, w: lensW, h: lensH });
+    setBgPos({ x: pctX, y: pctY });
+  };
 
   useEffect(() => {
     if (!productId) return;
@@ -5706,154 +7644,245 @@ export default function ProductDetailPage() {
   return (
     <main className="min-h-screen bg-[#f7f9f8]">
       <div className="mx-auto w-full max-w-6xl px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
-        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white sm:rounded-2xl">
-          <div className="grid grid-cols-[minmax(140px,42%)_1fr] gap-0 sm:grid-cols-[minmax(200px,40%)_1fr] lg:grid-cols-2">
+        <section className="overflow-visible rounded-xl border border-slate-200 bg-white sm:rounded-2xl">
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
             {/* Gallery */}
-            <div className="relative flex flex-col bg-slate-100 lg:min-h-[480px] lg:p-6">
-              <div className="relative flex aspect-square items-center justify-center overflow-hidden lg:aspect-auto lg:min-h-[400px]">
-                {currentSrc ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={currentSrc}
-                    alt={`${product.name} – view ${activeImage + 1}`}
-                    className="h-full w-full object-cover lg:max-h-[480px] lg:rounded-xl"
-                  />
-                ) : (
-                  <div className="p-2 text-center">
-                    <ShoppingBag
-                      size={36}
-                      className="mx-auto text-slate-300 lg:h-14 lg:w-14"
-                    />
+            <div className="relative border-b border-slate-100 bg-white p-3 sm:p-4 lg:border-b-0 lg:border-r lg:p-5">
+              <div className="flex flex-col gap-3 lg:flex-row lg:gap-3">
+                {/* Desktop vertical thumbs */}
+                {gallery.length > 1 && (
+                  <div className="hidden max-h-[520px] w-[72px] shrink-0 flex-col gap-2 overflow-y-auto lg:flex">
+                    {gallery.map((src, i) => (
+                      <button
+                        key={`desk-${src}-${i}`}
+                        type="button"
+                        onMouseEnter={() => {
+                          setActiveImage(i);
+                          setZooming(false);
+                        }}
+                        onClick={() => setActiveImage(i)}
+                        className={`relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-md border-2 bg-slate-50 transition ${
+                          i === activeImage
+                            ? "border-[#176b5b] shadow-sm"
+                            : "border-slate-200 hover:border-slate-300"
+                        }`}
+                        aria-label={`View image ${i + 1}`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={src}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      </button>
+                    ))}
                   </div>
                 )}
 
-                <Link
-                  href="/products"
-                  aria-label="Back to products"
-                  title="Back to products"
-                  className="absolute left-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-md transition hover:bg-white hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-[#176b5b] focus:ring-offset-2"
-                >
-                  <ArrowLeft size={18} />
-                </Link>
-
-                {product.hasDiscount && (
-                  <span className="absolute left-3 top-16 z-10 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm sm:text-xs">
-                    {product.discountPercent}% OFF
-                  </span>
-                )}
-
-                <button
-                  type="button"
-                  disabled={wishBusy}
-                  onClick={toggleWishlist}
-                  className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm disabled:opacity-50 sm:right-3 sm:top-3 sm:h-9 sm:w-9 lg:right-6 lg:top-6 lg:h-10 lg:w-10"
-                  aria-label={
-                    inWishlist ? "Remove from wishlist" : "Add to wishlist"
-                  }
-                >
-                  <Heart
-                    size={14}
-                    className={
-                      inWishlist
-                        ? "fill-current text-red-500 sm:h-4 sm:w-4"
-                        : "text-slate-600 sm:h-4 sm:w-4"
-                    }
-                  />
-                </button>
-              </div>
-
-              {product.images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto px-2 py-2 scrollbar-thin lg:px-0">
-                  {product.images.map((src, i) => (
-                    <button
-                      key={`${src}-${i}`}
-                      type="button"
-                      onClick={() => setActiveImage(i)}
-                      className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 transition sm:h-16 sm:w-16 ${
-                        i === activeImage
-                          ? "border-[#176b5b] ring-1 ring-[#176b5b]"
-                          : "border-white/80 opacity-80 hover:opacity-100"
-                      }`}
-                      aria-label={`View ${i + 1}`}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                {/* Main image + zoom */}
+                <div className="relative min-w-0 flex-1">
+                  <div
+                    ref={imgBoxRef}
+                    className="relative flex aspect-square cursor-crosshair items-center justify-center overflow-hidden rounded-xl bg-[#f5f5f5] sm:aspect-[4/3] lg:aspect-square lg:min-h-[420px]"
+                    onMouseEnter={() => currentSrc && setZooming(true)}
+                    onMouseLeave={() => setZooming(false)}
+                    onMouseMove={onZoomMove}
+                  >
+                    {currentSrc ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={src}
-                        alt=""
-                        className="h-full w-full object-cover"
+                        src={currentSrc}
+                        alt={`${product.name} – view ${activeImage + 1}`}
+                        className="pointer-events-none h-full w-full select-none object-contain"
+                        draggable={false}
+                      />
+                    ) : (
+                      <ShoppingBag size={48} className="text-slate-300" />
+                    )}
+
+                    {/* Lens (desktop only) */}
+                    {zooming && currentSrc && (
+                      <div
+                        className="pointer-events-none absolute z-20 hidden border border-[#176b5b]/50 bg-[#176b5b]/15 lg:block"
+                        style={{
+                          width: lens.w,
+                          height: lens.h,
+                          left: lens.x,
+                          top: lens.y,
+                        }}
+                      />
+                    )}
+
+                    <Link
+                      href="/products"
+                      aria-label="Back to products"
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute left-3 top-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-md transition hover:bg-white"
+                    >
+                      <ArrowLeft size={17} />
+                    </Link>
+
+                    <button
+                      type="button"
+                      disabled={wishBusy}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void toggleWishlist();
+                      }}
+                      className="absolute right-3 top-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white shadow-md disabled:opacity-50"
+                      aria-label={
+                        inWishlist ? "Remove from wishlist" : "Add to wishlist"
+                      }
+                    >
+                      <Heart
+                        size={16}
+                        className={
+                          inWishlist
+                            ? "fill-current text-red-500"
+                            : "text-slate-600"
+                        }
                       />
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            {/* Mobile title / price */}
-            <div className="flex flex-col justify-center p-3 sm:p-5 lg:hidden">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400 sm:text-[10px]">
-                {product.category}
-              </p>
-              <h1 className="mt-1 line-clamp-3 text-sm font-bold leading-snug text-slate-900 sm:text-lg">
-                {product.name}
-              </h1>
-              {product.hasDiscount ? (
-                <div className="mt-2">
-                  <p className="text-xs text-slate-400 line-through">
-                    {formatCurrency(product.listPrice)}
+                    {product.hasDiscount && (
+                      <span className="absolute left-3 top-14 z-30 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm sm:text-xs">
+                        {product.discountPercent}% OFF
+                      </span>
+                    )}
+
+                    {gallery.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            goPrev();
+                          }}
+                          className="absolute left-2 top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-md hover:bg-white sm:left-3"
+                          aria-label="Previous image"
+                        >
+                          <ChevronLeft size={18} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            goNext();
+                          }}
+                          className="absolute right-2 top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-md hover:bg-white sm:right-3"
+                          aria-label="Next image"
+                        >
+                          <ChevronRight size={18} />
+                        </button>
+                      </>
+                    )}
+
+                    {gallery.length > 1 && (
+                      <span className="absolute bottom-3 left-1/2 z-30 -translate-x-1/2 rounded-full bg-black/55 px-2.5 py-0.5 text-[11px] font-medium text-white">
+                        {activeImage + 1} / {gallery.length}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Zoom result panel — desktop, sits over detail column */}
+                  {/* {zooming && currentSrc && (
+                    <div
+                      className="pointer-events-none absolute left-[calc(100%+12px)] top-0 z-40 hidden h-[min(520px,70vh)] w-[min(420px,36vw)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl lg:block"
+                      style={{
+                        backgroundImage: `url(${currentSrc})`,
+                        backgroundRepeat: "no-repeat",
+                        backgroundSize: `${ZOOM * 100}%`,
+                        backgroundPosition: `${bgPos.x}% ${bgPos.y}%`,
+                      }}
+                      aria-hidden
+                    />
+                  )} */}
+
+                  {zooming && currentSrc && (
+                    <div
+                      className="pointer-events-none absolute left-[calc(100%+12px)] top-0 z-40 hidden h-[min(520px,70vh)] w-[min(460px,36vw)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl lg:block"
+                      style={{
+                        backgroundImage: `url(${currentSrc})`,
+                        backgroundRepeat: "no-repeat",
+                        backgroundSize: `${ZOOM * 100}%`,
+                        backgroundPosition: `${bgPos.x}% ${bgPos.y}%`,
+                      }}
+                      aria-hidden
+                    />
+                  )}
+
+                  {/* Mobile thumbs */}
+                  {gallery.length > 1 && (
+                    <div className="mt-3 flex gap-2 overflow-x-auto pb-1 lg:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {gallery.map((src, i) => (
+                        <button
+                          key={`mob-${src}-${i}`}
+                          type="button"
+                          onClick={() => setActiveImage(i)}
+                          className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 bg-slate-50 transition sm:h-[72px] sm:w-[72px] ${
+                            i === activeImage
+                              ? "border-[#176b5b] ring-1 ring-[#176b5b]/30"
+                              : "border-slate-200 opacity-90"
+                          }`}
+                          aria-label={`View image ${i + 1}`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={src}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <p className="mt-2 hidden text-center text-[11px] text-slate-400 lg:block">
+                    Hover image to zoom
                   </p>
-                  <p className="text-lg font-bold text-slate-900 sm:text-xl">
-                    {formatCurrency(product.effectivePrice)}
-                  </p>
-                  <span className="mt-0.5 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
-                    {product.discountPercent}% off
-                  </span>
                 </div>
-              ) : (
-                <p className="mt-2 text-lg font-bold text-slate-900 sm:text-xl">
-                  {formatCurrency(product.effectivePrice)}
-                </p>
-              )}
-              <div className="mt-2 flex items-center gap-1.5 text-[10px] sm:text-xs">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                <span className="font-medium text-emerald-700">
-                  {product.stock} in stock
-                </span>
               </div>
             </div>
 
             {/* Details */}
-            <div className="col-span-2 border-t border-slate-100 p-4 sm:p-6 lg:col-span-1 lg:border-t-0 lg:p-10">
-              <div className="hidden lg:block">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                  {product.category}
-                </p>
-                <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">
-                  {product.name}
-                </h1>
-                {product.hasDiscount ? (
-                  <div className="mt-6">
-                    <p className="text-base text-slate-400 line-through">
-                      {formatCurrency(product.listPrice)}
-                    </p>
-                    <p className="text-3xl font-bold text-slate-900">
-                      {formatCurrency(product.effectivePrice)}
-                    </p>
-                    <span className="mt-2 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
-                      {product.discountPercent}% off · discount
-                    </span>
-                  </div>
-                ) : (
-                  <p className="mt-6 text-3xl font-bold text-slate-900">
+            <div className="relative z-0 flex flex-col p-4 sm:p-6 lg:p-8">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 sm:text-xs">
+                {product.category}
+              </p>
+              <h1 className="mt-1.5 text-xl font-bold leading-snug text-slate-900 sm:text-2xl lg:text-3xl">
+                {product.name}
+              </h1>
+
+              {product.hasDiscount ? (
+                <div className="mt-4">
+                  <p className="text-sm text-slate-400 line-through">
+                    {formatCurrency(product.listPrice)}
+                  </p>
+                  <p className="text-2xl font-bold text-slate-900 sm:text-3xl">
                     {formatCurrency(product.effectivePrice)}
                   </p>
-                )}
+                  <span className="mt-1.5 inline-flex rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                    {product.discountPercent}% off
+                  </span>
+                </div>
+              ) : (
+                <p className="mt-4 text-2xl font-bold text-slate-900 sm:text-3xl">
+                  {formatCurrency(product.effectivePrice)}
+                </p>
+              )}
+
+              <div className="mt-3 flex items-center gap-1.5 text-xs sm:text-sm">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="font-medium text-emerald-700">
+                  {product.stock} in stock
+                </span>
               </div>
 
-              <p className="text-sm leading-6 text-slate-600 lg:mt-6 lg:leading-7">
+              <p className="mt-4 text-sm leading-6 text-slate-600 sm:mt-5">
                 {product.description || "No description available."}
               </p>
 
-              <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-7 sm:gap-3">
+              <div className="mt-5 grid grid-cols-2 gap-2.5 sm:gap-3">
                 <div className="rounded-lg bg-slate-50 p-3 sm:p-4">
                   <p className="text-[10px] uppercase text-slate-400 sm:text-[11px]">
                     Material
@@ -5872,26 +7901,19 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              <div className="mt-4 hidden items-center gap-2 text-xs lg:flex">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span className="font-medium text-emerald-700">
-                  {product.stock} units available
-                </span>
-              </div>
-
-              <p className="mt-4 text-[11px] text-slate-500 sm:mt-6 sm:text-xs">
+              <p className="mt-4 text-[11px] text-slate-500 sm:text-xs">
                 Change quantity on the cart page after adding.
                 {product.hasDiscount
                   ? ` Price includes ${product.discountPercent}% discount.`
                   : ""}
               </p>
 
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3">
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3">
                 <button
                   type="button"
                   disabled={busy}
                   onClick={toggleCart}
-                  className={`flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg px-2 py-3 text-xs font-semibold text-white transition disabled:opacity-60 sm:gap-2 sm:px-4 sm:text-sm ${
+                  className={`flex min-h-[48px] items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold text-white transition disabled:opacity-60 ${
                     inCart
                       ? "bg-red-600 hover:bg-red-700"
                       : "bg-slate-900 hover:bg-slate-800"
@@ -5901,21 +7923,21 @@ export default function ProductDetailPage() {
                     <Loader2 size={16} className="animate-spin" />
                   ) : inCart ? (
                     <>
-                      <Trash2 size={15} className="shrink-0" />
-                      <span className="truncate">Remove</span>
+                      <Trash2 size={16} className="shrink-0" />
+                      Remove
                     </>
                   ) : (
                     <>
-                      <ShoppingBag size={15} className="shrink-0" />
-                      <span className="truncate">Add to cart</span>
+                      <ShoppingBag size={16} className="shrink-0" />
+                      Add to cart
                     </>
                   )}
                 </button>
                 <Link
                   href="/cart"
-                  className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-2 py-3 text-xs font-semibold text-slate-800 hover:bg-slate-50 sm:gap-2 sm:px-4 sm:text-sm"
+                  className="flex min-h-[48px] items-center justify-center rounded-lg border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
                 >
-                  <span className="truncate">Go to Cart</span>
+                  Go to Cart
                 </Link>
               </div>
 
@@ -5931,7 +7953,7 @@ export default function ProductDetailPage() {
                 </p>
               )}
 
-              <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-3.5 sm:mt-7 sm:p-4">
+              <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-3.5 sm:mt-6 sm:p-4">
                 <div className="flex gap-3">
                   <Truck
                     size={18}
@@ -5951,9 +7973,7 @@ export default function ProductDetailPage() {
                           {" · "}
                           {product.leadTimeDays} day
                           {product.leadTimeDays === 1 ? "" : "s"} lead time
-                          {product.leadTime
-                            ? ` (${product.leadTime})`
-                            : ""}
+                          {product.leadTime ? ` (${product.leadTime})` : ""}
                         </>
                       ) : (
                         "Delivery date confirmed at checkout."
@@ -5968,6 +7988,8 @@ export default function ProductDetailPage() {
             </div>
           </div>
         </section>
+
+        <ProductReviews productId={product.id} productName={product.name} />
       </div>
     </main>
   );

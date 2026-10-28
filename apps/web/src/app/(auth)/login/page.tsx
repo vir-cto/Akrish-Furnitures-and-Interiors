@@ -4570,7 +4570,7 @@ function LoginPageContent() {
               <div className="flex flex-1 items-center justify-center px-5 py-6 sm:px-7 sm:py-7 lg:px-8 lg:py-5 xl:px-10">
                 <div className="w-full max-w-[360px]">
                   {/* Brand */}
-                  <Link
+                  {/* <Link
                     href="/"
                     className="mb-5 inline-flex items-center gap-2.5"
                   >
@@ -4579,6 +4579,26 @@ function LoginPageContent() {
                         A
                       </span>
                     </div>
+
+                    <div>
+                      <h2 className="text-lg font-bold leading-tight tracking-tight text-[#252b25]">
+                        Akrish
+                      </h2>
+                      <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#a47740]">
+                        Furniture &amp; Interior
+                      </p>
+                    </div>
+                  </Link> */}
+
+                  <Link
+                    href="/"
+                    className="mb-5 inline-flex items-center gap-2.5"
+                  >
+                    <img
+                      src="/Akrish.jpg"
+                      alt="Akrish"
+                      className="h-10 w-10 rounded-xl object-cover shadow-md shadow-emerald-900/15"
+                    />
 
                     <div>
                       <h2 className="text-lg font-bold leading-tight tracking-tight text-[#252b25]">

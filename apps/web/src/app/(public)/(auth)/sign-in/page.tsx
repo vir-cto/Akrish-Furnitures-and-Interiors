@@ -6066,10 +6066,26 @@ function CustomerSignInForm() {
               <div className="absolute inset-0 bg-gradient-to-b from-[#10251d]/80 via-[#172d23]/65 to-[#101c15]/95" />
 
               <div className="relative z-10 flex h-full flex-col justify-between p-7 xl:p-8">
-                <Link href="/" className="inline-flex items-center gap-2.5">
+                {/* <Link href="/" className="inline-flex items-center gap-2.5">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#176b5b] shadow-md">
                     <span className="text-lg font-bold text-white">A</span>
                   </div>
+                  <div>
+                    <h2 className="text-lg font-bold tracking-tight text-white">
+                      Akrish
+                    </h2>
+                    <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#e2cda4]">
+                      Furniture &amp; Interior
+                    </p>
+                  </div>
+                </Link> */}
+
+                <Link href="/" className="inline-flex items-center gap-2.5">
+                  <img
+                    src="/Akrish.jpg"
+                    alt="Akrish"
+                    className="h-10 w-10 rounded-xl object-cover shadow-md"
+                  />
                   <div>
                     <h2 className="text-lg font-bold tracking-tight text-white">
                       Akrish
@@ -6126,10 +6142,24 @@ function CustomerSignInForm() {
             {/* Right form */}
             <section className="flex min-h-0 flex-col overflow-hidden">
               <div className="flex shrink-0 items-center justify-between border-b border-[#e8e9e1] bg-white px-4 py-2.5 lg:hidden">
-                <Link href="/" className="inline-flex items-center gap-2.5">
+                {/* <Link href="/" className="inline-flex items-center gap-2.5">
                   <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#176b5b] text-sm font-bold text-white">
                     A
                   </div>
+                  <div>
+                    <p className="text-sm font-bold text-[#252b25]">Akrish</p>
+                    <p className="text-[10px] text-[#85887e]">
+                      Furniture &amp; Interior
+                    </p>
+                  </div>
+                </Link> */}
+
+                <Link href="/" className="inline-flex items-center gap-2.5">
+                  <img
+                    src="/Akrish.jpg"
+                    alt="Akrish"
+                    className="h-8 w-8 rounded-xl object-cover"
+                  />
                   <div>
                     <p className="text-sm font-bold text-[#252b25]">Akrish</p>
                     <p className="text-[10px] text-[#85887e]">

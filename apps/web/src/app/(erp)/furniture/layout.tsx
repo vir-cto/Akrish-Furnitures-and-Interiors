@@ -11159,1035 +11159,1044 @@
 // }
 
 
-"use client";
+// "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import {
-  LogOut,
-  Users,
-  Search,
-  Bell,
-  Settings,
-  X,
-  Sofa,
-  LayoutDashboard,
-  Home,
-  ArrowLeftIcon,
-  ArrowBigLeftIcon,
-} from "lucide-react";
-import {
-  collection,
-  query,
-  orderBy,
-  limit,
-  onSnapshot,
-  type Timestamp,
-} from "firebase/firestore";
-import { useAuth } from "@/core/auth/AuthContext";
-import { db } from "@/core/config/firebaseClient";
-import {
-  markEnquiryNotificationSeen,
-  markEnquiryNotificationsSeen,
-} from "@/modules/furniture/services/enquiryService";
+// import { useEffect, useMemo, useRef, useState } from "react";
+// import Link from "next/link";
+// import { usePathname, useRouter } from "next/navigation";
+// import {
+//   LogOut,
+//   Users,
+//   Search,
+//   Bell,
+//   Settings,
+//   X,
+//   Sofa,
+//   LayoutDashboard,
+//   Home,
+//   ArrowLeftIcon,
+//   ArrowBigLeftIcon,
+// } from "lucide-react";
+// import {
+//   collection,
+//   query,
+//   orderBy,
+//   limit,
+//   onSnapshot,
+//   type Timestamp,
+// } from "firebase/firestore";
+// import { useAuth } from "@/core/auth/AuthContext";
+// import { db } from "@/core/config/firebaseClient";
+// import {
+//   markEnquiryNotificationSeen,
+//   markEnquiryNotificationsSeen,
+// } from "@/modules/furniture/services/enquiryService";
 
-type NavItem = {
-  label: string;
-  href: string;
-  icon: string;
-  nested?: boolean;
-};
+// type NavItem = {
+//   label: string;
+//   href: string;
+//   icon: string;
+//   nested?: boolean;
+// };
 
-const navigation: NavItem[] = [
-  { label: "Dashboard", href: "/interior/dashboard", icon: "▦" },
-  { label: "CRM", href: "/interior/crm", icon: "♟" },
-  { label: "HRMS", href: "/interior/hrms", icon: "♟" },
-  { label: "Clients", href: "/interior/clients", icon: "♙" },
-  { label: "Quotations", href: "/interior/quotations", icon: "▤" },
-  { label: "Contracts", href: "/interior/contracts", icon: "▥" },
-  { label: "Projects", href: "/interior/projects", icon: "▣" },
-  { label: "Vendors", href: "/interior/vendors", icon: "◆" },
-  { label: "Payments", href: "/interior/payments", icon: "₹" },
-  { label: "Reports", href: "/interior/reports", icon: "▥" },
-];
+// const navigation: NavItem[] = [
+//   { label: "Dashboard", href: "/interior/dashboard", icon: "▦" },
+//   { label: "CRM", href: "/interior/crm", icon: "♟" },
+//   { label: "HRMS", href: "/interior/hrms", icon: "♟" },
+//   { label: "Clients", href: "/interior/clients", icon: "♙" },
+//   { label: "Quotations", href: "/interior/quotations", icon: "▤" },
+//   { label: "Contracts", href: "/interior/contracts", icon: "▥" },
+//   { label: "Projects", href: "/interior/projects", icon: "▣" },
+//   { label: "Vendors", href: "/interior/vendors", icon: "◆" },
+//   { label: "Payments", href: "/interior/payments", icon: "₹" },
+//   { label: "Reports", href: "/interior/reports", icon: "▥" },
+// ];
 
-const furnitureNavigation: NavItem[] = [
-  { label: "Dashboard", href: "/furniture/dashboard", icon: "▦" },
-  { label: "Products", href: "/furniture/products", icon: "▤" },
-  {
-    label: "Categories",
-    href: "/furniture/categories",
-    icon: "☰",
-    nested: true,
-  },
-  {
-    label: "Sub Categories",
-    href: "/furniture/sub-categories",
-    icon: "▤",
-    nested: true,
-  },
-  {
-    label: "Materials",
-    href: "/furniture/materials",
-    icon: "◆",
-    nested: true,
-  },
-  {
-    label: "Finishes",
-    href: "/furniture/finishes",
-    icon: "▣",
-    nested: true,
-  },
-  { label: "Inventory", href: "/furniture/inventory", icon: "▣" },
-  { label: "Customers", href: "/furniture/customers", icon: "♙" },
-  { label: "Enquiries", href: "/furniture/enquiries", icon: "◉" },
-  { label: "Orders", href: "/furniture/orders", icon: "▥" },
-  { label: "Payments", href: "/furniture/payments", icon: "₹" },
-  { label: "Expenses", href: "/furniture/expenses", icon: "◆" },
-  { label: "Delivery", href: "/furniture/settings/delivery", icon: "↗" },
-  { label: "Reports", href: "/furniture/reports", icon: "▥" },
-];
+// const furnitureNavigation: NavItem[] = [
+//   { label: "Dashboard", href: "/furniture/dashboard", icon: "▦" },
+//   { label: "Products", href: "/furniture/products", icon: "▤" },
+//   {
+//     label: "Categories",
+//     href: "/furniture/categories",
+//     icon: "☰",
+//     nested: true,
+//   },
+//   {
+//     label: "Sub Categories",
+//     href: "/furniture/sub-categories",
+//     icon: "▤",
+//     nested: true,
+//   },
+//   {
+//     label: "Materials",
+//     href: "/furniture/materials",
+//     icon: "◆",
+//     nested: true,
+//   },
+//   {
+//     label: "Finishes",
+//     href: "/furniture/finishes",
+//     icon: "▣",
+//     nested: true,
+//   },
+//   { label: "Inventory", href: "/furniture/inventory", icon: "▣" },
+//   { label: "Customers", href: "/furniture/customers", icon: "♙" },
+//   { label: "Enquiries", href: "/furniture/enquiries", icon: "◉" },
+//   { label: "Orders", href: "/furniture/orders", icon: "▥" },
+//   { label: "Payments", href: "/furniture/payments", icon: "₹" },
+//   { label: "Expenses", href: "/furniture/expenses", icon: "◆" },
+//   { label: "Delivery", href: "/furniture/settings/delivery", icon: "↗" },
+//   { label: "Reports", href: "/furniture/reports", icon: "▥" },
+// ];
 
-type NotificationItem = {
-  id: string;
-  title: string;
-  body: string;
-  href: string;
-  time: string;
-  read: boolean;
-  enquiryId: string;
-};
+// type NotificationItem = {
+//   id: string;
+//   title: string;
+//   body: string;
+//   href: string;
+//   time: string;
+//   read: boolean;
+//   enquiryId: string;
+// };
 
-const ENQUIRIES_COLLECTION = "furniture_enquiries";
+// const ENQUIRIES_COLLECTION = "furniture_enquiries";
 
-function formatRelativeTime(value: unknown): string {
-  let date: Date | null = null;
-  if (value && typeof value === "object" && "toDate" in (value as object)) {
-    try {
-      date = (value as Timestamp).toDate();
-    } catch {
-      date = null;
-    }
-  } else if (typeof value === "string" || typeof value === "number") {
-    date = new Date(value);
-  }
-  if (!date || Number.isNaN(date.getTime())) return "Just now";
+// function formatRelativeTime(value: unknown): string {
+//   let date: Date | null = null;
+//   if (value && typeof value === "object" && "toDate" in (value as object)) {
+//     try {
+//       date = (value as Timestamp).toDate();
+//     } catch {
+//       date = null;
+//     }
+//   } else if (typeof value === "string" || typeof value === "number") {
+//     date = new Date(value);
+//   }
+//   if (!date || Number.isNaN(date.getTime())) return "Just now";
 
-  const diffMs = Date.now() - date.getTime();
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-  });
-}
+//   const diffMs = Date.now() - date.getTime();
+//   const mins = Math.floor(diffMs / 60000);
+//   if (mins < 1) return "Just now";
+//   if (mins < 60) return `${mins}m ago`;
+//   const hours = Math.floor(mins / 60);
+//   if (hours < 24) return `${hours}h ago`;
+//   const days = Math.floor(hours / 24);
+//   if (days === 1) return "Yesterday";
+//   if (days < 7) return `${days}d ago`;
+//   return date.toLocaleDateString("en-IN", {
+//     day: "2-digit",
+//     month: "short",
+//   });
+// }
 
-function getPageTitle(pathname: string) {
-  const allItems = [...navigation, ...furnitureNavigation];
-  const item = allItems.find(
-    (nav) => pathname === nav.href || pathname.startsWith(`${nav.href}/`)
-  );
-  if (pathname.startsWith("/admin/users")) return "Staff Users";
-  return item?.label ?? "Dashboard";
-}
+// function getPageTitle(pathname: string) {
+//   const allItems = [...navigation, ...furnitureNavigation];
+//   const item = allItems.find(
+//     (nav) => pathname === nav.href || pathname.startsWith(`${nav.href}/`)
+//   );
+//   if (pathname.startsWith("/admin/users")) return "Staff Users";
+//   return item?.label ?? "Dashboard";
+// }
 
-function Logo() {
-  return (
-    <div className="flex min-w-0 items-center gap-2">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#176b57] text-white shadow-sm">
-        <span className="text-lg font-bold">A</span>
-      </div>
-      <div className="min-w-0 leading-none">
-        <div className="truncate text-[18px] font-bold tracking-tight text-[#1f2937] sm:text-[20px]">
-          Akrish
-        </div>
-        <div className="mt-1 hidden text-[8px] font-medium uppercase tracking-[0.16em] text-slate-400 sm:block">
-          Furniture and Interior
-        </div>
-      </div>
-    </div>
-  );
-}
+// function Logo() {
+//   return (
+//     <div className="flex min-w-0 items-center gap-2">
+//       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#176b57] text-white shadow-sm">
+//         <span className="text-lg font-bold">A</span>
+//       </div>
+//       <div className="min-w-0 leading-none">
+//         <div className="truncate text-[18px] font-bold tracking-tight text-[#1f2937] sm:text-[20px]">
+//           Akrish
+//         </div>
+//         <div className="mt-1 hidden text-[8px] font-medium uppercase tracking-[0.16em] text-slate-400 sm:block">
+//           Furniture and Interior
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
 
-function HeaderModuleSwitcher({
-  isFurniture,
-  canInterior,
-  canFurniture,
-}: {
-  isFurniture: boolean;
-  canInterior: boolean;
-  canFurniture: boolean;
-}) {
-  if (!canInterior || !canFurniture) {
-    return null;
-  }
+// function HeaderModuleSwitcher({
+//   isFurniture,
+//   canInterior,
+//   canFurniture,
+// }: {
+//   isFurniture: boolean;
+//   canInterior: boolean;
+//   canFurniture: boolean;
+// }) {
+//   if (!canInterior || !canFurniture) {
+//     return null;
+//   }
 
-  return (
-    <div
-      className="relative flex shrink-0 items-center rounded-full border border-slate-200 bg-slate-50 p-0.5 shadow-sm"
-      role="group"
-      aria-label="Switch ERP module"
-    >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-full bg-white shadow-sm transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-        style={{
-          left: isFurniture ? "calc(50% + 1px)" : "2px",
-        }}
-      />
+//   return (
+//     <div
+//       className="relative flex shrink-0 items-center rounded-full border border-slate-200 bg-slate-50 p-0.5 shadow-sm"
+//       role="group"
+//       aria-label="Switch ERP module"
+//     >
+//       <span
+//         aria-hidden
+//         className="pointer-events-none absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-full bg-white shadow-sm transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+//         style={{
+//           left: isFurniture ? "calc(50% + 1px)" : "2px",
+//         }}
+//       />
 
-      <Link
-        href="/interior/dashboard"
-        className={`relative z-10 flex flex-1 items-center justify-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors duration-300 sm:gap-1.5 sm:px-3.5 sm:py-2 sm:text-sm ${
-          !isFurniture
-            ? "text-[#176b57]"
-            : "text-slate-500 hover:text-slate-700"
-        }`}
-        title="Interior ERP"
-      >
-        <LayoutDashboard
-          size={15}
-          className={`shrink-0 transition-transform duration-300 ${
-            !isFurniture ? "scale-110" : "scale-100"
-          }`}
-        />
-        <span className="hidden sm:inline">Interior</span>
-      </Link>
+//       <Link
+//         href="/interior/dashboard"
+//         className={`relative z-10 flex flex-1 items-center justify-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors duration-300 sm:gap-1.5 sm:px-3.5 sm:py-2 sm:text-sm ${
+//           !isFurniture
+//             ? "text-[#176b57]"
+//             : "text-slate-500 hover:text-slate-700"
+//         }`}
+//         title="Interior ERP"
+//       >
+//         <LayoutDashboard
+//           size={15}
+//           className={`shrink-0 transition-transform duration-300 ${
+//             !isFurniture ? "scale-110" : "scale-100"
+//           }`}
+//         />
+//         <span className="hidden sm:inline">Interior</span>
+//       </Link>
 
-      <Link
-        href="/furniture/dashboard"
-        className={`relative z-10 flex flex-1 items-center justify-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors duration-300 sm:gap-1.5 sm:px-3.5 sm:py-2 sm:text-sm ${
-          isFurniture
-            ? "text-[#176b57]"
-            : "text-slate-500 hover:text-slate-700"
-        }`}
-        title="Furniture ERP — Products & Sales"
-      >
-        <Sofa
-          size={15}
-          className={`shrink-0 transition-transform duration-300 ${
-            isFurniture ? "scale-110" : "scale-100"
-          }`}
-        />
-        <span className="hidden sm:inline">Furniture</span>
-      </Link>
-    </div>
-  );
-}
+//       <Link
+//         href="/furniture/dashboard"
+//         className={`relative z-10 flex flex-1 items-center justify-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors duration-300 sm:gap-1.5 sm:px-3.5 sm:py-2 sm:text-sm ${
+//           isFurniture
+//             ? "text-[#176b57]"
+//             : "text-slate-500 hover:text-slate-700"
+//         }`}
+//         title="Furniture ERP — Products & Sales"
+//       >
+//         <Sofa
+//           size={15}
+//           className={`shrink-0 transition-transform duration-300 ${
+//             isFurniture ? "scale-110" : "scale-100"
+//           }`}
+//         />
+//         <span className="hidden sm:inline">Furniture</span>
+//       </Link>
+//     </div>
+//   );
+// }
 
-export default function ERPLayout({
+// export default function ERPLayout({
+//   children,
+// }: Readonly<{
+//   children: React.ReactNode;
+// }>) {
+//   const pathname = usePathname();
+//   const router = useRouter();
+//   const { user, isAdmin, logout, hasModule, isLoading } = useAuth();
+
+//   const canInterior = hasModule("interior");
+//   const canFurniture = hasModule("furniture");
+
+//   const [sidebarOpen, setSidebarOpen] = useState(false);
+//   const [searchOpen, setSearchOpen] = useState(false);
+//   const [searchQuery, setSearchQuery] = useState("");
+//   const [notifOpen, setNotifOpen] = useState(false);
+//   const [settingsOpen, setSettingsOpen] = useState(false);
+//   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+//   const [contentVisible, setContentVisible] = useState(true);
+//   const [displayChildren, setDisplayChildren] = useState(children);
+//   const prevModuleRef = useRef<"interior" | "furniture" | null>(null);
+
+//   const searchInputRef = useRef<HTMLInputElement>(null);
+//   const headerActionsRef = useRef<HTMLDivElement>(null);
+
+//   const isFurniture =
+//     pathname === "/furniture" || pathname.startsWith("/furniture/");
+//   const currentModule: "interior" | "furniture" = isFurniture
+//     ? "furniture"
+//     : "interior";
+//   const currentNavigation = isFurniture ? furnitureNavigation : navigation;
+//   const pageTitle = getPageTitle(pathname);
+//   const moduleName = isFurniture ? "Furniture ERP" : "Interior ERP";
+//   const moduleKey = isFurniture ? "furniture" : "interior";
+
+//   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+//   useEffect(() => {
+//     document.title = "Akrish Collective ERP"
+//   }, [pageTitle]);
+
+//   useEffect(() => {
+//     setSidebarOpen(false);
+//     setNotifOpen(false);
+//     setSettingsOpen(false);
+//     setUserMenuOpen(false);
+//     setSearchOpen(false);
+//   }, [pathname]);
+
+//   useEffect(() => {
+//     if (!sidebarOpen) return;
+//     const prev = document.body.style.overflow;
+//     document.body.style.overflow = "hidden";
+//     return () => {
+//       document.body.style.overflow = prev;
+//     };
+//   }, [sidebarOpen]);
+
+//   useEffect(() => {
+//     if (isLoading || !user) return;
+
+//     if (pathname.startsWith("/furniture") && !canFurniture) {
+//       router.replace(canInterior ? "/interior/dashboard" : "/unauthorized");
+//       return;
+//     }
+
+//     if (pathname.startsWith("/interior") && !canInterior) {
+//       router.replace(canFurniture ? "/furniture/dashboard" : "/unauthorized");
+//     }
+//   }, [isLoading, user, pathname, canInterior, canFurniture, router]);
+
+//   useEffect(() => {
+//     if (!isFurniture || !canFurniture) {
+//       setNotifications([]);
+//       setNotifOpen(false);
+//       return;
+//     }
+
+//     let unsub: (() => void) | undefined;
+
+//     try {
+//       const q = query(
+//         collection(db, ENQUIRIES_COLLECTION),
+//         orderBy("createdAt", "desc"),
+//         limit(25)
+//       );
+
+//       unsub = onSnapshot(
+//         q,
+//         (snapshot) => {
+//           const items: NotificationItem[] = [];
+
+//           snapshot.forEach((docSnap) => {
+//             const data = docSnap.data();
+//             const status = String(data.status || "New");
+//             const seen = data.notificationSeen === true;
+
+//             if (status !== "New") return;
+//             if (seen) return;
+
+//             const name =
+//               String(data.customerName || data.name || "Customer").trim() ||
+//               "Customer";
+//             const product = String(
+//               data.productName || data.productCode || ""
+//             ).trim();
+//             const source = String(data.source || "Website").trim();
+//             const message = String(data.message || "").trim();
+
+//             items.push({
+//               id: `enq-${docSnap.id}`,
+//               enquiryId: docSnap.id,
+//               title: "New enquiry",
+//               body: product
+//                 ? `${name} · ${product}${source ? ` · ${source}` : ""}`
+//                 : message
+//                   ? `${name}: ${message.slice(0, 60)}${
+//                       message.length > 60 ? "…" : ""
+//                     }`
+//                   : `${name} sent a contact request${
+//                       source ? ` (${source})` : ""
+//                     }`,
+//               href: "/furniture/enquiries",
+//               time: formatRelativeTime(data.createdAt),
+//               read: false,
+//             });
+//           });
+
+//           setNotifications(items);
+//         },
+//         (err) => {
+//           console.error("Enquiry notifications listener error:", err);
+//         }
+//       );
+//     } catch (err) {
+//       console.error("Failed to start enquiry notifications:", err);
+//     }
+
+//     return () => {
+//       unsub?.();
+//     };
+//   }, [isFurniture, canFurniture]);
+
+//   useEffect(() => {
+//     const prev = prevModuleRef.current;
+//     if (prev !== null && prev !== currentModule) {
+//       setContentVisible(false);
+//       const t = window.setTimeout(() => {
+//         setDisplayChildren(children);
+//         setContentVisible(true);
+//       }, 180);
+//       prevModuleRef.current = currentModule;
+//       return () => window.clearTimeout(t);
+//     }
+//     setDisplayChildren(children);
+//     setContentVisible(true);
+//     prevModuleRef.current = currentModule;
+//   }, [children, currentModule]);
+
+//   const unreadCount = notifications.length;
+
+//   useEffect(() => {
+//     function onDocClick(e: MouseEvent) {
+//       if (
+//         headerActionsRef.current &&
+//         !headerActionsRef.current.contains(e.target as Node)
+//       ) {
+//         setNotifOpen(false);
+//         setSettingsOpen(false);
+//         setUserMenuOpen(false);
+//       }
+//     }
+//     document.addEventListener("mousedown", onDocClick);
+//     return () => document.removeEventListener("mousedown", onDocClick);
+//   }, []);
+
+//   useEffect(() => {
+//     if (searchOpen) {
+//       setTimeout(() => searchInputRef.current?.focus(), 50);
+//     }
+//   }, [searchOpen]);
+
+//   useEffect(() => {
+//     function onKey(e: KeyboardEvent) {
+//       if (e.key === "Escape") {
+//         setSearchOpen(false);
+//         setNotifOpen(false);
+//         setSettingsOpen(false);
+//         setUserMenuOpen(false);
+//         setSidebarOpen(false);
+//       }
+//     }
+//     window.addEventListener("keydown", onKey);
+//     return () => window.removeEventListener("keydown", onKey);
+//   }, []);
+
+//   const searchTargets = useMemo(() => {
+//     const base = isFurniture
+//       ? [
+//           { label: "Products", href: "/furniture/products" },
+//           { label: "Inventory", href: "/furniture/inventory" },
+//           { label: "Categories", href: "/furniture/categories" },
+//           { label: "Sub Categories", href: "/furniture/sub-categories" },
+//           { label: "Materials", href: "/furniture/materials" },
+//           { label: "Finishes", href: "/furniture/finishes" },
+//           { label: "Customers", href: "/furniture/customers" },
+//           { label: "Enquiries", href: "/furniture/enquiries" },
+//           { label: "Orders", href: "/furniture/orders" },
+//           { label: "Payments", href: "/furniture/payments" },
+//           { label: "Expenses", href: "/furniture/expenses" },
+//           { label: "Reports", href: "/furniture/reports" },
+//         ]
+//       : [
+//           { label: "CRM / Leads", href: "/interior/crm" },
+//           { label: "Clients", href: "/interior/clients" },
+//           { label: "Quotations", href: "/interior/quotations" },
+//           { label: "Contracts", href: "/interior/contracts" },
+//           { label: "Projects", href: "/interior/projects" },
+//           { label: "HRMS", href: "/interior/hrms" },
+//           { label: "Vendors", href: "/interior/vendors" },
+//           { label: "Payments", href: "/interior/payments" },
+//           { label: "Reports", href: "/interior/reports" },
+//         ];
+
+//     if (isAdmin) {
+//       base.push({ label: "Staff Users", href: "/admin/users" });
+//     }
+//     return base;
+//   }, [isFurniture, isAdmin]);
+
+//   const filteredSearch = useMemo(() => {
+//     const q = searchQuery.toLowerCase().trim();
+//     if (!q) return searchTargets;
+//     return searchTargets.filter((t) => t.label.toLowerCase().includes(q));
+//   }, [searchQuery, searchTargets]);
+
+//   function runSearch(e?: React.FormEvent) {
+//     e?.preventDefault();
+//     const q = searchQuery.trim();
+//     if (!q) return;
+
+//     const match = filteredSearch[0];
+//     if (match) {
+//       router.push(`${match.href}?search=${encodeURIComponent(q)}`);
+//     } else if (isFurniture) {
+//       router.push(`/furniture/products?search=${encodeURIComponent(q)}`);
+//     } else {
+//       router.push(`/interior/crm?search=${encodeURIComponent(q)}`);
+//     }
+//     setSearchOpen(false);
+//     setSearchQuery("");
+//   }
+
+//   async function openNotification(n: NotificationItem) {
+//     setNotifications((list) => list.filter((item) => item.id !== n.id));
+//     setNotifOpen(false);
+//     router.push(n.href);
+
+//     try {
+//       await markEnquiryNotificationSeen(n.enquiryId);
+//     } catch (err) {
+//       console.error("Failed to mark notification seen:", err);
+//     }
+//   }
+
+//   async function markAllRead() {
+//     const ids = notifications.map((n) => n.enquiryId);
+//     setNotifications([]);
+//     setNotifOpen(false);
+//     try {
+//       await markEnquiryNotificationsSeen(ids);
+//     } catch (err) {
+//       console.error("Failed to clear notifications:", err);
+//     }
+//   }
+
+//   const handleLogout = () => {
+//     logout();
+//     router.push("/login");
+//   };
+
+//   const displayName = user?.name || "User";
+//   const displayRole = user?.role
+//     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+//     : "Staff";
+//   const avatarLetter = displayName.charAt(0).toUpperCase();
+
+//   return (
+//     <div className="min-h-screen min-h-[100dvh] overflow-x-hidden bg-[#f7f9f8] text-slate-800">
+//       {sidebarOpen && (
+//         <button
+//           type="button"
+//           aria-label="Close sidebar"
+//           onClick={() => setSidebarOpen(false)}
+//           className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-200 lg:hidden"
+//         />
+//       )}
+
+//       <aside
+//         className={`
+//           fixed z-50 flex flex-col bg-white
+//           transition-all duration-250 ease-out
+//           left-3 top-3 bottom-3 w-[min(17.5rem,calc(100vw-1.5rem))]
+//           rounded-2xl border border-white/80
+//           shadow-[0_12px_40px_rgba(0,0,0,0.18)] ring-1 ring-slate-900/5
+//           lg:left-0 lg:top-0 lg:bottom-0 lg:w-[235px]
+//           lg:rounded-none lg:border-0 lg:border-r lg:border-slate-200
+//           lg:shadow-none lg:ring-0
+//           ${
+//             sidebarOpen
+//               ? "translate-x-0 opacity-100"
+//               : "-translate-x-[calc(100%+1.5rem)] opacity-0 pointer-events-none lg:pointer-events-auto lg:translate-x-0 lg:opacity-100"
+//           }
+//         `}
+//         style={{
+//           animation: sidebarOpen ? "akrishSidebarIn 0.22s ease-out" : undefined,
+//         }}
+//       >
+//         <div className="flex h-14 shrink-0 items-center border-b border-slate-100 px-4 sm:h-[64px] sm:px-5">
+//           <Logo />
+//           <button
+//             type="button"
+//             onClick={() => setSidebarOpen(false)}
+//             className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 lg:hidden"
+//             aria-label="Close menu"
+//           >
+//             <X size={18} />
+//           </button>
+//         </div>
+
+//         <nav className="mt-2 flex-1 overflow-y-auto overscroll-contain px-2.5 pb-3 sm:mt-3 sm:px-3">
+//           <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
+//             {isFurniture ? "Furniture Management" : "Interior Management"}
+//           </p>
+
+//           <div className="space-y-0.5 sm:space-y-1">
+//             {currentNavigation.map((item) => {
+//               const active =
+//                 pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+//               return (
+//                 <Link
+//                   key={item.href}
+//                   href={item.href}
+//                   onClick={() => setSidebarOpen(false)}
+//                   className={`group flex min-h-[42px] items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200 sm:min-h-0 sm:rounded-lg ${
+//                     item.nested ? "ml-2 border-l border-slate-200 pl-3" : ""
+//                   } ${
+//                     active
+//                       ? "bg-[#e8f5ef] text-[#176b57] shadow-sm"
+//                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+//                   }`}
+//                 >
+//                   <span
+//                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[13px] transition-colors duration-200 sm:h-6 sm:w-6 ${
+//                       active
+//                         ? "bg-[#176b57] text-white"
+//                         : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
+//                     }`}
+//                   >
+//                     {item.icon}
+//                   </span>
+//                   <span className="truncate">{item.label}</span>
+//                   {active && (
+//                     <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[#176b57]" />
+//                   )}
+//                 </Link>
+//               );
+//             })}
+
+//             {isAdmin && (
+//               <>
+//                 <div className="my-3 border-t border-slate-100" />
+//                 <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
+//                   Administration
+//                 </p>
+//                 <Link
+//                   href="/admin/users"
+//                   onClick={() => setSidebarOpen(false)}
+//                   className={`group flex min-h-[42px] items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200 sm:min-h-0 sm:rounded-lg ${
+//                     pathname.startsWith("/admin/users")
+//                       ? "bg-[#e8f5ef] text-[#176b57] shadow-sm"
+//                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+//                   }`}
+//                 >
+//                   <span
+//                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-200 sm:h-6 sm:w-6 ${
+//                       pathname.startsWith("/admin/users")
+//                         ? "bg-[#176b57] text-white"
+//                         : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
+//                     }`}
+//                   >
+//                     <Users size={14} />
+//                   </span>
+//                   <span>Staff Users</span>
+//                 </Link>
+//               </>
+//             )}
+//           </div>
+//         </nav>
+
+//         <div className="shrink-0 border-t border-slate-100 p-2.5 sm:p-3">
+//           <Link
+//             href="/"
+//             onClick={() => setSidebarOpen(false)}
+//             className="mb-2 flex min-h-[40px] w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-[#f4fbf8] hover:text-[#176b57]"
+//           >
+//             <ArrowLeftIcon size={16} className="shrink-0 text-[#176b57]" />
+//             Back to website
+//           </Link>
+
+//           <div className="rounded-xl bg-slate-50 p-2.5 sm:rounded-lg sm:p-3">
+//             <div className="flex items-center gap-2">
+//               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#176b57] text-xs font-bold text-white sm:h-8 sm:w-8">
+//                 {avatarLetter}
+//               </div>
+//               <div className="min-w-0 flex-1">
+//                 <p className="truncate text-xs font-semibold text-slate-800">
+//                   {displayName}
+//                 </p>
+//                 <p className="truncate text-[10px] text-slate-400">
+//                   {displayRole}
+//                 </p>
+//               </div>
+//               <button
+//                 type="button"
+//                 onClick={handleLogout}
+//                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600 sm:h-7 sm:w-7"
+//                 title="Logout"
+//               >
+//                 <LogOut size={14} />
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       </aside>
+
+//       <div className="min-h-screen lg:pl-[235px]">
+//         <header className="sticky top-0 z-30 h-14 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur sm:h-[64px]">
+//           <div className="flex h-full items-center justify-between gap-2 px-3 sm:px-4 md:px-6">
+//             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+//               <button
+//                 type="button"
+//                 onClick={() => setSidebarOpen(true)}
+//                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 lg:hidden"
+//                 aria-label="Open navigation"
+//               >
+//                 ☰
+//               </button>
+
+//               <div className="min-w-0">
+//                 <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+//                   {moduleName}
+//                 </p>
+//                 <h1 className="truncate text-sm font-semibold leading-tight text-slate-800">
+//                   {pageTitle}
+//                 </h1>
+//               </div>
+//             </div>
+
+//             <div
+//               ref={headerActionsRef}
+//               className="relative flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-2"
+//             >
+//               {/* <Link
+//                 href="/"
+//                 className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-[#176b57]/30 hover:bg-[#f4fbf8] hover:text-[#176b57] sm:px-3 sm:py-2 sm:text-sm"
+//                 title="Back to website"
+//               >
+//                 <Home size={16} className="shrink-0 text-[#176b57]" />
+//                 <span className="hidden sm:inline">Website</span>
+//               </Link> */}
+
+//               <HeaderModuleSwitcher
+//                 isFurniture={isFurniture}
+//                 canInterior={canInterior}
+//                 canFurniture={canFurniture}
+//               />
+
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setSearchOpen(true);
+//                   setNotifOpen(false);
+//                   setSettingsOpen(false);
+//                   setUserMenuOpen(false);
+//                 }}
+//                 className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 sm:h-9 sm:w-9"
+//                 aria-label="Search"
+//               >
+//                 <Search size={18} />
+//               </button>
+
+//               {isFurniture && canFurniture && (
+//                 <div className="relative">
+//                   <button
+//                     type="button"
+//                     onClick={() => {
+//                       setNotifOpen((v) => !v);
+//                       setSettingsOpen(false);
+//                       setUserMenuOpen(false);
+//                     }}
+//                     className="relative flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 sm:h-9 sm:w-9"
+//                     aria-label="Notifications"
+//                   >
+//                     <Bell size={18} />
+//                     {unreadCount > 0 && (
+//                       <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+//                         {unreadCount > 9 ? "9+" : unreadCount}
+//                       </span>
+//                     )}
+//                   </button>
+
+//                   {notifOpen && (
+//                     <div className="absolute right-0 z-50 mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+//                       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+//                         <p className="text-sm font-semibold text-slate-800">
+//                           Notifications
+//                         </p>
+//                         {notifications.length > 0 && (
+//                           <button
+//                             type="button"
+//                             onClick={markAllRead}
+//                             className="text-xs font-medium text-[#176b57] hover:underline"
+//                           >
+//                             Clear all
+//                           </button>
+//                         )}
+//                       </div>
+//                       <div className="max-h-[min(18rem,50vh)] overflow-y-auto">
+//                         {notifications.length === 0 ? (
+//                           <div className="px-4 py-10 text-center">
+//                             <Bell
+//                               size={28}
+//                               className="mx-auto mb-2 text-slate-300"
+//                             />
+//                             <p className="text-sm font-medium text-slate-600">
+//                               No notifications
+//                             </p>
+//                             <p className="mt-1 text-xs text-slate-400">
+//                               New website enquiries will appear here
+//                             </p>
+//                           </div>
+//                         ) : (
+//                           notifications.map((n) => (
+//                             <button
+//                               key={n.id}
+//                               type="button"
+//                               onClick={() => openNotification(n)}
+//                               className="flex w-full flex-col gap-0.5 border-b border-slate-50 bg-[#f4fbf8] px-4 py-3 text-left transition-colors hover:bg-slate-50"
+//                             >
+//                               <div className="flex items-center justify-between gap-2">
+//                                 <p className="text-sm font-semibold text-slate-800">
+//                                   {n.title}
+//                                 </p>
+//                                 <span className="shrink-0 text-[10px] text-slate-400">
+//                                   {n.time}
+//                                 </span>
+//                               </div>
+//                               <p className="text-xs text-slate-500">{n.body}</p>
+//                             </button>
+//                           ))
+//                         )}
+//                       </div>
+//                       {notifications.length > 0 && (
+//                         <button
+//                           type="button"
+//                           onClick={() => {
+//                             setNotifOpen(false);
+//                             router.push("/furniture/enquiries");
+//                           }}
+//                           className="w-full border-t border-slate-100 px-4 py-2.5 text-center text-xs font-semibold text-[#176b57] hover:bg-slate-50"
+//                         >
+//                           View all enquiries
+//                         </button>
+//                       )}
+//                     </div>
+//                   )}
+//                 </div>
+//               )}
+
+//               <div className="relative hidden sm:block">
+//                 <button
+//                   type="button"
+//                   onClick={() => {
+//                     setSettingsOpen((v) => !v);
+//                     setNotifOpen(false);
+//                     setUserMenuOpen(false);
+//                   }}
+//                   className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100"
+//                   aria-label="Settings"
+//                 >
+//                   <Settings size={18} />
+//                 </button>
+
+//                 {settingsOpen && (
+//                   <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+//                     {isAdmin && (
+//                       <button
+//                         type="button"
+//                         onClick={() => {
+//                           setSettingsOpen(false);
+//                           router.push("/admin/users");
+//                         }}
+//                         className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+//                       >
+//                         <Users size={14} />
+//                         Staff Users
+//                       </button>
+//                     )}
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setSettingsOpen(false);
+//                         router.push(
+//                           isFurniture
+//                             ? "/furniture/reports"
+//                             : "/interior/reports"
+//                         );
+//                       }}
+//                       className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+//                     >
+//                       Reports
+//                     </button>
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setSettingsOpen(false);
+//                         router.push(
+//                           isFurniture
+//                             ? "/furniture/dashboard"
+//                             : "/interior/dashboard"
+//                         );
+//                       }}
+//                       className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+//                     >
+//                       {isFurniture ? "Furniture" : "Interior"} Dashboard
+//                     </button>
+//                     <div className="my-1 border-t border-slate-100" />
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setSettingsOpen(false);
+//                         handleLogout();
+//                       }}
+//                       className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+//                     >
+//                       <LogOut size={14} />
+//                       Logout
+//                     </button>
+//                   </div>
+//                 )}
+//               </div>
+
+//               <div className="relative border-l border-slate-200 pl-2 sm:pl-3">
+//                 <button
+//                   type="button"
+//                   onClick={() => {
+//                     setUserMenuOpen((v) => !v);
+//                     setNotifOpen(false);
+//                     setSettingsOpen(false);
+//                   }}
+//                   className="flex items-center gap-2 rounded-lg px-1 py-1 transition-colors hover:bg-slate-50"
+//                 >
+//                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#dff1e8] text-xs font-bold text-[#176b57] sm:h-8 sm:w-8">
+//                     {avatarLetter}
+//                   </div>
+//                   <div className="hidden min-w-0 text-left md:block">
+//                     <p className="max-w-[120px] truncate text-xs font-semibold text-slate-800">
+//                       {displayName}
+//                     </p>
+//                     <p className="text-[10px] text-slate-400">{displayRole}</p>
+//                   </div>
+//                 </button>
+
+//                 {userMenuOpen && (
+//                   <div className="absolute right-0 z-50 mt-2 w-[min(13rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+//                     <div className="border-b border-slate-100 px-4 py-3">
+//                       <p className="text-sm font-semibold text-slate-800">
+//                         {displayName}
+//                       </p>
+//                       <p className="text-xs text-slate-400">{displayRole}</p>
+//                       <p className="mt-1 text-[10px] uppercase tracking-wide text-[#176b57]">
+//                         {moduleKey} module
+//                       </p>
+//                     </div>
+//                     {isAdmin && (
+//                       <button
+//                         type="button"
+//                         onClick={() => {
+//                           setUserMenuOpen(false);
+//                           router.push("/admin/users");
+//                         }}
+//                         className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+//                       >
+//                         <Users size={14} />
+//                         Manage users
+//                       </button>
+//                     )}
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setUserMenuOpen(false);
+//                         handleLogout();
+//                       }}
+//                       className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+//                     >
+//                       <LogOut size={14} />
+//                       Logout
+//                     </button>
+//                   </div>
+//                 )}
+//               </div>
+//             </div>
+//           </div>
+//         </header>
+
+//         {searchOpen && (
+//           <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 p-3 pt-[max(10vh,env(safe-area-inset-top))] sm:p-4 sm:pt-[12vh]">
+//             <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+//               <form
+//                 onSubmit={runSearch}
+//                 className="flex items-center gap-2 border-b border-slate-100 px-3 py-3 sm:px-4"
+//               >
+//                 <Search size={18} className="shrink-0 text-slate-400" />
+//                 <input
+//                   ref={searchInputRef}
+//                   value={searchQuery}
+//                   onChange={(e) => setSearchQuery(e.target.value)}
+//                   placeholder={`Search in ${moduleName}…`}
+//                   className="h-10 min-w-0 flex-1 border-0 bg-transparent text-base outline-none sm:text-sm"
+//                 />
+//                 <button
+//                   type="button"
+//                   onClick={() => {
+//                     setSearchOpen(false);
+//                     setSearchQuery("");
+//                   }}
+//                   className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+//                 >
+//                   <X size={16} />
+//                 </button>
+//               </form>
+//               <div className="max-h-[min(18rem,50vh)] overflow-y-auto py-2">
+//                 {filteredSearch.length === 0 ? (
+//                   <p className="px-4 py-6 text-center text-sm text-slate-500">
+//                     No matching pages
+//                   </p>
+//                 ) : (
+//                   filteredSearch.map((item) => (
+//                     <button
+//                       key={item.href}
+//                       type="button"
+//                       onClick={() => {
+//                         const q = searchQuery.trim();
+//                         router.push(
+//                           q
+//                             ? `${item.href}?search=${encodeURIComponent(q)}`
+//                             : item.href
+//                         );
+//                         setSearchOpen(false);
+//                         setSearchQuery("");
+//                       }}
+//                       className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 sm:py-2.5"
+//                     >
+//                       <span>{item.label}</span>
+//                       <span className="hidden shrink-0 text-[10px] text-slate-400 sm:inline">
+//                         {item.href}
+//                       </span>
+//                     </button>
+//                   ))
+//                 )}
+//               </div>
+//               <div className="border-t border-slate-100 px-4 py-2 text-[11px] text-slate-400">
+//                 Enter to open · Esc to close
+//               </div>
+//             </div>
+//           </div>
+//         )}
+
+//         <main
+//           className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden px-3 py-4 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:min-h-[calc(100vh-64px)] sm:p-6"
+//           style={{
+//             opacity: contentVisible ? 1 : 0,
+//             transform: contentVisible
+//               ? "translateY(0) scale(1)"
+//               : "translateY(8px) scale(0.99)",
+//           }}
+//         >
+//           {displayChildren}
+//         </main>
+//       </div>
+
+//       <style jsx global>{`
+//         @keyframes akrishSidebarIn {
+//           from {
+//             opacity: 0.7;
+//             transform: translateX(-12px);
+//           }
+//           to {
+//             opacity: 1;
+//             transform: translateX(0);
+//           }
+//         }
+//       `}</style>
+//     </div>
+//   );
+// }
+
+
+export default function FurnitureLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user, isAdmin, logout, hasModule, isLoading } = useAuth();
-
-  const canInterior = hasModule("interior");
-  const canFurniture = hasModule("furniture");
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-
-  const [contentVisible, setContentVisible] = useState(true);
-  const [displayChildren, setDisplayChildren] = useState(children);
-  const prevModuleRef = useRef<"interior" | "furniture" | null>(null);
-
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const headerActionsRef = useRef<HTMLDivElement>(null);
-
-  const isFurniture =
-    pathname === "/furniture" || pathname.startsWith("/furniture/");
-  const currentModule: "interior" | "furniture" = isFurniture
-    ? "furniture"
-    : "interior";
-  const currentNavigation = isFurniture ? furnitureNavigation : navigation;
-  const pageTitle = getPageTitle(pathname);
-  const moduleName = isFurniture ? "Furniture ERP" : "Interior ERP";
-  const moduleKey = isFurniture ? "furniture" : "interior";
-
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-
-  useEffect(() => {
-    document.title = "Akrish Collective ERP"
-  }, [pageTitle]);
-
-  useEffect(() => {
-    setSidebarOpen(false);
-    setNotifOpen(false);
-    setSettingsOpen(false);
-    setUserMenuOpen(false);
-    setSearchOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    if (!sidebarOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [sidebarOpen]);
-
-  useEffect(() => {
-    if (isLoading || !user) return;
-
-    if (pathname.startsWith("/furniture") && !canFurniture) {
-      router.replace(canInterior ? "/interior/dashboard" : "/unauthorized");
-      return;
-    }
-
-    if (pathname.startsWith("/interior") && !canInterior) {
-      router.replace(canFurniture ? "/furniture/dashboard" : "/unauthorized");
-    }
-  }, [isLoading, user, pathname, canInterior, canFurniture, router]);
-
-  useEffect(() => {
-    if (!isFurniture || !canFurniture) {
-      setNotifications([]);
-      setNotifOpen(false);
-      return;
-    }
-
-    let unsub: (() => void) | undefined;
-
-    try {
-      const q = query(
-        collection(db, ENQUIRIES_COLLECTION),
-        orderBy("createdAt", "desc"),
-        limit(25)
-      );
-
-      unsub = onSnapshot(
-        q,
-        (snapshot) => {
-          const items: NotificationItem[] = [];
-
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            const status = String(data.status || "New");
-            const seen = data.notificationSeen === true;
-
-            if (status !== "New") return;
-            if (seen) return;
-
-            const name =
-              String(data.customerName || data.name || "Customer").trim() ||
-              "Customer";
-            const product = String(
-              data.productName || data.productCode || ""
-            ).trim();
-            const source = String(data.source || "Website").trim();
-            const message = String(data.message || "").trim();
-
-            items.push({
-              id: `enq-${docSnap.id}`,
-              enquiryId: docSnap.id,
-              title: "New enquiry",
-              body: product
-                ? `${name} · ${product}${source ? ` · ${source}` : ""}`
-                : message
-                  ? `${name}: ${message.slice(0, 60)}${
-                      message.length > 60 ? "…" : ""
-                    }`
-                  : `${name} sent a contact request${
-                      source ? ` (${source})` : ""
-                    }`,
-              href: "/furniture/enquiries",
-              time: formatRelativeTime(data.createdAt),
-              read: false,
-            });
-          });
-
-          setNotifications(items);
-        },
-        (err) => {
-          console.error("Enquiry notifications listener error:", err);
-        }
-      );
-    } catch (err) {
-      console.error("Failed to start enquiry notifications:", err);
-    }
-
-    return () => {
-      unsub?.();
-    };
-  }, [isFurniture, canFurniture]);
-
-  useEffect(() => {
-    const prev = prevModuleRef.current;
-    if (prev !== null && prev !== currentModule) {
-      setContentVisible(false);
-      const t = window.setTimeout(() => {
-        setDisplayChildren(children);
-        setContentVisible(true);
-      }, 180);
-      prevModuleRef.current = currentModule;
-      return () => window.clearTimeout(t);
-    }
-    setDisplayChildren(children);
-    setContentVisible(true);
-    prevModuleRef.current = currentModule;
-  }, [children, currentModule]);
-
-  const unreadCount = notifications.length;
-
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (
-        headerActionsRef.current &&
-        !headerActionsRef.current.contains(e.target as Node)
-      ) {
-        setNotifOpen(false);
-        setSettingsOpen(false);
-        setUserMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, []);
-
-  useEffect(() => {
-    if (searchOpen) {
-      setTimeout(() => searchInputRef.current?.focus(), 50);
-    }
-  }, [searchOpen]);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setSearchOpen(false);
-        setNotifOpen(false);
-        setSettingsOpen(false);
-        setUserMenuOpen(false);
-        setSidebarOpen(false);
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  const searchTargets = useMemo(() => {
-    const base = isFurniture
-      ? [
-          { label: "Products", href: "/furniture/products" },
-          { label: "Inventory", href: "/furniture/inventory" },
-          { label: "Categories", href: "/furniture/categories" },
-          { label: "Sub Categories", href: "/furniture/sub-categories" },
-          { label: "Materials", href: "/furniture/materials" },
-          { label: "Finishes", href: "/furniture/finishes" },
-          { label: "Customers", href: "/furniture/customers" },
-          { label: "Enquiries", href: "/furniture/enquiries" },
-          { label: "Orders", href: "/furniture/orders" },
-          { label: "Payments", href: "/furniture/payments" },
-          { label: "Expenses", href: "/furniture/expenses" },
-          { label: "Reports", href: "/furniture/reports" },
-        ]
-      : [
-          { label: "CRM / Leads", href: "/interior/crm" },
-          { label: "Clients", href: "/interior/clients" },
-          { label: "Quotations", href: "/interior/quotations" },
-          { label: "Contracts", href: "/interior/contracts" },
-          { label: "Projects", href: "/interior/projects" },
-          { label: "HRMS", href: "/interior/hrms" },
-          { label: "Vendors", href: "/interior/vendors" },
-          { label: "Payments", href: "/interior/payments" },
-          { label: "Reports", href: "/interior/reports" },
-        ];
-
-    if (isAdmin) {
-      base.push({ label: "Staff Users", href: "/admin/users" });
-    }
-    return base;
-  }, [isFurniture, isAdmin]);
-
-  const filteredSearch = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return searchTargets;
-    return searchTargets.filter((t) => t.label.toLowerCase().includes(q));
-  }, [searchQuery, searchTargets]);
-
-  function runSearch(e?: React.FormEvent) {
-    e?.preventDefault();
-    const q = searchQuery.trim();
-    if (!q) return;
-
-    const match = filteredSearch[0];
-    if (match) {
-      router.push(`${match.href}?search=${encodeURIComponent(q)}`);
-    } else if (isFurniture) {
-      router.push(`/furniture/products?search=${encodeURIComponent(q)}`);
-    } else {
-      router.push(`/interior/crm?search=${encodeURIComponent(q)}`);
-    }
-    setSearchOpen(false);
-    setSearchQuery("");
-  }
-
-  async function openNotification(n: NotificationItem) {
-    setNotifications((list) => list.filter((item) => item.id !== n.id));
-    setNotifOpen(false);
-    router.push(n.href);
-
-    try {
-      await markEnquiryNotificationSeen(n.enquiryId);
-    } catch (err) {
-      console.error("Failed to mark notification seen:", err);
-    }
-  }
-
-  async function markAllRead() {
-    const ids = notifications.map((n) => n.enquiryId);
-    setNotifications([]);
-    setNotifOpen(false);
-    try {
-      await markEnquiryNotificationsSeen(ids);
-    } catch (err) {
-      console.error("Failed to clear notifications:", err);
-    }
-  }
-
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
-  };
-
-  const displayName = user?.name || "User";
-  const displayRole = user?.role
-    ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
-    : "Staff";
-  const avatarLetter = displayName.charAt(0).toUpperCase();
-
-  return (
-    <div className="min-h-screen min-h-[100dvh] overflow-x-hidden bg-[#f7f9f8] text-slate-800">
-      {sidebarOpen && (
-        <button
-          type="button"
-          aria-label="Close sidebar"
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-200 lg:hidden"
-        />
-      )}
-
-      <aside
-        className={`
-          fixed z-50 flex flex-col bg-white
-          transition-all duration-250 ease-out
-          left-3 top-3 bottom-3 w-[min(17.5rem,calc(100vw-1.5rem))]
-          rounded-2xl border border-white/80
-          shadow-[0_12px_40px_rgba(0,0,0,0.18)] ring-1 ring-slate-900/5
-          lg:left-0 lg:top-0 lg:bottom-0 lg:w-[235px]
-          lg:rounded-none lg:border-0 lg:border-r lg:border-slate-200
-          lg:shadow-none lg:ring-0
-          ${
-            sidebarOpen
-              ? "translate-x-0 opacity-100"
-              : "-translate-x-[calc(100%+1.5rem)] opacity-0 pointer-events-none lg:pointer-events-auto lg:translate-x-0 lg:opacity-100"
-          }
-        `}
-        style={{
-          animation: sidebarOpen ? "akrishSidebarIn 0.22s ease-out" : undefined,
-        }}
-      >
-        <div className="flex h-14 shrink-0 items-center border-b border-slate-100 px-4 sm:h-[64px] sm:px-5">
-          <Logo />
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(false)}
-            className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 lg:hidden"
-            aria-label="Close menu"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <nav className="mt-2 flex-1 overflow-y-auto overscroll-contain px-2.5 pb-3 sm:mt-3 sm:px-3">
-          <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
-            {isFurniture ? "Furniture Management" : "Interior Management"}
-          </p>
-
-          <div className="space-y-0.5 sm:space-y-1">
-            {currentNavigation.map((item) => {
-              const active =
-                pathname === item.href || pathname.startsWith(`${item.href}/`);
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`group flex min-h-[42px] items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200 sm:min-h-0 sm:rounded-lg ${
-                    item.nested ? "ml-2 border-l border-slate-200 pl-3" : ""
-                  } ${
-                    active
-                      ? "bg-[#e8f5ef] text-[#176b57] shadow-sm"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                  }`}
-                >
-                  <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[13px] transition-colors duration-200 sm:h-6 sm:w-6 ${
-                      active
-                        ? "bg-[#176b57] text-white"
-                        : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
-                    }`}
-                  >
-                    {item.icon}
-                  </span>
-                  <span className="truncate">{item.label}</span>
-                  {active && (
-                    <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[#176b57]" />
-                  )}
-                </Link>
-              );
-            })}
-
-            {isAdmin && (
-              <>
-                <div className="my-3 border-t border-slate-100" />
-                <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                  Administration
-                </p>
-                <Link
-                  href="/admin/users"
-                  onClick={() => setSidebarOpen(false)}
-                  className={`group flex min-h-[42px] items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200 sm:min-h-0 sm:rounded-lg ${
-                    pathname.startsWith("/admin/users")
-                      ? "bg-[#e8f5ef] text-[#176b57] shadow-sm"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                  }`}
-                >
-                  <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-200 sm:h-6 sm:w-6 ${
-                      pathname.startsWith("/admin/users")
-                        ? "bg-[#176b57] text-white"
-                        : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
-                    }`}
-                  >
-                    <Users size={14} />
-                  </span>
-                  <span>Staff Users</span>
-                </Link>
-              </>
-            )}
-          </div>
-        </nav>
-
-        <div className="shrink-0 border-t border-slate-100 p-2.5 sm:p-3">
-          <Link
-            href="/"
-            onClick={() => setSidebarOpen(false)}
-            className="mb-2 flex min-h-[40px] w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-[#f4fbf8] hover:text-[#176b57]"
-          >
-            <ArrowLeftIcon size={16} className="shrink-0 text-[#176b57]" />
-            Back to website
-          </Link>
-
-          <div className="rounded-xl bg-slate-50 p-2.5 sm:rounded-lg sm:p-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#176b57] text-xs font-bold text-white sm:h-8 sm:w-8">
-                {avatarLetter}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold text-slate-800">
-                  {displayName}
-                </p>
-                <p className="truncate text-[10px] text-slate-400">
-                  {displayRole}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600 sm:h-7 sm:w-7"
-                title="Logout"
-              >
-                <LogOut size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <div className="min-h-screen lg:pl-[235px]">
-        <header className="sticky top-0 z-30 h-14 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur sm:h-[64px]">
-          <div className="flex h-full items-center justify-between gap-2 px-3 sm:px-4 md:px-6">
-            <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 lg:hidden"
-                aria-label="Open navigation"
-              >
-                ☰
-              </button>
-
-              <div className="min-w-0">
-                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
-                  {moduleName}
-                </p>
-                <h1 className="truncate text-sm font-semibold leading-tight text-slate-800">
-                  {pageTitle}
-                </h1>
-              </div>
-            </div>
-
-            <div
-              ref={headerActionsRef}
-              className="relative flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-2"
-            >
-              {/* <Link
-                href="/"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-[#176b57]/30 hover:bg-[#f4fbf8] hover:text-[#176b57] sm:px-3 sm:py-2 sm:text-sm"
-                title="Back to website"
-              >
-                <Home size={16} className="shrink-0 text-[#176b57]" />
-                <span className="hidden sm:inline">Website</span>
-              </Link> */}
-
-              <HeaderModuleSwitcher
-                isFurniture={isFurniture}
-                canInterior={canInterior}
-                canFurniture={canFurniture}
-              />
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchOpen(true);
-                  setNotifOpen(false);
-                  setSettingsOpen(false);
-                  setUserMenuOpen(false);
-                }}
-                className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 sm:h-9 sm:w-9"
-                aria-label="Search"
-              >
-                <Search size={18} />
-              </button>
-
-              {isFurniture && canFurniture && (
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNotifOpen((v) => !v);
-                      setSettingsOpen(false);
-                      setUserMenuOpen(false);
-                    }}
-                    className="relative flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 sm:h-9 sm:w-9"
-                    aria-label="Notifications"
-                  >
-                    <Bell size={18} />
-                    {unreadCount > 0 && (
-                      <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </button>
-
-                  {notifOpen && (
-                    <div className="absolute right-0 z-50 mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-                      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                        <p className="text-sm font-semibold text-slate-800">
-                          Notifications
-                        </p>
-                        {notifications.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={markAllRead}
-                            className="text-xs font-medium text-[#176b57] hover:underline"
-                          >
-                            Clear all
-                          </button>
-                        )}
-                      </div>
-                      <div className="max-h-[min(18rem,50vh)] overflow-y-auto">
-                        {notifications.length === 0 ? (
-                          <div className="px-4 py-10 text-center">
-                            <Bell
-                              size={28}
-                              className="mx-auto mb-2 text-slate-300"
-                            />
-                            <p className="text-sm font-medium text-slate-600">
-                              No notifications
-                            </p>
-                            <p className="mt-1 text-xs text-slate-400">
-                              New website enquiries will appear here
-                            </p>
-                          </div>
-                        ) : (
-                          notifications.map((n) => (
-                            <button
-                              key={n.id}
-                              type="button"
-                              onClick={() => openNotification(n)}
-                              className="flex w-full flex-col gap-0.5 border-b border-slate-50 bg-[#f4fbf8] px-4 py-3 text-left transition-colors hover:bg-slate-50"
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-sm font-semibold text-slate-800">
-                                  {n.title}
-                                </p>
-                                <span className="shrink-0 text-[10px] text-slate-400">
-                                  {n.time}
-                                </span>
-                              </div>
-                              <p className="text-xs text-slate-500">{n.body}</p>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                      {notifications.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNotifOpen(false);
-                            router.push("/furniture/enquiries");
-                          }}
-                          className="w-full border-t border-slate-100 px-4 py-2.5 text-center text-xs font-semibold text-[#176b57] hover:bg-slate-50"
-                        >
-                          View all enquiries
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="relative hidden sm:block">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSettingsOpen((v) => !v);
-                    setNotifOpen(false);
-                    setUserMenuOpen(false);
-                  }}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100"
-                  aria-label="Settings"
-                >
-                  <Settings size={18} />
-                </button>
-
-                {settingsOpen && (
-                  <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
-                    {isAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSettingsOpen(false);
-                          router.push("/admin/users");
-                        }}
-                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
-                      >
-                        <Users size={14} />
-                        Staff Users
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSettingsOpen(false);
-                        router.push(
-                          isFurniture
-                            ? "/furniture/reports"
-                            : "/interior/reports"
-                        );
-                      }}
-                      className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
-                    >
-                      Reports
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSettingsOpen(false);
-                        router.push(
-                          isFurniture
-                            ? "/furniture/dashboard"
-                            : "/interior/dashboard"
-                        );
-                      }}
-                      className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
-                    >
-                      {isFurniture ? "Furniture" : "Interior"} Dashboard
-                    </button>
-                    <div className="my-1 border-t border-slate-100" />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSettingsOpen(false);
-                        handleLogout();
-                      }}
-                      className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
-                    >
-                      <LogOut size={14} />
-                      Logout
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="relative border-l border-slate-200 pl-2 sm:pl-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUserMenuOpen((v) => !v);
-                    setNotifOpen(false);
-                    setSettingsOpen(false);
-                  }}
-                  className="flex items-center gap-2 rounded-lg px-1 py-1 transition-colors hover:bg-slate-50"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#dff1e8] text-xs font-bold text-[#176b57] sm:h-8 sm:w-8">
-                    {avatarLetter}
-                  </div>
-                  <div className="hidden min-w-0 text-left md:block">
-                    <p className="max-w-[120px] truncate text-xs font-semibold text-slate-800">
-                      {displayName}
-                    </p>
-                    <p className="text-[10px] text-slate-400">{displayRole}</p>
-                  </div>
-                </button>
-
-                {userMenuOpen && (
-                  <div className="absolute right-0 z-50 mt-2 w-[min(13rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
-                    <div className="border-b border-slate-100 px-4 py-3">
-                      <p className="text-sm font-semibold text-slate-800">
-                        {displayName}
-                      </p>
-                      <p className="text-xs text-slate-400">{displayRole}</p>
-                      <p className="mt-1 text-[10px] uppercase tracking-wide text-[#176b57]">
-                        {moduleKey} module
-                      </p>
-                    </div>
-                    {isAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setUserMenuOpen(false);
-                          router.push("/admin/users");
-                        }}
-                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
-                      >
-                        <Users size={14} />
-                        Manage users
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        handleLogout();
-                      }}
-                      className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
-                    >
-                      <LogOut size={14} />
-                      Logout
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {searchOpen && (
-          <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 p-3 pt-[max(10vh,env(safe-area-inset-top))] sm:p-4 sm:pt-[12vh]">
-            <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
-              <form
-                onSubmit={runSearch}
-                className="flex items-center gap-2 border-b border-slate-100 px-3 py-3 sm:px-4"
-              >
-                <Search size={18} className="shrink-0 text-slate-400" />
-                <input
-                  ref={searchInputRef}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={`Search in ${moduleName}…`}
-                  className="h-10 min-w-0 flex-1 border-0 bg-transparent text-base outline-none sm:text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchOpen(false);
-                    setSearchQuery("");
-                  }}
-                  className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
-                >
-                  <X size={16} />
-                </button>
-              </form>
-              <div className="max-h-[min(18rem,50vh)] overflow-y-auto py-2">
-                {filteredSearch.length === 0 ? (
-                  <p className="px-4 py-6 text-center text-sm text-slate-500">
-                    No matching pages
-                  </p>
-                ) : (
-                  filteredSearch.map((item) => (
-                    <button
-                      key={item.href}
-                      type="button"
-                      onClick={() => {
-                        const q = searchQuery.trim();
-                        router.push(
-                          q
-                            ? `${item.href}?search=${encodeURIComponent(q)}`
-                            : item.href
-                        );
-                        setSearchOpen(false);
-                        setSearchQuery("");
-                      }}
-                      className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 sm:py-2.5"
-                    >
-                      <span>{item.label}</span>
-                      <span className="hidden shrink-0 text-[10px] text-slate-400 sm:inline">
-                        {item.href}
-                      </span>
-                    </button>
-                  ))
-                )}
-              </div>
-              <div className="border-t border-slate-100 px-4 py-2 text-[11px] text-slate-400">
-                Enter to open · Esc to close
-              </div>
-            </div>
-          </div>
-        )}
-
-        <main
-          className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden px-3 py-4 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:min-h-[calc(100vh-64px)] sm:p-6"
-          style={{
-            opacity: contentVisible ? 1 : 0,
-            transform: contentVisible
-              ? "translateY(0) scale(1)"
-              : "translateY(8px) scale(0.99)",
-          }}
-        >
-          {displayChildren}
-        </main>
-      </div>
-
-      <style jsx global>{`
-        @keyframes akrishSidebarIn {
-          from {
-            opacity: 0.7;
-            transform: translateX(-12px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-      `}</style>
-    </div>
-  );
-} 
+}) {
+  return children;
+}
