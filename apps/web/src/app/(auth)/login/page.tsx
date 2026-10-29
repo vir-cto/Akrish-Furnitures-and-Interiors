@@ -5965,13 +5965,1068 @@
 
 
 
+// "use client";
+
+// import { FormEvent, Suspense, useEffect, useState } from "react";
+// import { useRouter, useSearchParams } from "next/navigation";
+// import { useAuth } from "@/core/auth/AuthContext";
+// import Link from "next/link";
+// import {
+//   ArrowRight,
+//   Eye,
+//   EyeOff,
+//   Loader2,
+//   ShieldCheck,
+// } from "lucide-react";
+
+// function safeRedirect(path: string | null): string {
+//   if (!path) return "/erp";
+//   if (path.startsWith("/") && !path.startsWith("//")) {
+//     return path === "/" ? "/erp" : path;
+//   }
+//   return "/erp";
+// }
+
+// async function setAuthCookie() {
+//   try {
+//     let authMod: {
+//       auth?: {
+//         currentUser: { getIdToken: () => Promise<string> } | null;
+//       };
+//     } | null = null;
+
+//     try {
+//       authMod = await import("@/core/config/firebaseClient");
+//     } catch {
+//       try {
+//         authMod = await import("@/lib/firebase");
+//       } catch {
+//         authMod = null;
+//       }
+//     }
+
+//     const user = authMod?.auth?.currentUser;
+//     if (!user) return;
+
+//     const token = await user.getIdToken();
+//     document.cookie = `authToken=${token}; path=/; max-age=${
+//       60 * 60 * 24 * 7
+//     }; SameSite=Lax`;
+//   } catch {
+//     // AuthContext may still hold the session.
+//   }
+// }
+
+// function LoginPageContent() {
+//   const router = useRouter();
+//   const searchParams = useSearchParams();
+
+//   const { login, lastError } = useAuth() as {
+//     login: (email: string, password: string) => Promise<boolean>;
+//     lastError?: string | null;
+//   };
+
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [remember, setRemember] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const [error, setError] = useState("");
+
+//   useEffect(() => {
+//     document.title = "ERP · Collective ERP · Akrish";
+//   }, []);
+
+//   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
+//     e.preventDefault();
+//     setError("");
+
+//     if (!email.trim()) {
+//       setError("Please enter your email address.");
+//       return;
+//     }
+//     if (!password.trim()) {
+//       setError("Please enter your password.");
+//       return;
+//     }
+
+//     setLoading(true);
+
+//     try {
+//       const success = await login(email.trim(), password);
+
+//       if (!success) {
+//         throw new Error(lastError || "Invalid email or password.");
+//       }
+
+//       await setAuthCookie();
+
+//       const target = safeRedirect(searchParams.get("redirect"));
+//       router.push(target);
+//       router.refresh();
+//     } catch (err) {
+//       setError(err instanceof Error ? err.message : "Unable to sign in.");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   return (
+//     <main className="relative min-h-[100dvh] overflow-hidden bg-[#f5f0e8]">
+//       <div className="pointer-events-none absolute inset-0">
+//         <div className="absolute -left-32 -top-24 h-[28rem] w-[28rem] rounded-full bg-[#b8956c]/15 blur-[100px]" />
+//         <div className="absolute -bottom-40 right-[-10%] h-[32rem] w-[32rem] rounded-full bg-[#d4c4a8]/40 blur-[120px]" />
+//         <div className="absolute left-1/2 top-1/3 h-64 w-64 -translate-x-1/2 rounded-full bg-white/50 blur-[80px]" />
+//         <div
+//           className="absolute inset-0 opacity-[0.35]"
+//           style={{
+//             backgroundImage:
+//               "radial-gradient(circle at 1px 1px, rgba(184,149,108,0.18) 1px, transparent 0)",
+//             backgroundSize: "28px 28px",
+//           }}
+//         />
+//       </div>
+
+//       {/* ERP brand strip only — not the website header */}
+//       <div className="relative z-20 flex items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
+//         <div className="inline-flex items-center gap-3">
+//           {/* eslint-disable-next-line @next/next/no-img-element */}
+//           <img
+//             src="/Akrish.jpg"
+//             alt="Akrish"
+//             className="h-10 w-10 rounded-2xl object-cover shadow-sm ring-1 ring-[#e8e2d8]"
+//           />
+//           <div className="leading-tight">
+//             <p className="font-display text-lg font-semibold tracking-tight text-[#1a1a1a]">
+//               ERP
+//             </p>
+//             <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#9a9188]">
+//               Collective · Akrish
+//             </p>
+//           </div>
+//         </div>
+//         <span className="hidden items-center gap-1.5 rounded-full border border-[#e8e2d8] bg-white/80 px-3 py-1.5 text-[11px] font-medium text-[#6b6560] sm:inline-flex">
+//           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+//           Systems online
+//         </span>
+//       </div>
+
+//       <div className="relative z-10 mx-auto flex min-h-[calc(100dvh-5.5rem)] max-w-6xl flex-col items-center justify-center px-5 pb-12 pt-2 sm:px-8 lg:px-12">
+//         <p
+//           aria-hidden
+//           className="pointer-events-none absolute left-1/2 top-[42%] hidden -translate-x-1/2 -translate-y-1/2 select-none whitespace-nowrap font-display text-[18vw] font-semibold leading-none tracking-tighter text-[#1a1a1a]/[0.035] sm:block lg:text-[12rem]"
+//         >
+//           ERP
+//         </p>
+
+//         <div className="relative w-full max-w-[420px]">
+//           <div
+//             aria-hidden
+//             className="absolute -inset-x-3 -bottom-3 top-6 rounded-[2rem] bg-gradient-to-br from-[#b8956c]/25 via-[#d4c4a8]/20 to-transparent sm:-inset-x-4 sm:-bottom-4"
+//           />
+
+//           <div className="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/90 shadow-[0_24px_64px_rgba(26,26,26,0.08)] backdrop-blur-md">
+//             <div className="h-1 w-full bg-gradient-to-r from-[#b8956c] via-[#d4b896] to-[#b8956c]/40" />
+
+//             <div className="px-6 pb-7 pt-7 sm:px-8 sm:pb-8 sm:pt-8">
+//               <div className="mb-6 flex items-start justify-between gap-3">
+//                 <div>
+//                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#b8956c]">
+//                     Staff portal
+//                   </p>
+//                   <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-[1.75rem]">
+//                     Collective ERP
+//                   </h1>
+//                   <p className="mt-1.5 text-sm text-[#7a746c]">
+//                     Sign in to manage interior &amp; furniture operations.
+//                   </p>
+//                 </div>
+//                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#f5f0e8] text-[#b8956c]">
+//                   <ShieldCheck size={20} strokeWidth={1.6} />
+//                 </div>
+//               </div>
+
+//               {error && (
+//                 <div
+//                   role="alert"
+//                   className="mb-5 rounded-2xl border border-red-100 bg-red-50/90 px-4 py-3 text-sm text-red-700"
+//                 >
+//                   {error}
+//                 </div>
+//               )}
+
+//               <form onSubmit={handleLogin} className="space-y-4">
+//                 <div>
+//                   <label
+//                     htmlFor="email"
+//                     className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9188]"
+//                   >
+//                     Work email
+//                   </label>
+//                   <input
+//                     id="email"
+//                     type="email"
+//                     value={email}
+//                     onChange={(e) => setEmail(e.target.value)}
+//                     placeholder="admin@akrish.in"
+//                     autoComplete="email"
+//                     className="h-12 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15"
+//                   />
+//                 </div>
+
+//                 <div>
+//                   <div className="mb-1.5 flex items-center justify-between">
+//                     <label
+//                       htmlFor="password"
+//                       className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9188]"
+//                     >
+//                       Password
+//                     </label>
+//                     <button
+//                       type="button"
+//                       onClick={() => router.push("/forgot-password")}
+//                       className="text-[11px] font-semibold text-[#b8956c] transition hover:text-[#8b7355]"
+//                     >
+//                       Forgot?
+//                     </button>
+//                   </div>
+//                   <div className="relative">
+//                     <input
+//                       id="password"
+//                       type={showPassword ? "text" : "password"}
+//                       value={password}
+//                       onChange={(e) => setPassword(e.target.value)}
+//                       placeholder="••••••••"
+//                       autoComplete="current-password"
+//                       className="h-12 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 pr-12 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15"
+//                     />
+//                     <button
+//                       type="button"
+//                       onClick={() => setShowPassword((v) => !v)}
+//                       className="absolute right-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-[#9a9188] transition hover:bg-[#f0e8dc] hover:text-[#1a1a1a]"
+//                       aria-label={
+//                         showPassword ? "Hide password" : "Show password"
+//                       }
+//                     >
+//                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+//                     </button>
+//                   </div>
+//                 </div>
+
+//                 <label
+//                   htmlFor="remember"
+//                   className="flex cursor-pointer items-center gap-2.5 pt-0.5 text-xs text-[#6b6560]"
+//                 >
+//                   <input
+//                     id="remember"
+//                     type="checkbox"
+//                     checked={remember}
+//                     onChange={(e) => setRemember(e.target.checked)}
+//                     className="h-3.5 w-3.5 cursor-pointer rounded border-[#d4cdc2] accent-[#b8956c]"
+//                   />
+//                   Keep me signed in on this device
+//                 </label>
+
+//                 <button
+//                   type="submit"
+//                   disabled={loading}
+//                   className="group relative mt-1 flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[#1a1a1a] text-sm font-semibold text-white transition hover:bg-[#2c2a26] disabled:cursor-not-allowed disabled:opacity-60"
+//                 >
+//                   <span
+//                     aria-hidden
+//                     className="absolute inset-y-0 left-0 w-1 bg-[#b8956c]"
+//                   />
+//                   {loading ? (
+//                     <>
+//                       <Loader2 size={16} className="animate-spin" />
+//                       Signing in…
+//                     </>
+//                   ) : (
+//                     <>
+//                       Enter workspace
+//                       <ArrowRight
+//                         size={16}
+//                         className="transition-transform group-hover:translate-x-0.5"
+//                       />
+//                     </>
+//                   )}
+//                 </button>
+//               </form>
+//             </div>
+
+//             <div className="grid grid-cols-2 divide-x divide-[#f0ebe3] border-t border-[#f0ebe3] bg-[#faf8f4]/80">
+//               <div className="px-4 py-3.5 text-center">
+//                 <p className="text-[11px] font-semibold text-[#1a1a1a]">
+//                   Interior
+//                 </p>
+//                 <p className="mt-0.5 text-[10px] text-[#9a9188]">
+//                   Projects · CRM
+//                 </p>
+//               </div>
+//               <div className="px-4 py-3.5 text-center">
+//                 <p className="text-[11px] font-semibold text-[#1a1a1a]">
+//                   Furniture
+//                 </p>
+//                 <p className="mt-0.5 text-[10px] text-[#9a9188]">
+//                   Catalog · Orders
+//                 </p>
+//               </div>
+//             </div>
+//           </div>
+
+//           <p className="mt-8 text-center text-xs text-[#9a9188]">
+//             Authorized staff only ·{" "}
+//             {/* <Link
+//               href="/"
+//               className="font-medium text-[#1a1a1a]/70 underline decoration-[#e0d9ce] underline-offset-2 hover:text-[#1a1a1a] hover:decoration-[#b8956c]"
+//             >
+//               Back to store
+//             </Link>
+//             {" · "} */}
+//             {/* <Link
+//               href="/sign-in"
+//               className="font-medium text-[#1a1a1a]/70 underline decoration-[#e0d9ce] underline-offset-2 hover:decoration-[#b8956c]"
+//             >
+//               Customer login
+//             </Link> */}
+//           </p>
+//         </div>
+//       </div>
+//     </main>
+//   );
+// }
+
+// export default function LoginPage() {
+//   return (
+//     <Suspense
+//       fallback={
+//         <div className="flex min-h-[100dvh] items-center justify-center bg-[#f5f0e8]">
+//           <Loader2 className="h-8 w-8 animate-spin text-[#b8956c]" />
+//         </div>
+//       }
+//     >
+//       <LoginPageContent />
+//     </Suspense>
+//   );
+// }
+
+
+// "use client";
+
+// import { FormEvent, Suspense, useEffect, useState } from "react";
+// import { useRouter, useSearchParams } from "next/navigation";
+// import { useAuth } from "@/core/auth/AuthContext";
+// import Link from "next/link";
+// import {
+//   ArrowLeft,
+//   ArrowRight,
+//   Eye,
+//   EyeOff,
+//   Loader2,
+//   ShieldCheck,
+// } from "lucide-react";
+
+// function safeRedirect(path: string | null): string {
+//   if (!path) return "/erp";
+//   if (path.startsWith("/") && !path.startsWith("//")) {
+//     return path === "/" ? "/erp" : path;
+//   }
+//   return "/erp";
+// }
+
+// async function setAuthCookie() {
+//   try {
+//     let authMod: {
+//       auth?: {
+//         currentUser: { getIdToken: () => Promise<string> } | null;
+//       };
+//     } | null = null;
+
+//     try {
+//       authMod = await import("@/core/config/firebaseClient");
+//     } catch {
+//       try {
+//         authMod = await import("@/lib/firebase");
+//       } catch {
+//         authMod = null;
+//       }
+//     }
+
+//     const user = authMod?.auth?.currentUser;
+//     if (!user) return;
+
+//     const token = await user.getIdToken();
+//     document.cookie = `authToken=${token}; path=/; max-age=${
+//       60 * 60 * 24 * 7
+//     }; SameSite=Lax`;
+//   } catch {
+//     // AuthContext may still hold the session.
+//   }
+// }
+
+// function LoginPageContent() {
+//   const router = useRouter();
+//   const searchParams = useSearchParams();
+
+//   const { login, lastError } = useAuth() as {
+//     login: (email: string, password: string) => Promise<boolean>;
+//     lastError?: string | null;
+//   };
+
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [remember, setRemember] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const [error, setError] = useState("");
+
+//   useEffect(() => {
+//     document.title = "ERP · Collective ERP · Akrish";
+//   }, []);
+
+//   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
+//     e.preventDefault();
+//     setError("");
+
+//     if (!email.trim()) {
+//       setError("Please enter your email address.");
+//       return;
+//     }
+//     if (!password.trim()) {
+//       setError("Please enter your password.");
+//       return;
+//     }
+
+//     setLoading(true);
+
+//     try {
+//       const success = await login(email.trim(), password);
+
+//       if (!success) {
+//         throw new Error(lastError || "Invalid email or password.");
+//       }
+
+//       await setAuthCookie();
+
+//       const target = safeRedirect(searchParams.get("redirect"));
+//       router.push(target);
+//       router.refresh();
+//     } catch (err) {
+//       setError(err instanceof Error ? err.message : "Unable to sign in.");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   return (
+//     <main className="relative min-h-[100dvh] overflow-hidden bg-[#f5f0e8]">
+//       <div className="pointer-events-none absolute inset-0">
+//         <div className="absolute -left-32 -top-24 h-[28rem] w-[28rem] rounded-full bg-[#b8956c]/15 blur-[100px]" />
+//         <div className="absolute -bottom-40 right-[-10%] h-[32rem] w-[32rem] rounded-full bg-[#d4c4a8]/40 blur-[120px]" />
+//         <div className="absolute left-1/2 top-1/3 h-64 w-64 -translate-x-1/2 rounded-full bg-white/50 blur-[80px]" />
+//         <div
+//           className="absolute inset-0 opacity-[0.35]"
+//           style={{
+//             backgroundImage:
+//               "radial-gradient(circle at 1px 1px, rgba(184,149,108,0.18) 1px, transparent 0)",
+//             backgroundSize: "28px 28px",
+//           }}
+//         />
+//       </div>
+
+//       {/* Top bar: ERP brand + Back to website */}
+//       <div className="relative z-20 flex items-center justify-between gap-3 px-5 py-5 sm:px-8 lg:px-12">
+//         <div className="inline-flex min-w-0 items-center gap-3">
+//           {/* eslint-disable-next-line @next/next/no-img-element */}
+//           <img
+//             src="/Akrish.jpg"
+//             alt="Akrish"
+//             className="h-10 w-10 shrink-0 rounded-2xl object-cover shadow-sm ring-1 ring-[#e8e2d8]"
+//           />
+//           <div className="min-w-0 leading-tight">
+//             <p className="font-display text-lg font-semibold tracking-tight text-[#1a1a1a]">
+//               ERP
+//             </p>
+//             <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#9a9188]">
+//               Collective · Akrish
+//             </p>
+//           </div>
+//         </div>
+
+//         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+//           <span className="hidden items-center gap-1.5 rounded-full border border-[#e8e2d8] bg-white/80 px-3 py-1.5 text-[11px] font-medium text-[#6b6560] sm:inline-flex">
+//             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+//             Systems online
+//           </span>
+
+//           <Link
+//             href="/"
+//             className="inline-flex items-center gap-1.5 rounded-full border border-[#e8e2d8] bg-white/90 px-3.5 py-2 text-xs font-semibold text-[#1a1a1a] shadow-sm transition hover:border-[#b8956c] hover:bg-white hover:text-[#b8956c] sm:px-4 sm:text-[13px]"
+//           >
+//             <ArrowLeft size={14} strokeWidth={2} />
+//             <span className="hidden xs:inline sm:inline">Back to website</span>
+//             <span className="sm:hidden">Website</span>
+//           </Link>
+//         </div>
+//       </div>
+
+//       <div className="relative z-10 mx-auto flex min-h-[calc(100dvh-5.5rem)] max-w-6xl flex-col items-center justify-center px-5 pb-12 pt-2 sm:px-8 lg:px-12">
+//         <p
+//           aria-hidden
+//           className="pointer-events-none absolute left-1/2 top-[42%] hidden -translate-x-1/2 -translate-y-1/2 select-none whitespace-nowrap font-display text-[18vw] font-semibold leading-none tracking-tighter text-[#1a1a1a]/[0.035] sm:block lg:text-[12rem]"
+//         >
+//           ERP
+//         </p>
+
+//         <div className="relative w-full max-w-[420px]">
+//           <div
+//             aria-hidden
+//             className="absolute -inset-x-3 -bottom-3 top-6 rounded-[2rem] bg-gradient-to-br from-[#b8956c]/25 via-[#d4c4a8]/20 to-transparent sm:-inset-x-4 sm:-bottom-4"
+//           />
+
+//           <div className="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/90 shadow-[0_24px_64px_rgba(26,26,26,0.08)] backdrop-blur-md">
+//             <div className="h-1 w-full bg-gradient-to-r from-[#b8956c] via-[#d4b896] to-[#b8956c]/40" />
+
+//             <div className="px-6 pb-7 pt-7 sm:px-8 sm:pb-8 sm:pt-8">
+//               <div className="mb-6 flex items-start justify-between gap-3">
+//                 <div>
+//                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#b8956c]">
+//                     Staff portal
+//                   </p>
+//                   <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-[1.75rem]">
+//                     Collective ERP
+//                   </h1>
+//                   <p className="mt-1.5 text-sm text-[#7a746c]">
+//                     Sign in to manage interior &amp; furniture operations.
+//                   </p>
+//                 </div>
+//                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#f5f0e8] text-[#b8956c]">
+//                   <ShieldCheck size={20} strokeWidth={1.6} />
+//                 </div>
+//               </div>
+
+//               {error && (
+//                 <div
+//                   role="alert"
+//                   className="mb-5 rounded-2xl border border-red-100 bg-red-50/90 px-4 py-3 text-sm text-red-700"
+//                 >
+//                   {error}
+//                 </div>
+//               )}
+
+//               <form onSubmit={handleLogin} className="space-y-4">
+//                 <div>
+//                   <label
+//                     htmlFor="email"
+//                     className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9188]"
+//                   >
+//                     Work email
+//                   </label>
+//                   <input
+//                     id="email"
+//                     type="email"
+//                     value={email}
+//                     onChange={(e) => setEmail(e.target.value)}
+//                     placeholder="admin@akrish.in"
+//                     autoComplete="email"
+//                     className="h-12 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15"
+//                   />
+//                 </div>
+
+//                 <div>
+//                   <div className="mb-1.5 flex items-center justify-between">
+//                     <label
+//                       htmlFor="password"
+//                       className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9188]"
+//                     >
+//                       Password
+//                     </label>
+//                     <button
+//                       type="button"
+//                       onClick={() => router.push("/forgot-password")}
+//                       className="text-[11px] font-semibold text-[#b8956c] transition hover:text-[#8b7355]"
+//                     >
+//                       Forgot?
+//                     </button>
+//                   </div>
+//                   <div className="relative">
+//                     <input
+//                       id="password"
+//                       type={showPassword ? "text" : "password"}
+//                       value={password}
+//                       onChange={(e) => setPassword(e.target.value)}
+//                       placeholder="••••••••"
+//                       autoComplete="current-password"
+//                       className="h-12 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 pr-12 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15"
+//                     />
+//                     <button
+//                       type="button"
+//                       onClick={() => setShowPassword((v) => !v)}
+//                       className="absolute right-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-[#9a9188] transition hover:bg-[#f0e8dc] hover:text-[#1a1a1a]"
+//                       aria-label={
+//                         showPassword ? "Hide password" : "Show password"
+//                       }
+//                     >
+//                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+//                     </button>
+//                   </div>
+//                 </div>
+
+//                 <label
+//                   htmlFor="remember"
+//                   className="flex cursor-pointer items-center gap-2.5 pt-0.5 text-xs text-[#6b6560]"
+//                 >
+//                   <input
+//                     id="remember"
+//                     type="checkbox"
+//                     checked={remember}
+//                     onChange={(e) => setRemember(e.target.checked)}
+//                     className="h-3.5 w-3.5 cursor-pointer rounded border-[#d4cdc2] accent-[#b8956c]"
+//                   />
+//                   Keep me signed in on this device
+//                 </label>
+
+//                 <button
+//                   type="submit"
+//                   disabled={loading}
+//                   className="group relative mt-1 flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[#1a1a1a] text-sm font-semibold text-white transition hover:bg-[#2c2a26] disabled:cursor-not-allowed disabled:opacity-60"
+//                 >
+//                   <span
+//                     aria-hidden
+//                     className="absolute inset-y-0 left-0 w-1 bg-[#b8956c]"
+//                   />
+//                   {loading ? (
+//                     <>
+//                       <Loader2 size={16} className="animate-spin" />
+//                       Signing in…
+//                     </>
+//                   ) : (
+//                     <>
+//                       Enter workspace
+//                       <ArrowRight
+//                         size={16}
+//                         className="transition-transform group-hover:translate-x-0.5"
+//                       />
+//                     </>
+//                   )}
+//                 </button>
+//               </form>
+//             </div>
+
+//             <div className="grid grid-cols-2 divide-x divide-[#f0ebe3] border-t border-[#f0ebe3] bg-[#faf8f4]/80">
+//               <div className="px-4 py-3.5 text-center">
+//                 <p className="text-[11px] font-semibold text-[#1a1a1a]">
+//                   Interior
+//                 </p>
+//                 <p className="mt-0.5 text-[10px] text-[#9a9188]">
+//                   Projects · CRM
+//                 </p>
+//               </div>
+//               <div className="px-4 py-3.5 text-center">
+//                 <p className="text-[11px] font-semibold text-[#1a1a1a]">
+//                   Furniture
+//                 </p>
+//                 <p className="mt-0.5 text-[10px] text-[#9a9188]">
+//                   Catalog · Orders
+//                 </p>
+//               </div>
+//             </div>
+//           </div>
+
+//           <p className="mt-8 text-center text-xs text-[#9a9188]">
+//             Authorized staff only
+//             <span className="mx-2 text-[#d4cdc2]">·</span>
+//             <Link
+//               href="/"
+//               className="inline-flex items-center gap-1 font-medium text-[#1a1a1a]/80 underline decoration-[#e0d9ce] underline-offset-2 transition hover:text-[#b8956c] hover:decoration-[#b8956c]"
+//             >
+//               <ArrowLeft size={12} />
+//               Back to website
+//             </Link>
+//           </p>
+//         </div>
+//       </div>
+//     </main>
+//   );
+// }
+
+// export default function LoginPage() {
+//   return (
+//     <Suspense
+//       fallback={
+//         <div className="flex min-h-[100dvh] items-center justify-center bg-[#f5f0e8]">
+//           <Loader2 className="h-8 w-8 animate-spin text-[#b8956c]" />
+//         </div>
+//       }
+//     >
+//       <LoginPageContent />
+//     </Suspense>
+//   );
+// }
+
+
+// "use client";
+
+// import { FormEvent, Suspense, useEffect, useState } from "react";
+// import { useRouter, useSearchParams } from "next/navigation";
+// import { useAuth } from "@/core/auth/AuthContext";
+// import {
+//   ArrowLeft,
+//   ArrowRight,
+//   Eye,
+//   EyeOff,
+//   Loader2,
+//   ShieldCheck,
+// } from "lucide-react";
+
+// function safeRedirect(path: string | null): string {
+//   if (!path) return "/erp";
+//   if (path.startsWith("/") && !path.startsWith("//")) {
+//     return path === "/" ? "/erp" : path;
+//   }
+//   return "/erp";
+// }
+
+// async function setAuthCookie() {
+//   try {
+//     let authMod: {
+//       auth?: {
+//         currentUser: { getIdToken: () => Promise<string> } | null;
+//       };
+//     } | null = null;
+
+//     try {
+//       authMod = await import("@/core/config/firebaseClient");
+//     } catch {
+//       try {
+//         authMod = await import("@/lib/firebase");
+//       } catch {
+//         authMod = null;
+//       }
+//     }
+
+//     const user = authMod?.auth?.currentUser;
+//     if (!user) return;
+
+//     const token = await user.getIdToken();
+//     document.cookie = `authToken=${token}; path=/; max-age=${
+//       60 * 60 * 24 * 7
+//     }; SameSite=Lax`;
+//   } catch {
+//     // AuthContext may still hold the session.
+//   }
+// }
+
+// function LoginPageContent() {
+//   const router = useRouter();
+//   const searchParams = useSearchParams();
+
+//   const { login, lastError } = useAuth() as {
+//     login: (email: string, password: string) => Promise<boolean>;
+//     lastError?: string | null;
+//   };
+
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [remember, setRemember] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const [error, setError] = useState("");
+
+//   useEffect(() => {
+//     document.title = "ERP · Collective ERP · Akrish";
+//   }, []);
+
+//   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
+//     e.preventDefault();
+//     setError("");
+
+//     if (!email.trim()) {
+//       setError("Please enter your email address.");
+//       return;
+//     }
+//     if (!password.trim()) {
+//       setError("Please enter your password.");
+//       return;
+//     }
+
+//     setLoading(true);
+
+//     try {
+//       const success = await login(email.trim(), password);
+
+//       if (!success) {
+//         throw new Error(lastError || "Invalid email or password.");
+//       }
+
+//       await setAuthCookie();
+
+//       const target = safeRedirect(searchParams.get("redirect"));
+//       router.push(target);
+//       router.refresh();
+//     } catch (err) {
+//       setError(err instanceof Error ? err.message : "Unable to sign in.");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const goToWebsite = () => {
+//     router.push("/");
+//   };
+
+//   return (
+//     <main className="relative min-h-[100dvh] overflow-x-hidden bg-[#f5f0e8]">
+//       {/* Background — never capture clicks */}
+//       <div className="pointer-events-none absolute inset-0" aria-hidden>
+//         <div className="absolute -left-32 -top-24 h-[28rem] w-[28rem] rounded-full bg-[#b8956c]/15 blur-[100px]" />
+//         <div className="absolute -bottom-40 right-[-10%] h-[32rem] w-[32rem] rounded-full bg-[#d4c4a8]/40 blur-[120px]" />
+//         <div className="absolute left-1/2 top-1/3 h-64 w-64 -translate-x-1/2 rounded-full bg-white/50 blur-[80px]" />
+//         <div
+//           className="absolute inset-0 opacity-[0.35]"
+//           style={{
+//             backgroundImage:
+//               "radial-gradient(circle at 1px 1px, rgba(184,149,108,0.18) 1px, transparent 0)",
+//             backgroundSize: "28px 28px",
+//           }}
+//         />
+//       </div>
+
+//       {/* Top bar — logo only (no Back to website here) */}
+//       <div className="relative z-30 flex items-center justify-between gap-3 px-4 py-4 sm:px-8 sm:py-5 lg:px-12">
+//         <div className="inline-flex min-w-0 items-center gap-2.5 sm:gap-3">
+//           {/* eslint-disable-next-line @next/next/no-img-element */}
+//           <img
+//             src="/Akrish.jpg"
+//             alt="Akrish"
+//             className="h-9 w-9 shrink-0 rounded-2xl object-cover shadow-sm ring-1 ring-[#e8e2d8] sm:h-10 sm:w-10"
+//           />
+//           <div className="min-w-0 leading-tight">
+//             <p className="font-display text-base font-semibold tracking-tight text-[#1a1a1a] sm:text-lg">
+//               ERP
+//             </p>
+//             <p className="text-[9px] font-medium uppercase tracking-[0.18em] text-[#9a9188] sm:text-[10px] sm:tracking-[0.2em]">
+//               Collective · Akrish
+//             </p>
+//           </div>
+//         </div>
+
+//         <span className="hidden items-center gap-1.5 rounded-full border border-[#e8e2d8] bg-white/80 px-3 py-1.5 text-[11px] font-medium text-[#6b6560] sm:inline-flex">
+//           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+//           Systems online
+//         </span>
+//       </div>
+
+//       <div className="relative z-10 mx-auto flex min-h-[calc(100dvh-4.5rem)] max-w-6xl flex-col items-center justify-center px-4 pb-10 pt-2 sm:min-h-[calc(100dvh-5.5rem)] sm:px-8 sm:pb-12 lg:px-12">
+//         <p
+//           aria-hidden
+//           className="pointer-events-none absolute left-1/2 top-[42%] hidden -translate-x-1/2 -translate-y-1/2 select-none whitespace-nowrap font-display text-[18vw] font-semibold leading-none tracking-tighter text-[#1a1a1a]/[0.035] sm:block lg:text-[12rem]"
+//         >
+//           ERP
+//         </p>
+
+//         <div className="relative w-full max-w-[420px]">
+//           {/* Card glow — must NOT capture clicks */}
+//           <div
+//             aria-hidden
+//             className="pointer-events-none absolute -inset-x-3 -bottom-3 top-6 rounded-[2rem] bg-gradient-to-br from-[#b8956c]/25 via-[#d4c4a8]/20 to-transparent sm:-inset-x-4 sm:-bottom-4"
+//           />
+
+//           <div className="relative z-10 overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/90 shadow-[0_24px_64px_rgba(26,26,26,0.08)] backdrop-blur-md">
+//             <div className="h-1 w-full bg-gradient-to-r from-[#b8956c] via-[#d4b896] to-[#b8956c]/40" />
+
+//             <div className="px-5 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-8">
+//               <div className="mb-5 flex items-start justify-between gap-3 sm:mb-6">
+//                 <div className="min-w-0">
+//                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#b8956c]">
+//                     Staff portal
+//                   </p>
+//                   <h1 className="mt-1.5 font-display text-xl font-semibold tracking-tight text-[#1a1a1a] sm:text-[1.75rem]">
+//                     Collective ERP
+//                   </h1>
+//                   <p className="mt-1.5 text-sm text-[#7a746c]">
+//                     Sign in to manage interior &amp; furniture operations.
+//                   </p>
+//                 </div>
+//                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#f5f0e8] text-[#b8956c] sm:h-11 sm:w-11">
+//                   <ShieldCheck size={20} strokeWidth={1.6} />
+//                 </div>
+//               </div>
+
+//               {error && (
+//                 <div
+//                   role="alert"
+//                   className="mb-5 rounded-2xl border border-red-100 bg-red-50/90 px-4 py-3 text-sm text-red-700"
+//                 >
+//                   {error}
+//                 </div>
+//               )}
+
+//               <form onSubmit={handleLogin} className="space-y-4">
+//                 <div>
+//                   <label
+//                     htmlFor="email"
+//                     className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9188]"
+//                   >
+//                     Work email
+//                   </label>
+//                   <input
+//                     id="email"
+//                     type="email"
+//                     value={email}
+//                     onChange={(e) => setEmail(e.target.value)}
+//                     placeholder="admin@akrish.in"
+//                     autoComplete="email"
+//                     className="h-11 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15 sm:h-12"
+//                   />
+//                 </div>
+
+//                 <div>
+//                   <div className="mb-1.5 flex items-center justify-between">
+//                     <label
+//                       htmlFor="password"
+//                       className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9188]"
+//                     >
+//                       Password
+//                     </label>
+//                     <button
+//                       type="button"
+//                       onClick={() => router.push("/forgot-password")}
+//                       className="text-[11px] font-semibold text-[#b8956c] transition hover:text-[#8b7355]"
+//                     >
+//                       Forgot?
+//                     </button>
+//                   </div>
+//                   <div className="relative">
+//                     <input
+//                       id="password"
+//                       type={showPassword ? "text" : "password"}
+//                       value={password}
+//                       onChange={(e) => setPassword(e.target.value)}
+//                       placeholder="••••••••"
+//                       autoComplete="current-password"
+//                       className="h-11 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 pr-12 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15 sm:h-12"
+//                     />
+//                     <button
+//                       type="button"
+//                       onClick={() => setShowPassword((v) => !v)}
+//                       className="absolute right-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-[#9a9188] transition hover:bg-[#f0e8dc] hover:text-[#1a1a1a]"
+//                       aria-label={
+//                         showPassword ? "Hide password" : "Show password"
+//                       }
+//                     >
+//                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+//                     </button>
+//                   </div>
+//                 </div>
+
+//                 <label
+//                   htmlFor="remember"
+//                   className="flex cursor-pointer items-center gap-2.5 pt-0.5 text-xs text-[#6b6560]"
+//                 >
+//                   <input
+//                     id="remember"
+//                     type="checkbox"
+//                     checked={remember}
+//                     onChange={(e) => setRemember(e.target.checked)}
+//                     className="h-3.5 w-3.5 cursor-pointer rounded border-[#d4cdc2] accent-[#b8956c]"
+//                   />
+//                   Keep me signed in on this device
+//                 </label>
+
+//                 <button
+//                   type="submit"
+//                   disabled={loading}
+//                   className="group relative mt-1 flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[#1a1a1a] text-sm font-semibold text-white transition hover:bg-[#2c2a26] disabled:cursor-not-allowed disabled:opacity-60 sm:h-12"
+//                 >
+//                   <span
+//                     aria-hidden
+//                     className="absolute inset-y-0 left-0 w-1 bg-[#b8956c]"
+//                   />
+//                   {loading ? (
+//                     <>
+//                       <Loader2 size={16} className="animate-spin" />
+//                       Signing in…
+//                     </>
+//                   ) : (
+//                     <>
+//                       Enter workspace
+//                       <ArrowRight
+//                         size={16}
+//                         className="transition-transform group-hover:translate-x-0.5"
+//                       />
+//                     </>
+//                   )}
+//                 </button>
+//               </form>
+//             </div>
+
+//             <div className="grid grid-cols-2 divide-x divide-[#f0ebe3] border-t border-[#f0ebe3] bg-[#faf8f4]/80">
+//               <div className="px-3 py-3 text-center sm:px-4 sm:py-3.5">
+//                 <p className="text-[11px] font-semibold text-[#1a1a1a]">
+//                   Interior
+//                 </p>
+//                 <p className="mt-0.5 text-[10px] text-[#9a9188]">
+//                   Projects · CRM
+//                 </p>
+//               </div>
+//               <div className="px-3 py-3 text-center sm:px-4 sm:py-3.5">
+//                 <p className="text-[11px] font-semibold text-[#1a1a1a]">
+//                   Furniture
+//                 </p>
+//                 <p className="mt-0.5 text-[10px] text-[#9a9188]">
+//                   Catalog · Orders
+//                 </p>
+//               </div>
+//             </div>
+//           </div>
+
+//           {/* Only Back to website control — clickable */}
+//           <div className="relative z-20 mt-6 flex items-center justify-center gap-2 px-2 text-center sm:mt-8">
+//             <span className="text-xs text-[#9a9188]">Authorized staff only</span>
+//             <span className="text-[#d4cdc2]" aria-hidden>
+//               ·
+//             </span>
+//             <button
+//               type="button"
+//               onClick={goToWebsite}
+//               className="relative z-20 inline-flex min-h-[44px] items-center gap-1 rounded-lg px-1.5 py-2 text-sm font-semibold text-[#1a1a1a] underline decoration-[#e0d9ce] underline-offset-4 transition hover:text-[#b8956c] hover:decoration-[#b8956c] active:scale-[0.98]"
+//             >
+//               <ArrowLeft size={14} className="shrink-0" />
+//               Back to website
+//             </button>
+//           </div>
+//         </div>
+//       </div>
+//     </main>
+//   );
+// }
+
+// export default function LoginPage() {
+//   return (
+//     <Suspense
+//       fallback={
+//         <div className="flex min-h-[100dvh] items-center justify-center bg-[#f5f0e8]">
+//           <Loader2 className="h-8 w-8 animate-spin text-[#b8956c]" />
+//         </div>
+//       }
+//     >
+//       <LoginPageContent />
+//     </Suspense>
+//   );
+// }
+
+
+
+
+
 "use client";
 
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/core/auth/AuthContext";
-import Link from "next/link";
 import {
+  ArrowLeft,
   ArrowRight,
   Eye,
   EyeOff,
@@ -6071,9 +7126,14 @@ function LoginPageContent() {
     }
   };
 
+  const goToWebsite = () => {
+    router.push("/");
+  };
+
   return (
-    <main className="relative min-h-[100dvh] overflow-hidden bg-[#f5f0e8]">
-      <div className="pointer-events-none absolute inset-0">
+    <main className="relative min-h-[100dvh] overflow-x-hidden bg-[#f5f0e8]">
+      {/* Background — never capture clicks */}
+      <div className="pointer-events-none absolute inset-0" aria-hidden>
         <div className="absolute -left-32 -top-24 h-[28rem] w-[28rem] rounded-full bg-[#b8956c]/15 blur-[100px]" />
         <div className="absolute -bottom-40 right-[-10%] h-[32rem] w-[32rem] rounded-full bg-[#d4c4a8]/40 blur-[120px]" />
         <div className="absolute left-1/2 top-1/3 h-64 w-64 -translate-x-1/2 rounded-full bg-white/50 blur-[80px]" />
@@ -6087,31 +7147,32 @@ function LoginPageContent() {
         />
       </div>
 
-      {/* ERP brand strip only — not the website header */}
-      <div className="relative z-20 flex items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
-        <div className="inline-flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/Akrish.jpg"
-            alt="Akrish"
-            className="h-10 w-10 rounded-2xl object-cover shadow-sm ring-1 ring-[#e8e2d8]"
-          />
-          <div className="leading-tight">
-            <p className="font-display text-lg font-semibold tracking-tight text-[#1a1a1a]">
-              ERP
-            </p>
-            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#9a9188]">
-              Collective · Akrish
-            </p>
+      {/* Top bar — Akrish / Collective ERP centered */}
+      <div className="relative z-30 px-4 py-5 sm:px-8 sm:py-6 lg:px-12">
+        <div className="flex flex-col items-center justify-center text-center">
+          <div className="inline-flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/Akrish.jpg"
+              alt="Akrish"
+              className="h-11 w-11 shrink-0 rounded-2xl object-cover shadow-sm ring-1 ring-[#e8e2d8] sm:h-12 sm:w-12"
+            />
+            <div className="text-left leading-tight">
+              <p className="font-display text-xl font-semibold tracking-tight text-[#1a1a1a] sm:text-2xl">
+                Akrish
+              </p>
+              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#b8956c] sm:text-[11px]">
+                Collective ERP
+              </p>
+              <p className="mt-0.5 text-[9px] font-medium text-[#9a9188] sm:text-[10px]">
+                Furniture &amp; Interior
+              </p>
+            </div>
           </div>
         </div>
-        <span className="hidden items-center gap-1.5 rounded-full border border-[#e8e2d8] bg-white/80 px-3 py-1.5 text-[11px] font-medium text-[#6b6560] sm:inline-flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          Systems online
-        </span>
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100dvh-5.5rem)] max-w-6xl flex-col items-center justify-center px-5 pb-12 pt-2 sm:px-8 lg:px-12">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100dvh-5.5rem)] max-w-6xl flex-col items-center justify-center px-4 pb-10 pt-2 sm:px-8 sm:pb-12 lg:px-12">
         <p
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-[42%] hidden -translate-x-1/2 -translate-y-1/2 select-none whitespace-nowrap font-display text-[18vw] font-semibold leading-none tracking-tighter text-[#1a1a1a]/[0.035] sm:block lg:text-[12rem]"
@@ -6120,28 +7181,29 @@ function LoginPageContent() {
         </p>
 
         <div className="relative w-full max-w-[420px]">
+          {/* Card glow — must NOT capture clicks */}
           <div
             aria-hidden
-            className="absolute -inset-x-3 -bottom-3 top-6 rounded-[2rem] bg-gradient-to-br from-[#b8956c]/25 via-[#d4c4a8]/20 to-transparent sm:-inset-x-4 sm:-bottom-4"
+            className="pointer-events-none absolute -inset-x-3 -bottom-3 top-6 rounded-[2rem] bg-gradient-to-br from-[#b8956c]/25 via-[#d4c4a8]/20 to-transparent sm:-inset-x-4 sm:-bottom-4"
           />
 
-          <div className="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/90 shadow-[0_24px_64px_rgba(26,26,26,0.08)] backdrop-blur-md">
+          <div className="relative z-10 overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/90 shadow-[0_24px_64px_rgba(26,26,26,0.08)] backdrop-blur-md">
             <div className="h-1 w-full bg-gradient-to-r from-[#b8956c] via-[#d4b896] to-[#b8956c]/40" />
 
-            <div className="px-6 pb-7 pt-7 sm:px-8 sm:pb-8 sm:pt-8">
-              <div className="mb-6 flex items-start justify-between gap-3">
-                <div>
+            <div className="px-5 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-8">
+              <div className="mb-5 flex items-start justify-between gap-3 sm:mb-6">
+                <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#b8956c]">
                     Staff portal
                   </p>
-                  <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-[1.75rem]">
+                  <h1 className="mt-1.5 font-display text-xl font-semibold tracking-tight text-[#1a1a1a] sm:text-[1.75rem]">
                     Collective ERP
                   </h1>
                   <p className="mt-1.5 text-sm text-[#7a746c]">
                     Sign in to manage interior &amp; furniture operations.
                   </p>
                 </div>
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#f5f0e8] text-[#b8956c]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#f5f0e8] text-[#b8956c] sm:h-11 sm:w-11">
                   <ShieldCheck size={20} strokeWidth={1.6} />
                 </div>
               </div>
@@ -6170,7 +7232,7 @@ function LoginPageContent() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="admin@akrish.in"
                     autoComplete="email"
-                    className="h-12 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15"
+                    className="h-11 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15 sm:h-12"
                   />
                 </div>
 
@@ -6198,7 +7260,7 @@ function LoginPageContent() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       autoComplete="current-password"
-                      className="h-12 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 pr-12 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15"
+                      className="h-11 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 pr-12 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15 sm:h-12"
                     />
                     <button
                       type="button"
@@ -6230,7 +7292,7 @@ function LoginPageContent() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="group relative mt-1 flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[#1a1a1a] text-sm font-semibold text-white transition hover:bg-[#2c2a26] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="group relative mt-1 flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[#1a1a1a] text-sm font-semibold text-white transition hover:bg-[#2c2a26] disabled:cursor-not-allowed disabled:opacity-60 sm:h-12"
                 >
                   <span
                     aria-hidden
@@ -6255,7 +7317,7 @@ function LoginPageContent() {
             </div>
 
             <div className="grid grid-cols-2 divide-x divide-[#f0ebe3] border-t border-[#f0ebe3] bg-[#faf8f4]/80">
-              <div className="px-4 py-3.5 text-center">
+              <div className="px-3 py-3 text-center sm:px-4 sm:py-3.5">
                 <p className="text-[11px] font-semibold text-[#1a1a1a]">
                   Interior
                 </p>
@@ -6263,7 +7325,7 @@ function LoginPageContent() {
                   Projects · CRM
                 </p>
               </div>
-              <div className="px-4 py-3.5 text-center">
+              <div className="px-3 py-3 text-center sm:px-4 sm:py-3.5">
                 <p className="text-[11px] font-semibold text-[#1a1a1a]">
                   Furniture
                 </p>
@@ -6274,22 +7336,21 @@ function LoginPageContent() {
             </div>
           </div>
 
-          <p className="mt-8 text-center text-xs text-[#9a9188]">
-            Authorized staff only ·{" "}
-            {/* <Link
-              href="/"
-              className="font-medium text-[#1a1a1a]/70 underline decoration-[#e0d9ce] underline-offset-2 hover:text-[#1a1a1a] hover:decoration-[#b8956c]"
+          {/* Footer — Back to website */}
+          <div className="relative z-20 mt-6 flex items-center justify-center gap-2 px-2 text-center sm:mt-8">
+            <span className="text-xs text-[#9a9188]">Authorized staff only</span>
+            <span className="text-[#d4cdc2]" aria-hidden>
+              ·
+            </span>
+            <button
+              type="button"
+              onClick={goToWebsite}
+              className="relative z-20 inline-flex min-h-[44px] items-center gap-1 rounded-lg px-1.5 py-2 text-sm font-semibold text-[#1a1a1a] underline decoration-[#e0d9ce] underline-offset-4 transition hover:text-[#b8956c] hover:decoration-[#b8956c] active:scale-[0.98]"
             >
-              Back to store
-            </Link>
-            {" · "} */}
-            {/* <Link
-              href="/sign-in"
-              className="font-medium text-[#1a1a1a]/70 underline decoration-[#e0d9ce] underline-offset-2 hover:decoration-[#b8956c]"
-            >
-              Customer login
-            </Link> */}
-          </p>
+              <ArrowLeft size={14} className="shrink-0" />
+              Back to website
+            </button>
+          </div>
         </div>
       </div>
     </main>
