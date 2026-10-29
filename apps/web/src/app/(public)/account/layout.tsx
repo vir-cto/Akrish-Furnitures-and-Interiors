@@ -2701,75 +2701,423 @@
 // }
 
 
+// "use client";
+
+// import Link from "next/link";
+// import { usePathname, useRouter } from "next/navigation";
+// import { ReactNode, useEffect, useState } from "react";
+// import {
+//   Heart,
+//   LogOut,
+//   Menu,
+//   Package,
+//   User,
+//   X,
+//   Loader2,
+//   Lock,
+// } from "lucide-react";
+// import {
+//   onAuthStateChanged,
+//   signOut,
+//   User as FirebaseUser,
+// } from "firebase/auth";
+// import { auth } from "@/lib/firebase";
+
+// const navItems = [
+//   {
+//     href: "/account/profile",
+//     label: "Profile",
+//     icon: User,
+//   },
+//   {
+//     href: "/account/orders",
+//     label: "Orders",
+//     icon: Package,
+//   },
+//   {
+//     href: "/account/wishlist",
+//     label: "Wishlist",
+//     icon: Heart,
+//   },
+// ];
+
+// export default function AccountLayout({
+//   children,
+// }: {
+//   children: ReactNode;
+// }) {
+//   const pathname = usePathname();
+//   const router = useRouter();
+
+//   const [open, setOpen] = useState(false);
+//   const [firebaseUser, setFirebaseUser] =
+//     useState<FirebaseUser | null>(null);
+//   const [authReady, setAuthReady] = useState(false);
+//   const [loggingOut, setLoggingOut] = useState(false);
+
+//   useEffect(() => {
+//     const unsubscribe = onAuthStateChanged(
+//       auth,
+//       (user) => {
+//         setFirebaseUser(user);
+//         setAuthReady(true);
+//       },
+//       (error) => {
+//         console.error("Failed to check authentication:", error);
+//         setFirebaseUser(null);
+//         setAuthReady(true);
+//       }
+//     );
+
+//     return () => unsubscribe();
+//   }, []);
+
+//   useEffect(() => {
+//     setOpen(false);
+//   }, [pathname]);
+
+//   useEffect(() => {
+//     if (!open) return;
+
+//     const previousOverflow = document.body.style.overflow;
+//     document.body.style.overflow = "hidden";
+
+//     return () => {
+//       document.body.style.overflow = previousOverflow;
+//     };
+//   }, [open]);
+
+//   const handleLogout = async () => {
+//     if (!firebaseUser || loggingOut) return;
+
+//     setLoggingOut(true);
+
+//     try {
+//       await signOut(auth);
+//       setOpen(false);
+//       router.replace("/");
+//       router.refresh();
+//     } catch (error) {
+//       console.error("Failed to log out:", error);
+//       setLoggingOut(false);
+//     }
+//   };
+
+//   const isActive = (href: string) =>
+//     pathname === href || pathname.startsWith(`${href}/`);
+
+//   const displayName =
+//     firebaseUser?.displayName ||
+//     firebaseUser?.email ||
+//     "Account";
+
+//   const userLabel = displayName.charAt(0).toUpperCase() || "A";
+
+//   const NavLinks = ({
+//     onNavigate,
+//   }: {
+//     onNavigate?: () => void;
+//   }) => (
+//     <nav className="flex flex-col gap-1 p-3">
+//       {navItems.map(({ href, label, icon: Icon }) => {
+//         const active = isActive(href);
+
+//         return (
+//           <Link
+//             key={href}
+//             href={href}
+//             onClick={onNavigate}
+//             aria-current={active ? "page" : undefined}
+//             className={`flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-sm font-medium transition ${
+//               active
+//                 ? "bg-[#e8f5ef] text-[#176b5b] shadow-sm"
+//                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+//             }`}
+//           >
+//             <Icon size={18} className="shrink-0" />
+//             {label}
+//           </Link>
+//         );
+//       })}
+
+//       {authReady && firebaseUser && (
+//         <button
+//           type="button"
+//           onClick={handleLogout}
+//           disabled={loggingOut}
+//           className="mt-1 flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+//         >
+//           {loggingOut ? (
+//             <Loader2 size={18} className="shrink-0 animate-spin" />
+//           ) : (
+//             <LogOut size={18} className="shrink-0" />
+//           )}
+
+//           {loggingOut ? "Logging out..." : "Logout"}
+//         </button>
+//       )}
+//     </nav>
+//   );
+
+//   if (!authReady) {
+//     return (
+//       <div className="flex min-h-[320px] items-center justify-center bg-[#f0f2f1]">
+//         <Loader2 className="h-6 w-6 animate-spin text-[#176b5b]" />
+//         <span className="ml-3 text-sm text-slate-500">
+//           Checking your account...
+//         </span>
+//       </div>
+//     );
+//   }
+
+//   if (!firebaseUser) {
+//     return (
+//       <div className="flex min-h-[420px] flex-col items-center justify-center bg-[#f0f2f1] px-5 py-12 text-center">
+//         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-[#176b5b] shadow-sm">
+//           <Lock size={25} />
+//         </div>
+
+//         <h1 className="mt-5 text-xl font-bold text-slate-900">
+//           Please sign in
+//         </h1>
+
+//         <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
+//           Sign in to access your profile, orders, and account information.
+//         </p>
+
+//         <div className="mt-6 flex flex-wrap justify-center gap-3">
+//           <Link
+//             href={`/sign-in?redirect=${encodeURIComponent(
+//               pathname || "/account/profile"
+//             )}`}
+//             className="rounded-xl bg-[#176b5b] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#125548]"
+//           >
+//             Sign In
+//           </Link>
+
+//           <Link
+//             href="/register"
+//             className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+//           >
+//             Create account
+//           </Link>
+//         </div>
+
+//         <Link
+//           href="/"
+//           className="mt-5 text-sm font-medium text-[#176b5b] hover:underline"
+//         >
+//           Back to home
+//         </Link>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="min-h-screen bg-[#f0f2f1]">
+//       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
+//         {/* Top bar */}
+//         <div className="mb-5 flex items-center justify-between gap-3 sm:mb-6">
+//           <div className="flex items-center gap-2 text-xs text-slate-500 sm:text-sm">
+//             <Link href="/" className="transition hover:text-slate-900">
+//               Home
+//             </Link>
+
+//             <span className="text-slate-300">›</span>
+
+//             <span className="font-medium text-slate-800">
+//               My Account
+//             </span>
+
+//             {pathname === "/account/wishlist" && (
+//               <>
+//                 <span className="text-slate-300">›</span>
+//                 <span className="font-medium text-slate-800">
+//                   Wishlist
+//                 </span>
+//               </>
+//             )}
+
+//             {pathname === "/account/orders" && (
+//               <>
+//                 <span className="text-slate-300">›</span>
+//                 <span className="font-medium text-slate-800">
+//                   Orders
+//                 </span>
+//               </>
+//             )}
+//           </div>
+
+//           <div className="flex items-center gap-2">
+//             <Link
+//               href="/products"
+//               className="hidden text-xs font-semibold text-slate-600 transition hover:text-slate-900 sm:inline"
+//             >
+//               Back to store
+//             </Link>
+
+//             <button
+//               type="button"
+//               onClick={() => setOpen(true)}
+//               className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-700 shadow-md shadow-slate-200/60 lg:hidden"
+//               aria-label="Open account menu"
+//               aria-expanded={open}
+//             >
+//               <Menu size={20} />
+//             </button>
+//           </div>
+//         </div>
+
+//         <div className="flex gap-6 lg:gap-8">
+//           {/* Desktop sidebar */}
+//           <aside className="hidden w-[15.5rem] shrink-0 lg:block">
+//             <div className="sticky top-24 overflow-hidden rounded-2xl border border-white/80 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] ring-1 ring-slate-900/5">
+//               <div className="flex items-center gap-3 border-b border-slate-100/80 bg-gradient-to-br from-[#f4fbf8] to-white px-4 py-4">
+//                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#176b5b] text-sm font-bold text-white shadow-md shadow-[#176b5b]/25">
+//                   {userLabel}
+//                 </div>
+
+//                 <div className="min-w-0">
+//                   <p className="truncate text-sm font-semibold text-slate-900">
+//                     {displayName}
+//                   </p>
+
+//                   <p className="text-xs text-slate-500">
+//                     Manage profile
+//                   </p>
+//                 </div>
+//               </div>
+
+//               <NavLinks />
+//             </div>
+//           </aside>
+
+//           {/* Account content */}
+//           <main className="min-w-0 flex-1">
+//             <div className="min-h-[280px] rounded-2xl border border-white/80 bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5 sm:p-6">
+//               {children}
+//             </div>
+//           </main>
+//         </div>
+//       </div>
+
+//       {/* Mobile account menu */}
+//       {open && (
+//         <div className="fixed inset-0 z-50 lg:hidden">
+//           <button
+//             type="button"
+//             className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+//             aria-label="Close account menu"
+//             onClick={() => setOpen(false)}
+//           />
+
+//           <aside
+//             className="absolute left-3 right-3 top-3 mx-auto flex max-h-[min(70vh,28rem)] w-[min(18rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5 sm:left-3 sm:right-auto"
+//             style={{ animation: "akrishDrawerIn 0.22s ease-out" }}
+//           >
+//             <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-br from-[#f4fbf8] to-white px-4 py-3">
+//               <div className="flex min-w-0 items-center gap-2.5">
+//                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#176b5b] text-sm font-bold text-white">
+//                   {userLabel}
+//                 </div>
+
+//                 <div className="min-w-0">
+//                   <p className="truncate text-sm font-semibold text-slate-900">
+//                     My Account
+//                   </p>
+
+//                   <p className="truncate text-xs text-slate-500">
+//                     {displayName}
+//                   </p>
+//                 </div>
+//               </div>
+
+//               <button
+//                 type="button"
+//                 onClick={() => setOpen(false)}
+//                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+//                 aria-label="Close menu"
+//               >
+//                 <X size={18} />
+//               </button>
+//             </div>
+
+//             <div className="flex-1 overflow-y-auto">
+//               <NavLinks onNavigate={() => setOpen(false)} />
+//             </div>
+
+//             <div className="border-t border-slate-100 p-2.5">
+//               <Link
+//                 href="/products"
+//                 onClick={() => setOpen(false)}
+//                 className="block rounded-xl bg-[#f4fbf8] py-2.5 text-center text-sm font-semibold text-[#176b5b]"
+//               >
+//                 Back to store
+//               </Link>
+//             </div>
+//           </aside>
+//         </div>
+//       )}
+
+//       <style jsx global>{`
+//         @keyframes akrishDrawerIn {
+//           from {
+//             opacity: 0.6;
+//             transform: translateX(-12px);
+//           }
+
+//           to {
+//             opacity: 1;
+//             transform: translateX(0);
+//           }
+//         }
+//       `}</style>
+//     </div>
+//   );
+// }
+
+
 "use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
 import {
+  Box,
   Heart,
   LogOut,
   Menu,
-  Package,
   User,
   X,
-  Loader2,
-  Lock,
 } from "lucide-react";
-import {
-  onAuthStateChanged,
-  signOut,
-  User as FirebaseUser,
-} from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 const navItems = [
-  {
-    href: "/account/profile",
-    label: "Profile",
-    icon: User,
-  },
-  {
-    href: "/account/orders",
-    label: "Orders",
-    icon: Package,
-  },
-  {
-    href: "/account/wishlist",
-    label: "Wishlist",
-    icon: Heart,
-  },
+  { href: "/account/profile", label: "Profile", icon: User, exact: true },
+  { href: "/account/orders", label: "Orders", icon: Box, exact: false },
+  { href: "/account/wishlist", label: "Wishlist", icon: Heart, exact: true },
 ];
 
-export default function AccountLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function AccountLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-
   const [open, setOpen] = useState(false);
-  const [firebaseUser, setFirebaseUser] =
-    useState<FirebaseUser | null>(null);
-  const [authReady, setAuthReady] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
+  const [userLabel, setUserLabel] = useState("A");
+  const [displayName, setDisplayName] = useState("Account");
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (user) => {
-        setFirebaseUser(user);
-        setAuthReady(true);
-      },
-      (error) => {
-        console.error("Failed to check authentication:", error);
-        setFirebaseUser(null);
-        setAuthReady(true);
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        setUserLabel("A");
+        setDisplayName("Account");
+        return;
       }
-    );
-
-    return () => unsubscribe();
+      const name = user.displayName || user.email || "User";
+      setDisplayName(name);
+      setUserLabel(name.charAt(0).toUpperCase());
+    });
+    return () => unsub();
   }, []);
 
   useEffect(() => {
@@ -2778,60 +3126,37 @@ export default function AccountLayout({
 
   useEffect(() => {
     if (!open) return;
-
-    const previousOverflow = document.body.style.overflow;
+    const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.body.style.overflow = prev;
     };
   }, [open]);
 
   const handleLogout = async () => {
-    if (!firebaseUser || loggingOut) return;
-
-    setLoggingOut(true);
-
-    try {
-      await signOut(auth);
-      setOpen(false);
-      router.replace("/");
-      router.refresh();
-    } catch (error) {
-      console.error("Failed to log out:", error);
-      setLoggingOut(false);
-    }
+    await signOut(auth);
+    setOpen(false);
+    router.push("/");
   };
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (href: string, exact: boolean) => {
+    if (exact) return pathname === href;
+    return pathname === href || pathname.startsWith(href + "/");
+  };
 
-  const displayName =
-    firebaseUser?.displayName ||
-    firebaseUser?.email ||
-    "Account";
-
-  const userLabel = displayName.charAt(0).toUpperCase() || "A";
-
-  const NavLinks = ({
-    onNavigate,
-  }: {
-    onNavigate?: () => void;
-  }) => (
+  const NavLinks = ({ onNavigate }: { onNavigate?: () => void }) => (
     <nav className="flex flex-col gap-1 p-3">
-      {navItems.map(({ href, label, icon: Icon }) => {
-        const active = isActive(href);
-
+      {navItems.map(({ href, label, icon: Icon, exact }) => {
+        const active = isActive(href, exact);
         return (
           <Link
             key={href}
             href={href}
             onClick={onNavigate}
-            aria-current={active ? "page" : undefined}
             className={`flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-sm font-medium transition ${
               active
-                ? "bg-[#e8f5ef] text-[#176b5b] shadow-sm"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-[#f3ebe0] text-[#8b7355] shadow-sm"
+                : "text-[#5c564e] hover:bg-[#faf8f4] hover:text-[#1a1a1a]"
             }`}
           >
             <Icon size={18} className="shrink-0" />
@@ -2839,239 +3164,131 @@ export default function AccountLayout({
           </Link>
         );
       })}
-
-      {authReady && firebaseUser && (
-        <button
-          type="button"
-          onClick={handleLogout}
-          disabled={loggingOut}
-          className="mt-1 flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loggingOut ? (
-            <Loader2 size={18} className="shrink-0 animate-spin" />
-          ) : (
-            <LogOut size={18} className="shrink-0" />
-          )}
-
-          {loggingOut ? "Logging out..." : "Logout"}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="mt-1 flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-sm font-medium text-red-600 hover:bg-red-50"
+      >
+        <LogOut size={18} className="shrink-0" />
+        Logout
+      </button>
     </nav>
   );
 
-  if (!authReady) {
-    return (
-      <div className="flex min-h-[320px] items-center justify-center bg-[#f0f2f1]">
-        <Loader2 className="h-6 w-6 animate-spin text-[#176b5b]" />
-        <span className="ml-3 text-sm text-slate-500">
-          Checking your account...
-        </span>
-      </div>
-    );
-  }
-
-  if (!firebaseUser) {
-    return (
-      <div className="flex min-h-[420px] flex-col items-center justify-center bg-[#f0f2f1] px-5 py-12 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-[#176b5b] shadow-sm">
-          <Lock size={25} />
-        </div>
-
-        <h1 className="mt-5 text-xl font-bold text-slate-900">
-          Please sign in
-        </h1>
-
-        <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
-          Sign in to access your profile, orders, and account information.
-        </p>
-
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Link
-            href={`/sign-in?redirect=${encodeURIComponent(
-              pathname || "/account/profile"
-            )}`}
-            className="rounded-xl bg-[#176b5b] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#125548]"
-          >
-            Sign In
-          </Link>
-
-          <Link
-            href="/register"
-            className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            Create account
-          </Link>
-        </div>
-
-        <Link
-          href="/"
-          className="mt-5 text-sm font-medium text-[#176b5b] hover:underline"
-        >
-          Back to home
-        </Link>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-[#f0f2f1]">
+    <div className="min-h-screen bg-[#faf8f4]">
       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
         {/* Top bar */}
         <div className="mb-5 flex items-center justify-between gap-3 sm:mb-6">
-          <div className="flex items-center gap-2 text-xs text-slate-500 sm:text-sm">
-            <Link href="/" className="transition hover:text-slate-900">
+          <nav className="text-xs text-[#8a847c]">
+            <Link href="/" className="hover:text-[#1a1a1a]">
               Home
             </Link>
-
-            <span className="text-slate-300">›</span>
-
-            <span className="font-medium text-slate-800">
+            <span className="mx-1.5">/</span>
+            <Link href="/account/profile" className="hover:text-[#1a1a1a]">
               My Account
-            </span>
-
-            {pathname === "/account/wishlist" && (
+            </Link>
+            {pathname.includes("wishlist") && (
               <>
-                <span className="text-slate-300">›</span>
-                <span className="font-medium text-slate-800">
-                  Wishlist
-                </span>
+                <span className="mx-1.5">/</span>
+                <span className="text-[#1a1a1a]">Wishlist</span>
               </>
             )}
-
-            {pathname === "/account/orders" && (
+            {pathname.includes("orders") && (
               <>
-                <span className="text-slate-300">›</span>
-                <span className="font-medium text-slate-800">
-                  Orders
-                </span>
+                <span className="mx-1.5">/</span>
+                <span className="text-[#1a1a1a]">Orders</span>
               </>
             )}
-          </div>
+            {pathname.includes("profile") && (
+              <>
+                <span className="mx-1.5">/</span>
+                <span className="text-[#1a1a1a]">Profile</span>
+              </>
+            )}
+          </nav>
 
           <div className="flex items-center gap-2">
             <Link
               href="/products"
-              className="hidden text-xs font-semibold text-slate-600 transition hover:text-slate-900 sm:inline"
+              className="hidden text-xs font-semibold text-[#6b6560] hover:text-[#1a1a1a] sm:inline"
             >
               Back to store
             </Link>
-
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-700 shadow-md shadow-slate-200/60 lg:hidden"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#e8e2d8] bg-white text-[#1a1a1a] lg:hidden"
               aria-label="Open account menu"
-              aria-expanded={open}
             >
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
           </div>
         </div>
 
-        <div className="flex gap-6 lg:gap-8">
+        <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
           {/* Desktop sidebar */}
-          <aside className="hidden w-[15.5rem] shrink-0 lg:block">
-            <div className="sticky top-24 overflow-hidden rounded-2xl border border-white/80 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] ring-1 ring-slate-900/5">
-              <div className="flex items-center gap-3 border-b border-slate-100/80 bg-gradient-to-br from-[#f4fbf8] to-white px-4 py-4">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#176b5b] text-sm font-bold text-white shadow-md shadow-[#176b5b]/25">
-                  {userLabel}
-                </div>
-
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-900">
-                    {displayName}
-                  </p>
-
-                  <p className="text-xs text-slate-500">
-                    Manage profile
-                  </p>
-                </div>
+          <aside className="hidden h-fit overflow-hidden rounded-2xl border border-[#e8e2d8] bg-white lg:block">
+            <div className="flex items-center gap-3 border-b border-[#f0ebe3] p-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#1a1a1a] text-sm font-bold text-white">
+                {userLabel}
               </div>
-
-              <NavLinks />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-[#1a1a1a]">
+                  {displayName}
+                </p>
+                <Link
+                  href="/account/profile"
+                  className="text-xs text-[#8a847c] hover:text-[#b8956c]"
+                >
+                  Manage profile
+                </Link>
+              </div>
             </div>
+            <NavLinks />
           </aside>
 
-          {/* Account content */}
-          <main className="min-w-0 flex-1">
-            <div className="min-h-[280px] rounded-2xl border border-white/80 bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5 sm:p-6">
-              {children}
-            </div>
-          </main>
+          {/* Content */}
+          <div className="min-w-0 rounded-2xl border border-[#e8e2d8] bg-white p-4 sm:p-6 lg:p-8">
+            {children}
+          </div>
         </div>
       </div>
 
-      {/* Mobile account menu */}
+      {/* Mobile drawer */}
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
-            aria-label="Close account menu"
+            className="absolute inset-0 bg-[#1a1a1a]/40"
+            aria-label="Close menu"
             onClick={() => setOpen(false)}
           />
-
-          <aside
-            className="absolute left-3 right-3 top-3 mx-auto flex max-h-[min(70vh,28rem)] w-[min(18rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5 sm:left-3 sm:right-auto"
-            style={{ animation: "akrishDrawerIn 0.22s ease-out" }}
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-br from-[#f4fbf8] to-white px-4 py-3">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#176b5b] text-sm font-bold text-white">
+          <div className="absolute left-0 top-0 flex h-full w-[min(300px,88vw)] flex-col bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-[#f0ebe3] p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1a1a1a] text-sm font-bold text-white">
                   {userLabel}
                 </div>
-
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-900">
-                    My Account
-                  </p>
-
-                  <p className="truncate text-xs text-slate-500">
+                <div>
+                  <p className="text-sm font-semibold text-[#1a1a1a]">
                     {displayName}
                   </p>
+                  <p className="text-xs text-[#8a847c]">Manage profile</p>
                 </div>
               </div>
-
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
-                aria-label="Close menu"
+                className="rounded-lg p-2 text-[#8a847c] hover:bg-[#f3ebe0]"
               >
                 <X size={18} />
               </button>
             </div>
-
-            <div className="flex-1 overflow-y-auto">
-              <NavLinks onNavigate={() => setOpen(false)} />
-            </div>
-
-            <div className="border-t border-slate-100 p-2.5">
-              <Link
-                href="/products"
-                onClick={() => setOpen(false)}
-                className="block rounded-xl bg-[#f4fbf8] py-2.5 text-center text-sm font-semibold text-[#176b5b]"
-              >
-                Back to store
-              </Link>
-            </div>
-          </aside>
+            <NavLinks onNavigate={() => setOpen(false)} />
+          </div>
         </div>
       )}
-
-      <style jsx global>{`
-        @keyframes akrishDrawerIn {
-          from {
-            opacity: 0.6;
-            transform: translateX(-12px);
-          }
-
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }

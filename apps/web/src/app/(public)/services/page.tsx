@@ -89,6 +89,130 @@
 // }
 
 
+// "use client";
+
+// import Link from "next/link";
+// import {
+//   ArrowRight,
+//   Armchair,
+//   BedDouble,
+//   Lamp,
+//   Sofa,
+//   Table,
+//   Warehouse,
+// } from "lucide-react";
+
+// const services = [
+//   {
+//     title: "Living Room",
+//     description:
+//       "Sofas, sectionals, coffee tables and accent pieces for everyday comfort.",
+//     icon: Sofa,
+//   },
+//   {
+//     title: "Dining",
+//     description:
+//       "Dining tables, chairs and storage that bring the family together.",
+//     icon: Table,
+//   },
+//   {
+//     title: "Bedroom",
+//     description:
+//       "Beds, wardrobes and nightstands designed for rest and calm spaces.",
+//     icon: BedDouble,
+//   },
+//   {
+//     title: "Office & Study",
+//     description:
+//       "Desks, chairs and storage for productive work from home or office.",
+//     icon: Armchair,
+//   },
+//   {
+//     title: "Lighting & Decor",
+//     description:
+//       "Lamps and finishing touches that complete your furniture setup.",
+//     icon: Lamp,
+//   },
+//   {
+//     title: "Bulk & Custom Orders",
+//     description:
+//       "Large quantities and made-to-order pieces for homes and projects.",
+//     icon: Warehouse,
+//   },
+// ];
+
+// export default function ServicesPage() {
+//   return (
+//     <main className="min-h-screen bg-[#f7f9f8]">
+//       <section className="border-b border-slate-200 bg-white">
+//         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+//           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 sm:text-xs">
+//             Our Services
+//           </p>
+//           <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:mt-3 sm:text-4xl">
+//             Furniture services
+//           </h1>
+//           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:mt-4">
+//             Premium furniture for every room — curated collections, quality
+//             materials, and options that fit modern homes and workspaces.
+//           </p>
+//         </div>
+//       </section>
+
+//       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+//         {/* 2 per row on mobile, 3 on large screens */}
+//         <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
+//           {services.map((service) => {
+//             const Icon = service.icon;
+//             return (
+//               <div
+//                 key={service.title}
+//                 className="rounded-xl border border-slate-200 bg-white p-3.5 transition hover:shadow-md sm:rounded-2xl sm:p-6"
+//               >
+//                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#e8f5ef] text-[#176b5b] sm:h-12 sm:w-12 sm:rounded-xl">
+//                   <Icon size={18} className="sm:hidden" />
+//                   <Icon size={22} className="hidden sm:block" />
+//                 </div>
+//                 <h2 className="mt-3 text-sm font-bold leading-snug text-slate-900 sm:mt-5 sm:text-lg">
+//                   {service.title}
+//                 </h2>
+//                 <p className="mt-1.5 text-[11px] leading-5 text-slate-500 sm:mt-2 sm:text-sm sm:leading-6">
+//                   {service.description}
+//                 </p>
+//               </div>
+//             );
+//           })}
+//         </div>
+
+//         <div className="mt-8 rounded-xl bg-slate-900 px-5 py-8 text-center text-white sm:mt-12 sm:rounded-2xl sm:px-8 sm:py-10">
+//           <h2 className="text-xl font-bold sm:text-2xl">
+//             Ready to furnish your space?
+//           </h2>
+//           <p className="mt-2 text-sm text-slate-300 sm:mt-3">
+//             Browse our collection or talk to us about bulk and custom orders.
+//           </p>
+//           <div className="mt-5 flex flex-wrap justify-center gap-2.5 sm:mt-6 sm:gap-3">
+//             <Link
+//               href="/products"
+//               className="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-slate-900"
+//             >
+//               Shop Furniture
+//               <ArrowRight size={16} />
+//             </Link>
+//             <Link
+//               href="/contact"
+//               className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white"
+//             >
+//               Contact Us
+//             </Link>
+//           </div>
+//         </div>
+//       </section>
+//     </main>
+//   );
+// }
+
+
 "use client";
 
 import Link from "next/link";
@@ -143,16 +267,16 @@ const services = [
 
 export default function ServicesPage() {
   return (
-    <main className="min-h-screen bg-[#f7f9f8]">
-      <section className="border-b border-slate-200 bg-white">
+    <main className="min-h-screen bg-[#faf8f4]">
+      <section className="border-b border-[#e8e2d8] bg-[#faf8f4]">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 sm:text-xs">
-            Our Services
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#b8956c] sm:text-xs">
+            Our services
           </p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:mt-3 sm:text-4xl">
+          <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-[#1a1a1a] sm:mt-3 sm:text-4xl">
             Furniture services
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:mt-4">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#6b6560] sm:mt-4">
             Premium furniture for every room — curated collections, quality
             materials, and options that fit modern homes and workspaces.
           </p>
@@ -160,23 +284,21 @@ export default function ServicesPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-        {/* 2 per row on mobile, 3 on large screens */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
           {services.map((service) => {
             const Icon = service.icon;
             return (
               <div
                 key={service.title}
-                className="rounded-xl border border-slate-200 bg-white p-3.5 transition hover:shadow-md sm:rounded-2xl sm:p-6"
+                className="rounded-2xl border border-[#e8e2d8] bg-white p-4 transition hover:-translate-y-0.5 hover:shadow-sm sm:p-6"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#e8f5ef] text-[#176b5b] sm:h-12 sm:w-12 sm:rounded-xl">
-                  <Icon size={18} className="sm:hidden" />
-                  <Icon size={22} className="hidden sm:block" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f3ebe0] text-[#b8956c] sm:h-12 sm:w-12">
+                  <Icon size={20} strokeWidth={1.5} />
                 </div>
-                <h2 className="mt-3 text-sm font-bold leading-snug text-slate-900 sm:mt-5 sm:text-lg">
+                <h2 className="mt-3 text-sm font-semibold leading-snug text-[#1a1a1a] sm:mt-4 sm:text-base">
                   {service.title}
                 </h2>
-                <p className="mt-1.5 text-[11px] leading-5 text-slate-500 sm:mt-2 sm:text-sm sm:leading-6">
+                <p className="mt-1.5 text-xs leading-5 text-[#6b6560] sm:mt-2 sm:text-sm sm:leading-6">
                   {service.description}
                 </p>
               </div>
@@ -184,26 +306,26 @@ export default function ServicesPage() {
           })}
         </div>
 
-        <div className="mt-8 rounded-xl bg-slate-900 px-5 py-8 text-center text-white sm:mt-12 sm:rounded-2xl sm:px-8 sm:py-10">
-          <h2 className="text-xl font-bold sm:text-2xl">
+        <div className="mt-10 rounded-2xl bg-[#1a1a1a] px-5 py-10 text-center text-white sm:mt-14 sm:px-8 sm:py-12">
+          <h2 className="font-display text-xl font-semibold sm:text-2xl">
             Ready to furnish your space?
           </h2>
-          <p className="mt-2 text-sm text-slate-300 sm:mt-3">
+          <p className="mx-auto mt-2 max-w-md text-sm text-white/65 sm:mt-3">
             Browse our collection or talk to us about bulk and custom orders.
           </p>
-          <div className="mt-5 flex flex-wrap justify-center gap-2.5 sm:mt-6 sm:gap-3">
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link
               href="/products"
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-slate-900"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-[#1a1a1a] transition hover:bg-[#f0ebe3]"
             >
-              Shop Furniture
+              Shop furniture
               <ArrowRight size={16} />
             </Link>
             <Link
               href="/contact"
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/25 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
             >
-              Contact Us
+              Contact us
             </Link>
           </div>
         </div>

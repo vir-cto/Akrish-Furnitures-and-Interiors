@@ -8794,6 +8794,2178 @@
 // }
 
 
+// "use client";
+
+// import { useEffect, useMemo, useRef, useState } from "react";
+// import Link from "next/link";
+// import { usePathname, useRouter } from "next/navigation";
+// import {
+//   LogOut,
+//   Users,
+//   Search,
+//   Bell,
+//   Settings,
+//   X,
+//   Sofa,
+//   LayoutDashboard,
+// } from "lucide-react";
+// import {
+//   collection,
+//   query,
+//   orderBy,
+//   limit,
+//   onSnapshot,
+//   type Timestamp,
+// } from "firebase/firestore";
+// import { useAuth } from "@/core/auth/AuthContext";
+// import { db } from "@/core/config/firebaseClient";
+// import {
+//   markEnquiryNotificationSeen,
+//   markEnquiryNotificationsSeen,
+// } from "@/modules/furniture/services/enquiryService";
+
+// type NavItem = {
+//   label: string;
+//   href: string;
+//   icon: string;
+//   nested?: boolean;
+// };
+
+// type ErpModule = "interior" | "furniture";
+
+// const MODULE_STORAGE_KEY = "akrish_active_module";
+
+// const navigation: NavItem[] = [
+//   { label: "Dashboard", href: "/interior/dashboard", icon: "▦" },
+//   { label: "CRM", href: "/interior/crm", icon: "♟" },
+//   { label: "HRMS", href: "/interior/hrms", icon: "♟" },
+//   { label: "Clients", href: "/interior/clients", icon: "♙" },
+//   { label: "Quotations", href: "/interior/quotations", icon: "▤" },
+//   { label: "Contracts", href: "/interior/contracts", icon: "▥" },
+//   { label: "Projects", href: "/interior/projects", icon: "▣" },
+//   { label: "Vendors", href: "/interior/vendors", icon: "◆" },
+//   { label: "Payments", href: "/interior/payments", icon: "₹" },
+//   { label: "Reports", href: "/interior/reports", icon: "▥" },
+// ];
+
+// const furnitureNavigation: NavItem[] = [
+//   { label: "Dashboard", href: "/furniture/dashboard", icon: "▦" },
+//   { label: "Products", href: "/furniture/products", icon: "▤" },
+//   {
+//     label: "Categories",
+//     href: "/furniture/categories",
+//     icon: "☰",
+//     nested: true,
+//   },
+//   {
+//     label: "Sub Categories",
+//     href: "/furniture/sub-categories",
+//     icon: "▤",
+//     nested: true,
+//   },
+//   {
+//     label: "Materials",
+//     href: "/furniture/materials",
+//     icon: "◆",
+//     nested: true,
+//   },
+//   {
+//     label: "Finishes",
+//     href: "/furniture/finishes",
+//     icon: "▣",
+//     nested: true,
+//   },
+//   { label: "Inventory", href: "/furniture/inventory", icon: "▣" },
+//   { label: "Customers", href: "/furniture/customers", icon: "♙" },
+//   { label: "Enquiries", href: "/furniture/enquiries", icon: "◉" },
+//   { label: "Orders", href: "/furniture/orders", icon: "▥" },
+//   { label: "Payments", href: "/furniture/payments", icon: "₹" },
+//   { label: "Expenses", href: "/furniture/expenses", icon: "◆" },
+//   { label: "Delivery", href: "/furniture/settings/delivery", icon: "↗" },
+//   { label: "Reports", href: "/furniture/reports", icon: "▥" },
+// ];
+
+// type NotificationItem = {
+//   id: string;
+//   title: string;
+//   body: string;
+//   href: string;
+//   time: string;
+//   read: boolean;
+//   enquiryId: string;
+// };
+
+// const ENQUIRIES_COLLECTION = "furniture_enquiries";
+// const WEBSITE_URL = process.env.NEXT_PUBLIC_WEBSITE_URL || "/";
+
+// function readStoredModule(): ErpModule {
+//   if (typeof window === "undefined") return "furniture";
+//   try {
+//     const s = localStorage.getItem(MODULE_STORAGE_KEY);
+//     if (s === "interior" || s === "furniture") return s;
+//   } catch {
+//     /* ignore */
+//   }
+//   return "furniture";
+// }
+
+// function writeStoredModule(mod: ErpModule) {
+//   try {
+//     localStorage.setItem(MODULE_STORAGE_KEY, mod);
+//   } catch {
+//     /* ignore */
+//   }
+// }
+
+// function formatRelativeTime(value: unknown): string {
+//   let date: Date | null = null;
+//   if (value && typeof value === "object" && "toDate" in (value as object)) {
+//     try {
+//       date = (value as Timestamp).toDate();
+//     } catch {
+//       date = null;
+//     }
+//   } else if (typeof value === "string" || typeof value === "number") {
+//     date = new Date(value);
+//   }
+//   if (!date || Number.isNaN(date.getTime())) return "Just now";
+
+//   const diffMs = Date.now() - date.getTime();
+//   const mins = Math.floor(diffMs / 60000);
+//   if (mins < 1) return "Just now";
+//   if (mins < 60) return `${mins}m ago`;
+//   const hours = Math.floor(mins / 60);
+//   if (hours < 24) return `${hours}h ago`;
+//   const days = Math.floor(hours / 24);
+//   if (days === 1) return "Yesterday";
+//   if (days < 7) return `${days}d ago`;
+//   return date.toLocaleDateString("en-IN", {
+//     day: "2-digit",
+//     month: "short",
+//   });
+// }
+
+// function getPageTitle(pathname: string) {
+//   if (pathname.startsWith("/admin/users")) return "Staff Users";
+//   if (pathname.startsWith("/admin")) return "Administration";
+
+//   const allItems = [...navigation, ...furnitureNavigation];
+//   const item = allItems.find(
+//     (nav) => pathname === nav.href || pathname.startsWith(`${nav.href}/`)
+//   );
+//   return item?.label ?? "Dashboard";
+// }
+
+// function Logo() {
+//   return (
+//     <div className="flex min-w-0 items-center gap-2">
+//       <img
+//         src="/Akrish.jpg"
+//         alt="Akrish"
+//         className="h-9 w-9 shrink-0 rounded-lg object-cover shadow-sm"
+//       />
+//       <div className="min-w-0 leading-none">
+//         <div className="truncate text-[18px] font-bold tracking-tight text-[#1f2937] sm:text-[20px]">
+//           Akrish
+//         </div>
+//         <div className="mt-1 hidden text-[8px] font-medium uppercase tracking-[0.16em] text-slate-400 sm:block">
+//           Furniture and Interior
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+// /** Compact on mobile, normal on sm+ */
+// function HeaderModuleSwitcher({
+//   isFurniture,
+// }: {
+//   isFurniture: boolean;
+//   canInterior: boolean;
+//   canFurniture: boolean;
+// }) {
+//   return (
+//     <div
+//       className="relative flex h-8 shrink-0 items-center rounded-full border border-[#e0e6ef] bg-[#f8fafc] p-[2px] shadow-[0_1px_2px_rgba(15,23,42,0.06)] sm:h-[42px] sm:p-[3px]"
+//       role="group"
+//       aria-label="Switch ERP module"
+//     >
+//       <span
+//         aria-hidden="true"
+//         className="pointer-events-none absolute bottom-[2px] top-[2px] w-[calc(50%-2px)] rounded-full border border-[#e4e9f0] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-all duration-200 sm:bottom-[3px] sm:top-[3px] sm:w-[calc(50%-3px)]"
+//         style={{ left: isFurniture ? "calc(50% + 0px)" : "2px" }}
+//       />
+//       <Link
+//         href="/interior/dashboard"
+//         title="Interior ERP"
+//         onClick={() => writeStoredModule("interior")}
+//         className={`relative z-10 flex h-full items-center justify-center gap-1 rounded-full px-2 text-[11px] font-semibold transition-colors sm:gap-1.5 sm:px-3 sm:text-[13px] ${
+//           !isFurniture ? "text-[#176b57]" : "text-[#64748b] hover:text-slate-800"
+//         }`}
+//       >
+//         <LayoutDashboard size={13} className="sm:hidden" />
+//         <LayoutDashboard size={15} className="hidden sm:block" />
+//         <span>Interior</span>
+//       </Link>
+//       <Link
+//         href="/furniture/dashboard"
+//         title="Furniture ERP"
+//         onClick={() => writeStoredModule("furniture")}
+//         className={`relative z-10 flex h-full items-center justify-center gap-1 rounded-full px-2 text-[11px] font-semibold transition-colors sm:gap-1.5 sm:px-3 sm:text-[13px] ${
+//           isFurniture ? "text-[#08775f]" : "text-[#64748b] hover:text-slate-800"
+//         }`}
+//       >
+//         <Sofa size={13} className="sm:hidden" />
+//         <Sofa size={15} className="hidden sm:block" />
+//         <span>Furniture</span>
+//       </Link>
+//     </div>
+//   );
+// }
+
+// export default function ERPLayout({
+//   children,
+// }: Readonly<{
+//   children: React.ReactNode;
+// }>) {
+//   const pathname = usePathname();
+//   const router = useRouter();
+//   const { user, isAdmin, logout, hasModule, isLoading } = useAuth();
+
+//   const canInterior = hasModule("interior");
+//   const canFurniture = hasModule("furniture");
+
+//   const [sidebarOpen, setSidebarOpen] = useState(false);
+//   const [searchOpen, setSearchOpen] = useState(false);
+//   const [searchQuery, setSearchQuery] = useState("");
+//   const [notifOpen, setNotifOpen] = useState(false);
+//   const [settingsOpen, setSettingsOpen] = useState(false);
+//   const [userMenuOpen, setUserMenuOpen] = useState(false);
+//   const [contentVisible, setContentVisible] = useState(true);
+//   const [displayChildren, setDisplayChildren] = useState(children);
+//   const prevModuleRef = useRef<"interior" | "furniture" | null>(null);
+//   const [shellModule, setShellModule] = useState<ErpModule>("furniture");
+
+//   const searchInputRef = useRef<HTMLInputElement>(null);
+//   const headerActionsRef = useRef<HTMLDivElement>(null);
+
+//   const pathIsFurniture =
+//     pathname === "/furniture" || pathname.startsWith("/furniture/");
+//   const pathIsInterior =
+//     pathname === "/interior" || pathname.startsWith("/interior/");
+//   const pathIsAdmin = pathname.startsWith("/admin");
+
+//   useEffect(() => {
+//     if (pathIsFurniture) {
+//       writeStoredModule("furniture");
+//       setShellModule("furniture");
+//       return;
+//     }
+//     if (pathIsInterior) {
+//       writeStoredModule("interior");
+//       setShellModule("interior");
+//       return;
+//     }
+//     if (pathIsAdmin) {
+//       setShellModule(readStoredModule());
+//     }
+//   }, [pathname, pathIsFurniture, pathIsInterior, pathIsAdmin]);
+
+//   const isFurniture = pathIsFurniture
+//     ? true
+//     : pathIsInterior
+//       ? false
+//       : shellModule === "furniture";
+
+//   const currentModule: ErpModule = isFurniture ? "furniture" : "interior";
+//   const currentNavigation = isFurniture ? furnitureNavigation : navigation;
+//   const pageTitle = getPageTitle(pathname);
+
+//   useEffect(() => {
+//     document.title = `Collective ERP`;
+//   }, [pageTitle, pathname]);
+
+//   const moduleName = pathIsAdmin
+//     ? "Collective ERP"
+//     : isFurniture
+//       ? "Furniture ERP"
+//       : "Interior ERP";
+
+//   const moduleKey = isFurniture ? "furniture" : "interior";
+
+//   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+//   useEffect(() => {
+//     setSidebarOpen(false);
+//     setNotifOpen(false);
+//     setSettingsOpen(false);
+//     setUserMenuOpen(false);
+//     setSearchOpen(false);
+//   }, [pathname]);
+
+//   useEffect(() => {
+//     if (!sidebarOpen) return;
+//     const prev = document.body.style.overflow;
+//     document.body.style.overflow = "hidden";
+//     return () => {
+//       document.body.style.overflow = prev;
+//     };
+//   }, [sidebarOpen]);
+
+//   useEffect(() => {
+//     if (isLoading || !user) return;
+
+//     if (pathname.startsWith("/furniture") && !canFurniture) {
+//       router.replace(canInterior ? "/interior/dashboard" : "/unauthorized");
+//       return;
+//     }
+
+//     if (pathname.startsWith("/interior") && !canInterior) {
+//       router.replace(canFurniture ? "/furniture/dashboard" : "/unauthorized");
+//     }
+//   }, [isLoading, user, pathname, canInterior, canFurniture, router]);
+
+//   useEffect(() => {
+//     if (!canFurniture) {
+//       setNotifications([]);
+//       setNotifOpen(false);
+//       return;
+//     }
+
+//     let unsub: (() => void) | undefined;
+
+//     try {
+//       const q = query(
+//         collection(db, ENQUIRIES_COLLECTION),
+//         orderBy("createdAt", "desc"),
+//         limit(25)
+//       );
+
+//       unsub = onSnapshot(
+//         q,
+//         (snapshot) => {
+//           const items: NotificationItem[] = [];
+
+//           snapshot.forEach((docSnap) => {
+//             const data = docSnap.data();
+//             const status = String(data.status || "New").trim().toLowerCase();
+//             const seen = data.notificationSeen === true;
+
+//             if (status !== "new") return;
+//             if (seen) return;
+
+//             const name =
+//               String(data.customerName || data.name || "Customer").trim() ||
+//               "Customer";
+//             const product = String(
+//               data.productName || data.productCode || ""
+//             ).trim();
+//             const source = String(data.source || "Website").trim();
+//             const message = String(data.message || "").trim();
+
+//             items.push({
+//               id: `enq-${docSnap.id}`,
+//               enquiryId: docSnap.id,
+//               title: "New enquiry",
+//               body: product
+//                 ? `${name} · ${product}${source ? ` · ${source}` : ""}`
+//                 : message
+//                   ? `${name}: ${message.slice(0, 60)}${message.length > 60 ? "…" : ""}`
+//                   : `${name} sent a contact request${source ? ` (${source})` : ""}`,
+//               href: "/furniture/enquiries",
+//               time: formatRelativeTime(data.createdAt),
+//               read: false,
+//             });
+//           });
+
+//           setNotifications(items);
+//         },
+//         (err) => {
+//           console.error("Enquiry notifications listener error:", err);
+//         }
+//       );
+//     } catch (err) {
+//       console.error("Failed to start enquiry notifications:", err);
+//     }
+
+//     return () => {
+//       unsub?.();
+//     };
+//   }, [canFurniture]);
+
+//   useEffect(() => {
+//     const prev = prevModuleRef.current;
+//     if (prev !== null && prev !== currentModule) {
+//       setContentVisible(false);
+//       const t = window.setTimeout(() => {
+//         setDisplayChildren(children);
+//         setContentVisible(true);
+//       }, 180);
+//       prevModuleRef.current = currentModule;
+//       return () => window.clearTimeout(t);
+//     }
+//     setDisplayChildren(children);
+//     setContentVisible(true);
+//     prevModuleRef.current = currentModule;
+//   }, [children, currentModule]);
+
+//   const unreadCount = notifications.length;
+
+//   useEffect(() => {
+//     function onDocClick(e: MouseEvent) {
+//       if (
+//         headerActionsRef.current &&
+//         !headerActionsRef.current.contains(e.target as Node)
+//       ) {
+//         setNotifOpen(false);
+//         setSettingsOpen(false);
+//         setUserMenuOpen(false);
+//       }
+//     }
+//     document.addEventListener("mousedown", onDocClick);
+//     return () => document.removeEventListener("mousedown", onDocClick);
+//   }, []);
+
+//   useEffect(() => {
+//     if (searchOpen) {
+//       setTimeout(() => searchInputRef.current?.focus(), 50);
+//     }
+//   }, [searchOpen]);
+
+//   useEffect(() => {
+//     function onKey(e: KeyboardEvent) {
+//       if (e.key === "Escape") {
+//         setSearchOpen(false);
+//         setNotifOpen(false);
+//         setSettingsOpen(false);
+//         setUserMenuOpen(false);
+//         setSidebarOpen(false);
+//       }
+//     }
+//     window.addEventListener("keydown", onKey);
+//     return () => window.removeEventListener("keydown", onKey);
+//   }, []);
+
+//   const searchTargets = useMemo(() => {
+//     const base = isFurniture
+//       ? [
+//           { label: "Products", href: "/furniture/products" },
+//           { label: "Inventory", href: "/furniture/inventory" },
+//           { label: "Categories", href: "/furniture/categories" },
+//           { label: "Sub Categories", href: "/furniture/sub-categories" },
+//           { label: "Materials", href: "/furniture/materials" },
+//           { label: "Finishes", href: "/furniture/finishes" },
+//           { label: "Customers", href: "/furniture/customers" },
+//           { label: "Enquiries", href: "/furniture/enquiries" },
+//           { label: "Orders", href: "/furniture/orders" },
+//           { label: "Payments", href: "/furniture/payments" },
+//           { label: "Expenses", href: "/furniture/expenses" },
+//           { label: "Reports", href: "/furniture/reports" },
+//         ]
+//       : [
+//           { label: "CRM / Leads", href: "/interior/crm" },
+//           { label: "Clients", href: "/interior/clients" },
+//           { label: "Quotations", href: "/interior/quotations" },
+//           { label: "Contracts", href: "/interior/contracts" },
+//           { label: "Projects", href: "/interior/projects" },
+//           { label: "HRMS", href: "/interior/hrms" },
+//           { label: "Vendors", href: "/interior/vendors" },
+//           { label: "Payments", href: "/interior/payments" },
+//           { label: "Reports", href: "/interior/reports" },
+//         ];
+
+//     if (isAdmin) {
+//       base.push({ label: "Staff Users", href: "/admin/users" });
+//     }
+//     return base;
+//   }, [isFurniture, isAdmin]);
+
+//   const filteredSearch = useMemo(() => {
+//     const q = searchQuery.toLowerCase().trim();
+//     if (!q) return searchTargets;
+//     return searchTargets.filter((t) => t.label.toLowerCase().includes(q));
+//   }, [searchQuery, searchTargets]);
+
+//   function runSearch(e?: React.FormEvent) {
+//     e?.preventDefault();
+//     const q = searchQuery.trim();
+//     if (!q) return;
+
+//     const match = filteredSearch[0];
+//     if (match) {
+//       router.push(`${match.href}?search=${encodeURIComponent(q)}`);
+//     } else if (isFurniture) {
+//       router.push(`/furniture/products?search=${encodeURIComponent(q)}`);
+//     } else {
+//       router.push(`/interior/crm?search=${encodeURIComponent(q)}`);
+//     }
+//     setSearchOpen(false);
+//     setSearchQuery("");
+//   }
+
+//   async function openNotification(n: NotificationItem) {
+//     setNotifications((list) => list.filter((item) => item.id !== n.id));
+//     setNotifOpen(false);
+
+//     try {
+//       await markEnquiryNotificationSeen(n.enquiryId);
+//     } catch (err) {
+//       console.error("Failed to mark notification seen:", err);
+//     } finally {
+//       router.push("/furniture/enquiries");
+//     }
+//   }
+
+//   async function markAllRead() {
+//     const ids = notifications.map((n) => n.enquiryId);
+//     setNotifications([]);
+//     setNotifOpen(false);
+//     try {
+//       await markEnquiryNotificationsSeen(ids);
+//     } catch (err) {
+//       console.error("Failed to clear notifications:", err);
+//     }
+//   }
+
+//   const handleLogout = () => {
+//     logout();
+//     router.push("/login");
+//   };
+
+//   function goToStaffUsers() {
+//     writeStoredModule(isFurniture ? "furniture" : "interior");
+//     setSidebarOpen(false);
+//     setSettingsOpen(false);
+//     setUserMenuOpen(false);
+//     router.push("/admin/users");
+//   }
+
+//   const displayName = user?.name || "User";
+//   const displayRole = user?.role
+//     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+//     : "Staff";
+//   const avatarLetter = displayName.charAt(0).toUpperCase();
+
+//   return (
+//     <div className="min-h-screen min-h-[100dvh] overflow-x-hidden bg-[#f7f9f8] text-slate-800">
+//       {sidebarOpen && (
+//         <button
+//           type="button"
+//           aria-label="Close sidebar"
+//           onClick={() => setSidebarOpen(false)}
+//           className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-200 lg:hidden"
+//         />
+//       )}
+
+//       <aside
+//         className={`
+//           fixed z-50 flex flex-col bg-white
+//           transition-all duration-250 ease-out
+//           left-3 top-3 bottom-3 w-[min(17.5rem,calc(100vw-1.5rem))]
+//           rounded-2xl border border-white/80
+//           shadow-[0_12px_40px_rgba(0,0,0,0.18)] ring-1 ring-slate-900/5
+//           lg:left-0 lg:top-0 lg:bottom-0 lg:w-[215px]
+//           lg:rounded-none lg:border-0 lg:border-r lg:border-slate-200
+//           lg:shadow-none lg:ring-0
+//           ${
+//             sidebarOpen
+//               ? "translate-x-0 opacity-100"
+//               : "-translate-x-[calc(100%+1.5rem)] opacity-0 pointer-events-none lg:pointer-events-auto lg:translate-x-0 lg:opacity-100"
+//           }
+//         `}
+//         style={{
+//           animation: sidebarOpen ? "akrishSidebarIn 0.22s ease-out" : undefined,
+//         }}
+//       >
+//         <div className="flex h-14 shrink-0 items-center border-b border-slate-100 px-4 sm:h-[64px] sm:px-5">
+//           <Logo />
+//           <button
+//             type="button"
+//             onClick={() => setSidebarOpen(false)}
+//             className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 lg:hidden"
+//             aria-label="Close menu"
+//           >
+//             <X size={18} />
+//           </button>
+//         </div>
+
+//         <nav className="mt-2 flex-1 overflow-y-auto overscroll-contain px-2.5 pb-3 sm:mt-3 sm:px-3">
+//           <p
+//             key={moduleKey + "-label"}
+//             className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400"
+//           >
+//             {isFurniture ? "Furniture Management" : "Interior Management"}
+//           </p>
+
+//           <div key={moduleKey + "-nav"} className="space-y-0.5 sm:space-y-1">
+//             {currentNavigation.map((item) => {
+//               const active =
+//                 pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+//               return (
+//                 <Link
+//                   key={item.href}
+//                   href={item.href}
+//                   onClick={() => {
+//                     writeStoredModule(
+//                       item.href.startsWith("/furniture")
+//                         ? "furniture"
+//                         : "interior"
+//                     );
+//                     setSidebarOpen(false);
+//                   }}
+//                   className={`group flex min-h-[42px] items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200 sm:min-h-0 sm:rounded-lg ${
+//                     item.nested ? "ml-2 border-l border-slate-200 pl-3" : ""
+//                   } ${
+//                     active
+//                       ? "bg-[#e8f5ef] text-[#176b57] shadow-sm"
+//                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+//                   }`}
+//                 >
+//                   <span
+//                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[13px] transition-colors duration-200 sm:h-6 sm:w-6 ${
+//                       active
+//                         ? "bg-[#176b57] text-white"
+//                         : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
+//                     }`}
+//                   >
+//                     {item.icon}
+//                   </span>
+//                   <span className="truncate">{item.label}</span>
+//                   {active && (
+//                     <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[#176b57]" />
+//                   )}
+//                 </Link>
+//               );
+//             })}
+
+//             {isAdmin && (
+//               <>
+//                 <div className="my-3 border-t border-slate-100" />
+//                 <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
+//                   Administration
+//                 </p>
+//                 <button
+//                   type="button"
+//                   onClick={goToStaffUsers}
+//                   className={`group flex w-full min-h-[42px] items-center gap-3 rounded-xl px-3 py-2 text-left text-[13px] font-medium transition-all duration-200 sm:min-h-0 sm:rounded-lg ${
+//                     pathname.startsWith("/admin/users")
+//                       ? "bg-[#e8f5ef] text-[#176b57] shadow-sm"
+//                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+//                   }`}
+//                 >
+//                   <span
+//                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-200 sm:h-6 sm:w-6 ${
+//                       pathname.startsWith("/admin/users")
+//                         ? "bg-[#176b57] text-white"
+//                         : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
+//                     }`}
+//                   >
+//                     <Users size={14} />
+//                   </span>
+//                   <span>Staff Users</span>
+//                   {pathname.startsWith("/admin/users") && (
+//                     <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[#176b57]" />
+//                   )}
+//                 </button>
+//               </>
+//             )}
+//           </div>
+//         </nav>
+
+//         {/* Sidebar footer: Back to website + user */}
+//         <div className="shrink-0 border-t border-slate-100 p-2.5 sm:p-3">
+//           <Link
+//             href={WEBSITE_URL}
+//             onClick={() => setSidebarOpen(false)}
+//             className="mb-2 flex min-h-[40px] w-full items-center justify-center rounded-xl border border-[#dce8e3] bg-[#f4fbf8] px-3 text-[13px] font-semibold text-[#176b57] transition hover:bg-[#e8f5ef]"
+//           >
+//             Back to website
+//           </Link>
+
+//           <div className="rounded-xl bg-slate-50 p-2.5 sm:rounded-lg sm:p-3">
+//             <div className="flex items-center gap-2">
+//               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#176b57] text-xs font-bold text-white sm:h-8 sm:w-8">
+//                 {avatarLetter}
+//               </div>
+//               <div className="min-w-0 flex-1">
+//                 <p className="truncate text-xs font-semibold text-slate-800">
+//                   {displayName}
+//                 </p>
+//                 <p className="truncate text-[10px] text-slate-400">
+//                   {displayRole}
+//                 </p>
+//               </div>
+//               <button
+//                 type="button"
+//                 onClick={handleLogout}
+//                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600 sm:h-7 sm:w-7"
+//                 title="Logout"
+//               >
+//                 <LogOut size={14} />
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       </aside>
+
+//       <div className="min-h-screen lg:pl-[215px]">
+//         <header className="sticky top-0 z-30 h-14 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur sm:h-[64px]">
+//           <div className="flex h-full items-center justify-between gap-1.5 px-2.5 sm:gap-2 sm:px-4 md:px-6">
+//             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+//               <button
+//                 type="button"
+//                 onClick={() => setSidebarOpen(true)}
+//                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 sm:h-10 sm:w-10 lg:hidden"
+//                 aria-label="Open navigation"
+//               >
+//                 ☰
+//               </button>
+
+//               <div key={moduleKey + "-title"} className="min-w-0">
+//                 <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+//                   {moduleName}
+//                 </p>
+//                 <h1 className="truncate text-sm font-semibold leading-tight text-slate-800">
+//                   {pageTitle}
+//                 </h1>
+//               </div>
+//             </div>
+
+//             <div
+//               ref={headerActionsRef}
+//               className="relative flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-2"
+//             >
+//               {/* Desktop only — mobile uses sidebar link */}
+//               <Link
+//                 href={WEBSITE_URL}
+//                 title="Back to website"
+//                 className="hidden h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-semibold text-[#176b57] transition hover:bg-[#e8f5ef] sm:inline-flex"
+//               >
+//                 Back to website
+//               </Link>
+
+//               <HeaderModuleSwitcher
+//                 isFurniture={isFurniture}
+//                 canInterior={canInterior}
+//                 canFurniture={canFurniture}
+//               />
+
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setSearchOpen(true);
+//                   setNotifOpen(false);
+//                   setSettingsOpen(false);
+//                   setUserMenuOpen(false);
+//                 }}
+//                 className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 sm:h-9 sm:w-9"
+//                 aria-label="Search"
+//               >
+//                 <Search size={18} />
+//               </button>
+
+//               {canFurniture && (
+//                 <div className="relative">
+//                   <button
+//                     type="button"
+//                     onClick={() => {
+//                       setNotifOpen((v) => !v);
+//                       setSettingsOpen(false);
+//                       setUserMenuOpen(false);
+//                     }}
+//                     className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100"
+//                     aria-label="Notifications"
+//                   >
+//                     <Bell size={18} />
+//                     {unreadCount > 0 && (
+//                       <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+//                         {unreadCount > 9 ? "9+" : unreadCount}
+//                       </span>
+//                     )}
+//                   </button>
+
+//                   {notifOpen && (
+//                     <div className="absolute right-0 z-50 mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+//                       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+//                         <p className="text-sm font-semibold text-slate-800">
+//                           Notifications
+//                         </p>
+//                         {notifications.length > 0 && (
+//                           <button
+//                             type="button"
+//                             onClick={markAllRead}
+//                             className="text-xs font-medium text-[#176b57] hover:underline"
+//                           >
+//                             Clear all
+//                           </button>
+//                         )}
+//                       </div>
+//                       <div className="max-h-[min(18rem,50vh)] overflow-y-auto">
+//                         {notifications.length === 0 ? (
+//                           <div className="px-4 py-10 text-center">
+//                             <Bell
+//                               size={28}
+//                               className="mx-auto mb-2 text-slate-300"
+//                             />
+//                             <p className="text-sm font-medium text-slate-600">
+//                               No notifications
+//                             </p>
+//                             <p className="mt-1 text-xs text-slate-400">
+//                               New website enquiries will appear here
+//                             </p>
+//                           </div>
+//                         ) : (
+//                           notifications.map((n) => (
+//                             <button
+//                               key={n.id}
+//                               type="button"
+//                               onClick={() => openNotification(n)}
+//                               className="flex w-full flex-col gap-0.5 border-b border-slate-50 bg-[#f4fbf8] px-4 py-3 text-left transition-colors hover:bg-slate-50"
+//                             >
+//                               <div className="flex items-center justify-between gap-2">
+//                                 <p className="text-sm font-semibold text-slate-800">
+//                                   {n.title}
+//                                 </p>
+//                                 <span className="shrink-0 text-[10px] text-slate-400">
+//                                   {n.time}
+//                                 </span>
+//                               </div>
+//                               <p className="text-xs text-slate-500">{n.body}</p>
+//                             </button>
+//                           ))
+//                         )}
+//                       </div>
+//                       {notifications.length > 0 && (
+//                         <button
+//                           type="button"
+//                           onClick={() => {
+//                             setNotifOpen(false);
+//                             router.push("/furniture/enquiries");
+//                           }}
+//                           className="w-full border-t border-slate-100 px-4 py-2.5 text-center text-xs font-semibold text-[#176b57] hover:bg-slate-50"
+//                         >
+//                           View all enquiries
+//                         </button>
+//                       )}
+//                     </div>
+//                   )}
+//                 </div>
+//               )}
+
+//               <div className="relative">
+//                 <button
+//                   type="button"
+//                   onClick={() => {
+//                     setSettingsOpen((open) => !open);
+//                     setNotifOpen(false);
+//                     setUserMenuOpen(false);
+//                     setSearchOpen(false);
+//                   }}
+//                   className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100"
+//                   aria-label="Settings"
+//                   aria-expanded={settingsOpen}
+//                   title="Settings"
+//                 >
+//                   <Settings size={18} />
+//                 </button>
+
+//                 {settingsOpen && (
+//                   <div className="absolute right-0 top-full z-[70] mt-2 w-[230px] overflow-hidden rounded-[14px] border border-[#e1e7ef] bg-white py-1 shadow-[0_12px_28px_rgba(15,23,42,0.16)]">
+//                     {isAdmin && (
+//                       <button
+//                         type="button"
+//                         onClick={goToStaffUsers}
+//                         className="flex min-h-[40px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-[#334155] transition-colors hover:bg-[#f8fafc]"
+//                       >
+//                         <Users size={14} />
+//                         <span>Staff Users</span>
+//                       </button>
+//                     )}
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setSettingsOpen(false);
+//                         router.push(
+//                           isFurniture
+//                             ? "/furniture/reports"
+//                             : "/interior/reports"
+//                         );
+//                       }}
+//                       className="flex min-h-[40px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-[#334155] transition-colors hover:bg-[#f8fafc]"
+//                     >
+//                       <span>Reports</span>
+//                     </button>
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setSettingsOpen(false);
+//                         router.push(
+//                           isFurniture
+//                             ? "/furniture/dashboard"
+//                             : "/interior/dashboard"
+//                         );
+//                       }}
+//                       className="flex min-h-[40px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-[#334155] transition-colors hover:bg-[#f8fafc]"
+//                     >
+//                       <span>
+//                         {isFurniture
+//                           ? "Furniture Dashboard"
+//                           : "Interior Dashboard"}
+//                       </span>
+//                     </button>
+//                     <div className="my-1 border-t border-[#edf0f4]" />
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setSettingsOpen(false);
+//                         handleLogout();
+//                       }}
+//                       className="flex min-h-[44px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-red-500 transition-colors hover:bg-red-50"
+//                     >
+//                       <LogOut size={14} />
+//                       <span>Logout</span>
+//                     </button>
+//                   </div>
+//                 )}
+//               </div>
+
+//               <div className="relative border-l border-slate-200 pl-1.5 sm:pl-3">
+//                 <button
+//                   type="button"
+//                   onClick={() => {
+//                     setUserMenuOpen((v) => !v);
+//                     setNotifOpen(false);
+//                     setSettingsOpen(false);
+//                   }}
+//                   className="flex items-center gap-2 rounded-lg px-1 py-1 transition-colors hover:bg-slate-50"
+//                 >
+//                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#dff1e8] text-xs font-bold text-[#176b57] sm:h-8 sm:w-8">
+//                     {avatarLetter}
+//                   </div>
+//                   <div className="hidden min-w-0 text-left md:block">
+//                     <p className="max-w-[120px] truncate text-xs font-semibold text-slate-800">
+//                       {displayName}
+//                     </p>
+//                     <p className="text-[10px] text-slate-400">{displayRole}</p>
+//                   </div>
+//                 </button>
+
+//                 {userMenuOpen && (
+//                   <div className="absolute right-0 z-50 mt-2 w-[min(13rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+//                     <div className="border-b border-slate-100 px-4 py-3">
+//                       <p className="text-sm font-semibold text-slate-800">
+//                         {displayName}
+//                       </p>
+//                       <p className="text-xs text-slate-400">{displayRole}</p>
+//                       <p className="mt-1 text-[10px] uppercase tracking-wide text-[#176b57]">
+//                         {pathIsAdmin ? "Collective ERP" : `${moduleKey} module`}
+//                       </p>
+//                     </div>
+//                     {isAdmin && (
+//                       <button
+//                         type="button"
+//                         onClick={goToStaffUsers}
+//                         className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+//                       >
+//                         <Users size={14} />
+//                         Manage users
+//                       </button>
+//                     )}
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setUserMenuOpen(false);
+//                         handleLogout();
+//                       }}
+//                       className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+//                     >
+//                       <LogOut size={14} />
+//                       Logout
+//                     </button>
+//                   </div>
+//                 )}
+//               </div>
+//             </div>
+//           </div>
+//         </header>
+
+//         {searchOpen && (
+//           <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 p-3 pt-[max(10vh,env(safe-area-inset-top))] sm:p-4 sm:pt-[12vh]">
+//             <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+//               <form
+//                 onSubmit={runSearch}
+//                 className="flex items-center gap-2 border-b border-slate-100 px-3 py-3 sm:px-4"
+//               >
+//                 <Search size={18} className="shrink-0 text-slate-400" />
+//                 <input
+//                   ref={searchInputRef}
+//                   value={searchQuery}
+//                   onChange={(e) => setSearchQuery(e.target.value)}
+//                   placeholder={`Search in ${moduleName}…`}
+//                   className="h-10 min-w-0 flex-1 border-0 bg-transparent text-base outline-none sm:text-sm"
+//                 />
+//                 <button
+//                   type="button"
+//                   onClick={() => {
+//                     setSearchOpen(false);
+//                     setSearchQuery("");
+//                   }}
+//                   className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+//                 >
+//                   <X size={16} />
+//                 </button>
+//               </form>
+//               <div className="max-h-[min(18rem,50vh)] overflow-y-auto py-2">
+//                 {filteredSearch.length === 0 ? (
+//                   <p className="px-4 py-6 text-center text-sm text-slate-500">
+//                     No matching pages
+//                   </p>
+//                 ) : (
+//                   filteredSearch.map((item) => (
+//                     <button
+//                       key={item.href}
+//                       type="button"
+//                       onClick={() => {
+//                         const q = searchQuery.trim();
+//                         router.push(
+//                           q
+//                             ? `${item.href}?search=${encodeURIComponent(q)}`
+//                             : item.href
+//                         );
+//                         setSearchOpen(false);
+//                         setSearchQuery("");
+//                       }}
+//                       className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 sm:py-2.5"
+//                     >
+//                       <span>{item.label}</span>
+//                       <span className="hidden shrink-0 text-[10px] text-slate-400 sm:inline">
+//                         {item.href}
+//                       </span>
+//                     </button>
+//                   ))
+//                 )}
+//               </div>
+//               <div className="border-t border-slate-100 px-4 py-2 text-[11px] text-slate-400">
+//                 Enter to open · Esc to close
+//               </div>
+//             </div>
+//           </div>
+//         )}
+
+//         <main
+//           className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden px-3 py-4 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:min-h-[calc(100vh-64px)] sm:p-6"
+//           style={{
+//             opacity: contentVisible ? 1 : 0,
+//             transform: contentVisible
+//               ? "translateY(0) scale(1)"
+//               : "translateY(8px) scale(0.99)",
+//           }}
+//         >
+//           {displayChildren}
+//         </main>
+//       </div>
+
+//       <style jsx global>{`
+//         @keyframes akrishSidebarIn {
+//           from {
+//             opacity: 0.7;
+//             transform: translateX(-12px);
+//           }
+//           to {
+//             opacity: 1;
+//             transform: translateX(0);
+//           }
+//         }
+//       `}</style>
+//     </div>
+//   );
+// }
+
+
+// "use client";
+
+// import { useEffect, useMemo, useRef, useState } from "react";
+// import Link from "next/link";
+// import { usePathname, useRouter } from "next/navigation";
+// import {
+//   LogOut,
+//   Users,
+//   Search,
+//   Bell,
+//   Settings,
+//   X,
+//   Sofa,
+//   LayoutDashboard,
+//   ExternalLink,
+// } from "lucide-react";
+// import {
+//   collection,
+//   query,
+//   orderBy,
+//   limit,
+//   onSnapshot,
+//   type Timestamp,
+// } from "firebase/firestore";
+// import { useAuth } from "@/core/auth/AuthContext";
+// import { db } from "@/core/config/firebaseClient";
+// import {
+//   markEnquiryNotificationSeen,
+//   markEnquiryNotificationsSeen,
+// } from "@/modules/furniture/services/enquiryService";
+
+// type NavItem = {
+//   label: string;
+//   href: string;
+//   icon: string;
+//   nested?: boolean;
+// };
+
+// type ErpModule = "interior" | "furniture";
+
+// const MODULE_STORAGE_KEY = "akrish_active_module";
+
+// const navigation: NavItem[] = [
+//   { label: "Dashboard", href: "/interior/dashboard", icon: "▦" },
+//   { label: "CRM", href: "/interior/crm", icon: "♟" },
+//   { label: "HRMS", href: "/interior/hrms", icon: "♟" },
+//   { label: "Clients", href: "/interior/clients", icon: "♙" },
+//   { label: "Quotations", href: "/interior/quotations", icon: "▤" },
+//   { label: "Contracts", href: "/interior/contracts", icon: "▥" },
+//   { label: "Projects", href: "/interior/projects", icon: "▣" },
+//   { label: "Vendors", href: "/interior/vendors", icon: "◆" },
+//   { label: "Payments", href: "/interior/payments", icon: "₹" },
+//   { label: "Reports", href: "/interior/reports", icon: "▥" },
+// ];
+
+// const furnitureNavigation: NavItem[] = [
+//   { label: "Dashboard", href: "/furniture/dashboard", icon: "▦" },
+//   { label: "Products", href: "/furniture/products", icon: "▤" },
+//   {
+//     label: "Categories",
+//     href: "/furniture/categories",
+//     icon: "☰",
+//     nested: true,
+//   },
+//   {
+//     label: "Sub Categories",
+//     href: "/furniture/sub-categories",
+//     icon: "▤",
+//     nested: true,
+//   },
+//   {
+//     label: "Materials",
+//     href: "/furniture/materials",
+//     icon: "◆",
+//     nested: true,
+//   },
+//   {
+//     label: "Finishes",
+//     href: "/furniture/finishes",
+//     icon: "▣",
+//     nested: true,
+//   },
+//   { label: "Inventory", href: "/furniture/inventory", icon: "▣" },
+//   { label: "Customers", href: "/furniture/customers", icon: "♙" },
+//   { label: "Enquiries", href: "/furniture/enquiries", icon: "◉" },
+//   { label: "Orders", href: "/furniture/orders", icon: "▥" },
+//   { label: "Payments", href: "/furniture/payments", icon: "₹" },
+//   { label: "Expenses", href: "/furniture/expenses", icon: "◆" },
+//   { label: "Delivery", href: "/furniture/settings/delivery", icon: "↗" },
+//   { label: "Reports", href: "/furniture/reports", icon: "▥" },
+// ];
+
+// type NotificationItem = {
+//   id: string;
+//   title: string;
+//   body: string;
+//   href: string;
+//   time: string;
+//   read: boolean;
+//   enquiryId: string;
+// };
+
+// const ENQUIRIES_COLLECTION = "furniture_enquiries";
+// const WEBSITE_URL = process.env.NEXT_PUBLIC_WEBSITE_URL || "/";
+
+// function readStoredModule(): ErpModule {
+//   if (typeof window === "undefined") return "furniture";
+//   try {
+//     const s = localStorage.getItem(MODULE_STORAGE_KEY);
+//     if (s === "interior" || s === "furniture") return s;
+//   } catch {
+//     /* ignore */
+//   }
+//   return "furniture";
+// }
+
+// function writeStoredModule(mod: ErpModule) {
+//   try {
+//     localStorage.setItem(MODULE_STORAGE_KEY, mod);
+//   } catch {
+//     /* ignore */
+//   }
+// }
+
+// function formatRelativeTime(value: unknown): string {
+//   let date: Date | null = null;
+//   if (value && typeof value === "object" && "toDate" in (value as object)) {
+//     try {
+//       date = (value as Timestamp).toDate();
+//     } catch {
+//       date = null;
+//     }
+//   } else if (typeof value === "string" || typeof value === "number") {
+//     date = new Date(value);
+//   }
+//   if (!date || Number.isNaN(date.getTime())) return "Just now";
+
+//   const diffMs = Date.now() - date.getTime();
+//   const mins = Math.floor(diffMs / 60000);
+//   if (mins < 1) return "Just now";
+//   if (mins < 60) return `${mins}m ago`;
+//   const hours = Math.floor(mins / 60);
+//   if (hours < 24) return `${hours}h ago`;
+//   const days = Math.floor(hours / 24);
+//   if (days === 1) return "Yesterday";
+//   if (days < 7) return `${days}d ago`;
+//   return date.toLocaleDateString("en-IN", {
+//     day: "2-digit",
+//     month: "short",
+//   });
+// }
+
+// function getPageTitle(pathname: string) {
+//   if (pathname.startsWith("/admin/users")) return "Staff Users";
+//   if (pathname.startsWith("/admin")) return "Administration";
+
+//   const allItems = [...navigation, ...furnitureNavigation];
+//   const item = allItems.find(
+//     (nav) => pathname === nav.href || pathname.startsWith(`${nav.href}/`)
+//   );
+//   return item?.label ?? "Dashboard";
+// }
+
+// function Logo() {
+//   return (
+//     <div className="flex min-w-0 items-center gap-2">
+//       {/* eslint-disable-next-line @next/next/no-img-element */}
+//       <img
+//         src="/Akrish.jpg"
+//         alt="Akrish"
+//         className="h-9 w-9 shrink-0 rounded-lg object-cover shadow-sm ring-1 ring-[#e8e2d8]"
+//       />
+//       <div className="min-w-0 leading-none">
+//         <div className="truncate font-display text-[18px] font-semibold tracking-tight text-[#1a1a1a] sm:text-[20px]">
+//           Akrish
+//         </div>
+//         <div className="mt-1 hidden text-[8px] font-medium uppercase tracking-[0.16em] text-[#b8956c] sm:block">
+//           Furniture and Interior
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+// function HeaderModuleSwitcher({ isFurniture }: { isFurniture: boolean }) {
+//   return (
+//     <div
+//       className="relative flex h-8 shrink-0 items-center rounded-full border border-[#e8e2d8] bg-[#faf8f4] p-[2px] shadow-sm sm:h-[42px] sm:p-[3px]"
+//       role="group"
+//       aria-label="Switch ERP module"
+//     >
+//       <span
+//         aria-hidden="true"
+//         className="pointer-events-none absolute bottom-[2px] top-[2px] w-[calc(50%-2px)] rounded-full border border-[#e8e2d8] bg-white shadow-sm transition-all duration-200 sm:bottom-[3px] sm:top-[3px] sm:w-[calc(50%-3px)]"
+//         style={{ left: isFurniture ? "calc(50% + 0px)" : "2px" }}
+//       />
+//       <Link
+//         href="/interior/dashboard"
+//         title="Interior ERP"
+//         onClick={() => writeStoredModule("interior")}
+//         className={`relative z-10 flex h-full items-center justify-center gap-1 rounded-full px-2 text-[11px] font-semibold transition-colors sm:gap-1.5 sm:px-3 sm:text-[13px] ${
+//           !isFurniture
+//             ? "text-[#1a1a1a]"
+//             : "text-[#8a847c] hover:text-[#1a1a1a]"
+//         }`}
+//       >
+//         <LayoutDashboard size={13} className="sm:hidden" />
+//         <LayoutDashboard size={15} className="hidden sm:block" />
+//         <span>Interior</span>
+//       </Link>
+//       <Link
+//         href="/furniture/dashboard"
+//         title="Furniture ERP"
+//         onClick={() => writeStoredModule("furniture")}
+//         className={`relative z-10 flex h-full items-center justify-center gap-1 rounded-full px-2 text-[11px] font-semibold transition-colors sm:gap-1.5 sm:px-3 sm:text-[13px] ${
+//           isFurniture
+//             ? "text-[#1a1a1a]"
+//             : "text-[#8a847c] hover:text-[#1a1a1a]"
+//         }`}
+//       >
+//         <Sofa size={13} className="sm:hidden" />
+//         <Sofa size={15} className="hidden sm:block" />
+//         <span>Furniture</span>
+//       </Link>
+//     </div>
+//   );
+// }
+
+// export default function ERPLayout({
+//   children,
+// }: Readonly<{
+//   children: React.ReactNode;
+// }>) {
+//   const pathname = usePathname();
+//   const router = useRouter();
+//   const { user, isAdmin, logout, hasModule, isLoading } = useAuth();
+
+//   const canInterior = hasModule("interior");
+//   const canFurniture = hasModule("furniture");
+
+//   const [sidebarOpen, setSidebarOpen] = useState(false);
+//   const [searchOpen, setSearchOpen] = useState(false);
+//   const [searchQuery, setSearchQuery] = useState("");
+//   const [notifOpen, setNotifOpen] = useState(false);
+//   const [settingsOpen, setSettingsOpen] = useState(false);
+//   const [userMenuOpen, setUserMenuOpen] = useState(false);
+//   const [contentVisible, setContentVisible] = useState(true);
+//   const [displayChildren, setDisplayChildren] = useState(children);
+//   const prevModuleRef = useRef<"interior" | "furniture" | null>(null);
+//   const [shellModule, setShellModule] = useState<ErpModule>("furniture");
+
+//   const searchInputRef = useRef<HTMLInputElement>(null);
+//   const headerActionsRef = useRef<HTMLDivElement>(null);
+
+//   const pathIsFurniture =
+//     pathname === "/furniture" || pathname.startsWith("/furniture/");
+//   const pathIsInterior =
+//     pathname === "/interior" || pathname.startsWith("/interior/");
+//   const pathIsAdmin = pathname.startsWith("/admin");
+
+//   useEffect(() => {
+//     if (pathIsFurniture) {
+//       writeStoredModule("furniture");
+//       setShellModule("furniture");
+//       return;
+//     }
+//     if (pathIsInterior) {
+//       writeStoredModule("interior");
+//       setShellModule("interior");
+//       return;
+//     }
+//     if (pathIsAdmin) {
+//       setShellModule(readStoredModule());
+//     }
+//   }, [pathname, pathIsFurniture, pathIsInterior, pathIsAdmin]);
+
+//   const isFurniture = pathIsFurniture
+//     ? true
+//     : pathIsInterior
+//       ? false
+//       : shellModule === "furniture";
+
+//   const currentModule: ErpModule = isFurniture ? "furniture" : "interior";
+//   const currentNavigation = isFurniture ? furnitureNavigation : navigation;
+//   const pageTitle = getPageTitle(pathname);
+
+//   useEffect(() => {
+//     document.title = `Collective ERP`;
+//   }, [pageTitle, pathname]);
+
+//   const moduleName = pathIsAdmin
+//     ? "Collective ERP"
+//     : isFurniture
+//       ? "Furniture ERP"
+//       : "Interior ERP";
+
+//   const moduleKey = isFurniture ? "furniture" : "interior";
+
+//   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+//   useEffect(() => {
+//     setSidebarOpen(false);
+//     setNotifOpen(false);
+//     setSettingsOpen(false);
+//     setUserMenuOpen(false);
+//     setSearchOpen(false);
+//   }, [pathname]);
+
+//   useEffect(() => {
+//     if (!sidebarOpen) return;
+//     const prev = document.body.style.overflow;
+//     document.body.style.overflow = "hidden";
+//     return () => {
+//       document.body.style.overflow = prev;
+//     };
+//   }, [sidebarOpen]);
+
+//   useEffect(() => {
+//     if (isLoading || !user) return;
+
+//     if (pathname.startsWith("/furniture") && !canFurniture) {
+//       router.replace(canInterior ? "/interior/dashboard" : "/unauthorized");
+//       return;
+//     }
+
+//     if (pathname.startsWith("/interior") && !canInterior) {
+//       router.replace(canFurniture ? "/furniture/dashboard" : "/unauthorized");
+//     }
+//   }, [isLoading, user, pathname, canInterior, canFurniture, router]);
+
+//   useEffect(() => {
+//     if (!canFurniture) {
+//       setNotifications([]);
+//       setNotifOpen(false);
+//       return;
+//     }
+
+//     let unsub: (() => void) | undefined;
+
+//     try {
+//       const q = query(
+//         collection(db, ENQUIRIES_COLLECTION),
+//         orderBy("createdAt", "desc"),
+//         limit(25)
+//       );
+
+//       unsub = onSnapshot(
+//         q,
+//         (snapshot) => {
+//           const items: NotificationItem[] = [];
+
+//           snapshot.forEach((docSnap) => {
+//             const data = docSnap.data();
+//             const status = String(data.status || "New").trim().toLowerCase();
+//             const seen = data.notificationSeen === true;
+
+//             if (status !== "new") return;
+//             if (seen) return;
+
+//             const name =
+//               String(data.customerName || data.name || "Customer").trim() ||
+//               "Customer";
+//             const product = String(
+//               data.productName || data.productCode || ""
+//             ).trim();
+//             const source = String(data.source || "Website").trim();
+//             const message = String(data.message || "").trim();
+
+//             items.push({
+//               id: `enq-${docSnap.id}`,
+//               enquiryId: docSnap.id,
+//               title: "New enquiry",
+//               body: product
+//                 ? `${name} · ${product}${source ? ` · ${source}` : ""}`
+//                 : message
+//                   ? `${name}: ${message.slice(0, 60)}${
+//                       message.length > 60 ? "…" : ""
+//                     }`
+//                   : `${name} sent a contact request${
+//                       source ? ` (${source})` : ""
+//                     }`,
+//               href: "/furniture/enquiries",
+//               time: formatRelativeTime(data.createdAt),
+//               read: false,
+//             });
+//           });
+
+//           setNotifications(items);
+//         },
+//         (err) => {
+//           console.error("Enquiry notifications listener error:", err);
+//         }
+//       );
+//     } catch (err) {
+//       console.error("Failed to start enquiry notifications:", err);
+//     }
+
+//     return () => {
+//       unsub?.();
+//     };
+//   }, [canFurniture]);
+
+//   useEffect(() => {
+//     const prev = prevModuleRef.current;
+//     if (prev !== null && prev !== currentModule) {
+//       setContentVisible(false);
+//       const t = window.setTimeout(() => {
+//         setDisplayChildren(children);
+//         setContentVisible(true);
+//       }, 180);
+//       prevModuleRef.current = currentModule;
+//       return () => window.clearTimeout(t);
+//     }
+//     setDisplayChildren(children);
+//     setContentVisible(true);
+//     prevModuleRef.current = currentModule;
+//   }, [children, currentModule]);
+
+//   const unreadCount = notifications.length;
+
+//   useEffect(() => {
+//     function onDocClick(e: MouseEvent) {
+//       if (
+//         headerActionsRef.current &&
+//         !headerActionsRef.current.contains(e.target as Node)
+//       ) {
+//         setNotifOpen(false);
+//         setSettingsOpen(false);
+//         setUserMenuOpen(false);
+//       }
+//     }
+//     document.addEventListener("mousedown", onDocClick);
+//     return () => document.removeEventListener("mousedown", onDocClick);
+//   }, []);
+
+//   useEffect(() => {
+//     if (searchOpen) {
+//       setTimeout(() => searchInputRef.current?.focus(), 50);
+//     }
+//   }, [searchOpen]);
+
+//   useEffect(() => {
+//     function onKey(e: KeyboardEvent) {
+//       if (e.key === "Escape") {
+//         setSearchOpen(false);
+//         setNotifOpen(false);
+//         setSettingsOpen(false);
+//         setUserMenuOpen(false);
+//         setSidebarOpen(false);
+//       }
+//     }
+//     window.addEventListener("keydown", onKey);
+//     return () => window.removeEventListener("keydown", onKey);
+//   }, []);
+
+//   const searchTargets = useMemo(() => {
+//     const base = isFurniture
+//       ? [
+//           { label: "Products", href: "/furniture/products" },
+//           { label: "Inventory", href: "/furniture/inventory" },
+//           { label: "Categories", href: "/furniture/categories" },
+//           { label: "Sub Categories", href: "/furniture/sub-categories" },
+//           { label: "Materials", href: "/furniture/materials" },
+//           { label: "Finishes", href: "/furniture/finishes" },
+//           { label: "Customers", href: "/furniture/customers" },
+//           { label: "Enquiries", href: "/furniture/enquiries" },
+//           { label: "Orders", href: "/furniture/orders" },
+//           { label: "Payments", href: "/furniture/payments" },
+//           { label: "Expenses", href: "/furniture/expenses" },
+//           { label: "Reports", href: "/furniture/reports" },
+//         ]
+//       : [
+//           { label: "CRM / Leads", href: "/interior/crm" },
+//           { label: "Clients", href: "/interior/clients" },
+//           { label: "Quotations", href: "/interior/quotations" },
+//           { label: "Contracts", href: "/interior/contracts" },
+//           { label: "Projects", href: "/interior/projects" },
+//           { label: "HRMS", href: "/interior/hrms" },
+//           { label: "Vendors", href: "/interior/vendors" },
+//           { label: "Payments", href: "/interior/payments" },
+//           { label: "Reports", href: "/interior/reports" },
+//         ];
+
+//     if (isAdmin) {
+//       base.push({ label: "Staff Users", href: "/admin/users" });
+//     }
+//     return base;
+//   }, [isFurniture, isAdmin]);
+
+//   const filteredSearch = useMemo(() => {
+//     const q = searchQuery.toLowerCase().trim();
+//     if (!q) return searchTargets;
+//     return searchTargets.filter((t) => t.label.toLowerCase().includes(q));
+//   }, [searchQuery, searchTargets]);
+
+//   function runSearch(e?: React.FormEvent) {
+//     e?.preventDefault();
+//     const q = searchQuery.trim();
+//     if (!q) return;
+
+//     const match = filteredSearch[0];
+//     if (match) {
+//       router.push(`${match.href}?search=${encodeURIComponent(q)}`);
+//     } else if (isFurniture) {
+//       router.push(`/furniture/products?search=${encodeURIComponent(q)}`);
+//     } else {
+//       router.push(`/interior/crm?search=${encodeURIComponent(q)}`);
+//     }
+//     setSearchOpen(false);
+//     setSearchQuery("");
+//   }
+
+//   async function openNotification(n: NotificationItem) {
+//     setNotifications((list) => list.filter((item) => item.id !== n.id));
+//     setNotifOpen(false);
+
+//     try {
+//       await markEnquiryNotificationSeen(n.enquiryId);
+//     } catch (err) {
+//       console.error("Failed to mark notification seen:", err);
+//     } finally {
+//       router.push("/furniture/enquiries");
+//     }
+//   }
+
+//   async function markAllRead() {
+//     const ids = notifications.map((n) => n.enquiryId);
+//     setNotifications([]);
+//     setNotifOpen(false);
+//     try {
+//       await markEnquiryNotificationsSeen(ids);
+//     } catch (err) {
+//       console.error("Failed to clear notifications:", err);
+//     }
+//   }
+
+//   const handleLogout = () => {
+//     logout();
+//     router.push("/login");
+//   };
+
+//   function goToStaffUsers() {
+//     writeStoredModule(isFurniture ? "furniture" : "interior");
+//     setSidebarOpen(false);
+//     setSettingsOpen(false);
+//     setUserMenuOpen(false);
+//     router.push("/admin/users");
+//   }
+
+//   const displayName = user?.name || "User";
+//   const displayRole = user?.role
+//     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+//     : "Staff";
+//   const avatarLetter = displayName.charAt(0).toUpperCase();
+
+//   return (
+//     <div className="min-h-screen min-h-[100dvh] overflow-x-hidden bg-[#faf8f4] text-[#1a1a1a]">
+//       {sidebarOpen && (
+//         <button
+//           type="button"
+//           aria-label="Close sidebar"
+//           onClick={() => setSidebarOpen(false)}
+//           className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-200 lg:hidden"
+//         />
+//       )}
+
+//       <aside
+//         className={`
+//           fixed z-50 flex flex-col bg-white
+//           transition-all duration-250 ease-out
+//           left-3 top-3 bottom-3 w-[min(17.5rem,calc(100vw-1.5rem))]
+//           rounded-2xl border border-[#e8e2d8]
+//           shadow-[0_12px_40px_rgba(26,26,26,0.12)]
+//           lg:left-0 lg:top-0 lg:bottom-0 lg:w-[215px]
+//           lg:rounded-none lg:border-0 lg:border-r lg:border-[#e8e2d8]
+//           lg:shadow-none
+//           ${
+//             sidebarOpen
+//               ? "translate-x-0 opacity-100"
+//               : "-translate-x-[calc(100%+1.5rem)] opacity-0 pointer-events-none lg:pointer-events-auto lg:translate-x-0 lg:opacity-100"
+//           }
+//         `}
+//         style={{
+//           animation: sidebarOpen ? "akrishSidebarIn 0.22s ease-out" : undefined,
+//         }}
+//       >
+//         <div className="flex h-14 shrink-0 items-center border-b border-[#f0ebe3] px-4 sm:h-[64px] sm:px-5">
+//           <Logo />
+//           <button
+//             type="button"
+//             onClick={() => setSidebarOpen(false)}
+//             className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-[#8a847c] hover:bg-[#f3ebe0] lg:hidden"
+//             aria-label="Close menu"
+//           >
+//             <X size={18} />
+//           </button>
+//         </div>
+
+//         <nav className="mt-2 flex-1 overflow-y-auto overscroll-contain px-2.5 pb-3 sm:mt-3 sm:px-3">
+//           <p
+//             key={moduleKey + "-label"}
+//             className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-[#a6a089]"
+//           >
+//             {isFurniture ? "Furniture Management" : "Interior Management"}
+//           </p>
+
+//           <div key={moduleKey + "-nav"} className="space-y-0.5 sm:space-y-1">
+//             {currentNavigation.map((item) => {
+//               const active =
+//                 pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+//               return (
+//                 <Link
+//                   key={item.href}
+//                   href={item.href}
+//                   onClick={() => {
+//                     writeStoredModule(
+//                       item.href.startsWith("/furniture")
+//                         ? "furniture"
+//                         : "interior"
+//                     );
+//                     setSidebarOpen(false);
+//                   }}
+//                   className={`group flex min-h-[42px] items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200 sm:min-h-0 sm:rounded-lg ${
+//                     item.nested ? "ml-2 border-l border-[#e8e2d8] pl-3" : ""
+//                   } ${
+//                     active
+//                       ? "bg-[#f3ebe0] text-[#8b7355] shadow-sm"
+//                       : "text-[#6b6560] hover:bg-[#faf8f4] hover:text-[#1a1a1a]"
+//                   }`}
+//                 >
+//                   <span
+//                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[13px] transition-colors duration-200 sm:h-6 sm:w-6 ${
+//                       active
+//                         ? "bg-[#1a1a1a] text-white"
+//                         : "bg-[#f3ebe0] text-[#8a847c] group-hover:bg-[#ebe3d6]"
+//                     }`}
+//                   >
+//                     {item.icon}
+//                   </span>
+//                   <span className="truncate">{item.label}</span>
+//                   {active && (
+//                     <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[#b8956c]" />
+//                   )}
+//                 </Link>
+//               );
+//             })}
+
+//             {isAdmin && (
+//               <>
+//                 <div className="my-3 border-t border-[#f0ebe3]" />
+//                 <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-[#a6a089]">
+//                   Administration
+//                 </p>
+//                 <button
+//                   type="button"
+//                   onClick={goToStaffUsers}
+//                   className={`group flex w-full min-h-[42px] items-center gap-3 rounded-xl px-3 py-2 text-left text-[13px] font-medium transition-all duration-200 sm:min-h-0 sm:rounded-lg ${
+//                     pathname.startsWith("/admin/users")
+//                       ? "bg-[#f3ebe0] text-[#8b7355] shadow-sm"
+//                       : "text-[#6b6560] hover:bg-[#faf8f4] hover:text-[#1a1a1a]"
+//                   }`}
+//                 >
+//                   <span
+//                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-200 sm:h-6 sm:w-6 ${
+//                       pathname.startsWith("/admin/users")
+//                         ? "bg-[#1a1a1a] text-white"
+//                         : "bg-[#f3ebe0] text-[#8a847c] group-hover:bg-[#ebe3d6]"
+//                     }`}
+//                   >
+//                     <Users size={14} />
+//                   </span>
+//                   <span>Staff Users</span>
+//                   {pathname.startsWith("/admin/users") && (
+//                     <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[#b8956c]" />
+//                   )}
+//                 </button>
+//               </>
+//             )}
+//           </div>
+//         </nav>
+
+//         {/* Footer: Back to website = mobile only */}
+//         <div className="shrink-0 border-t border-[#f0ebe3] p-2.5 sm:p-3">
+//           <Link
+//             href={WEBSITE_URL}
+//             onClick={() => setSidebarOpen(false)}
+//             className="mb-2 flex min-h-[40px] w-full items-center justify-center gap-2 rounded-xl border border-[#e8e2d8] bg-[#faf8f4] px-3 text-[13px] font-semibold text-[#1a1a1a] transition hover:border-[#b8956c] hover:bg-[#f3ebe0] lg:hidden"
+//           >
+//             <ExternalLink size={15} className="text-[#b8956c]" />
+//             Back to website
+//           </Link>
+
+//           <div className="rounded-xl bg-[#faf8f4] p-2.5 sm:rounded-lg sm:p-3">
+//             <div className="flex items-center gap-2">
+//               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1a1a1a] text-xs font-bold text-white sm:h-8 sm:w-8">
+//                 {avatarLetter}
+//               </div>
+//               <div className="min-w-0 flex-1">
+//                 <p className="truncate text-xs font-semibold text-[#1a1a1a]">
+//                   {displayName}
+//                 </p>
+//                 <p className="truncate text-[10px] text-[#8a847c]">
+//                   {displayRole}
+//                 </p>
+//               </div>
+//               <button
+//                 type="button"
+//                 onClick={handleLogout}
+//                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[#a6a089] transition-colors hover:bg-red-50 hover:text-red-600 sm:h-7 sm:w-7"
+//                 title="Logout"
+//               >
+//                 <LogOut size={14} />
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       </aside>
+
+//       <div className="min-h-screen lg:pl-[215px]">
+//         <header className="sticky top-0 z-30 h-14 border-b border-[#e8e2d8] bg-white/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur sm:h-[64px]">
+//           <div className="flex h-full items-center justify-between gap-1.5 px-2.5 sm:gap-2 sm:px-4 md:px-6">
+//             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+//               <button
+//                 type="button"
+//                 onClick={() => setSidebarOpen(true)}
+//                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#e8e2d8] bg-white text-[#6b6560] shadow-sm transition-colors hover:bg-[#f3ebe0] sm:h-10 sm:w-10 lg:hidden"
+//                 aria-label="Open navigation"
+//               >
+//                 ☰
+//               </button>
+
+//               <div key={moduleKey + "-title"} className="min-w-0">
+//                 <p className="text-[10px] font-medium uppercase tracking-wide text-[#b8956c]">
+//                   {moduleName}
+//                 </p>
+//                 <h1 className="truncate text-sm font-semibold leading-tight text-[#1a1a1a]">
+//                   {pageTitle}
+//                 </h1>
+//               </div>
+//             </div>
+
+//             <div
+//               ref={headerActionsRef}
+//               className="relative flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-2"
+//             >
+//               {/* No desktop "Back to website" — mobile sidebar only */}
+
+//               <HeaderModuleSwitcher isFurniture={isFurniture} />
+
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setSearchOpen(true);
+//                   setNotifOpen(false);
+//                   setSettingsOpen(false);
+//                   setUserMenuOpen(false);
+//                 }}
+//                 className="flex h-9 w-9 items-center justify-center rounded-lg text-[#8a847c] transition-colors hover:bg-[#f3ebe0] hover:text-[#1a1a1a]"
+//                 aria-label="Search"
+//               >
+//                 <Search size={18} />
+//               </button>
+
+//               {canFurniture && (
+//                 <div className="relative">
+//                   <button
+//                     type="button"
+//                     onClick={() => {
+//                       setNotifOpen((v) => !v);
+//                       setSettingsOpen(false);
+//                       setUserMenuOpen(false);
+//                     }}
+//                     className="relative flex h-9 w-9 items-center justify-center rounded-lg text-[#8a847c] transition-colors hover:bg-[#f3ebe0] hover:text-[#1a1a1a]"
+//                     aria-label="Notifications"
+//                   >
+//                     <Bell size={18} />
+//                     {unreadCount > 0 && (
+//                       <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+//                         {unreadCount > 9 ? "9+" : unreadCount}
+//                       </span>
+//                     )}
+//                   </button>
+
+//                   {notifOpen && (
+//                     <div className="absolute right-0 z-50 mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-[#e8e2d8] bg-white shadow-xl">
+//                       <div className="flex items-center justify-between border-b border-[#f0ebe3] px-4 py-3">
+//                         <p className="text-sm font-semibold text-[#1a1a1a]">
+//                           Notifications
+//                         </p>
+//                         {notifications.length > 0 && (
+//                           <button
+//                             type="button"
+//                             onClick={markAllRead}
+//                             className="text-xs font-medium text-[#b8956c] hover:underline"
+//                           >
+//                             Clear all
+//                           </button>
+//                         )}
+//                       </div>
+//                       <div className="max-h-[min(18rem,50vh)] overflow-y-auto">
+//                         {notifications.length === 0 ? (
+//                           <div className="px-4 py-10 text-center">
+//                             <Bell
+//                               size={28}
+//                               className="mx-auto mb-2 text-[#d4cdc2]"
+//                             />
+//                             <p className="text-sm font-medium text-[#5c564e]">
+//                               No notifications
+//                             </p>
+//                             <p className="mt-1 text-xs text-[#8a847c]">
+//                               New website enquiries will appear here
+//                             </p>
+//                           </div>
+//                         ) : (
+//                           notifications.map((n) => (
+//                             <button
+//                               key={n.id}
+//                               type="button"
+//                               onClick={() => openNotification(n)}
+//                               className="flex w-full flex-col gap-0.5 border-b border-[#f7f3ec] bg-[#faf8f4] px-4 py-3 text-left transition-colors hover:bg-[#f3ebe0]"
+//                             >
+//                               <div className="flex items-center justify-between gap-2">
+//                                 <p className="text-sm font-semibold text-[#1a1a1a]">
+//                                   {n.title}
+//                                 </p>
+//                                 <span className="shrink-0 text-[10px] text-[#a6a089]">
+//                                   {n.time}
+//                                 </span>
+//                               </div>
+//                               <p className="text-xs text-[#6b6560]">{n.body}</p>
+//                             </button>
+//                           ))
+//                         )}
+//                       </div>
+//                       {notifications.length > 0 && (
+//                         <button
+//                           type="button"
+//                           onClick={() => {
+//                             setNotifOpen(false);
+//                             router.push("/furniture/enquiries");
+//                           }}
+//                           className="w-full border-t border-[#f0ebe3] px-4 py-2.5 text-center text-xs font-semibold text-[#b8956c] hover:bg-[#faf8f4]"
+//                         >
+//                           View all enquiries
+//                         </button>
+//                       )}
+//                     </div>
+//                   )}
+//                 </div>
+//               )}
+
+//               <div className="relative">
+//                 <button
+//                   type="button"
+//                   onClick={() => {
+//                     setSettingsOpen((open) => !open);
+//                     setNotifOpen(false);
+//                     setUserMenuOpen(false);
+//                     setSearchOpen(false);
+//                   }}
+//                   className="flex h-9 w-9 items-center justify-center rounded-lg text-[#8a847c] transition-colors hover:bg-[#f3ebe0] hover:text-[#1a1a1a]"
+//                   aria-label="Settings"
+//                   aria-expanded={settingsOpen}
+//                   title="Settings"
+//                 >
+//                   <Settings size={18} />
+//                 </button>
+
+//                 {settingsOpen && (
+//                   <div className="absolute right-0 top-full z-[70] mt-2 w-[230px] overflow-hidden rounded-2xl border border-[#e8e2d8] bg-white py-1 shadow-[0_12px_28px_rgba(26,26,26,0.12)]">
+//                     {isAdmin && (
+//                       <button
+//                         type="button"
+//                         onClick={goToStaffUsers}
+//                         className="flex min-h-[40px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-[#5c564e] transition-colors hover:bg-[#faf8f4]"
+//                       >
+//                         <Users size={14} />
+//                         <span>Staff Users</span>
+//                       </button>
+//                     )}
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setSettingsOpen(false);
+//                         router.push(
+//                           isFurniture
+//                             ? "/furniture/reports"
+//                             : "/interior/reports"
+//                         );
+//                       }}
+//                       className="flex min-h-[40px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-[#5c564e] transition-colors hover:bg-[#faf8f4]"
+//                     >
+//                       <span>Reports</span>
+//                     </button>
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setSettingsOpen(false);
+//                         router.push(
+//                           isFurniture
+//                             ? "/furniture/dashboard"
+//                             : "/interior/dashboard"
+//                         );
+//                       }}
+//                       className="flex min-h-[40px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-[#5c564e] transition-colors hover:bg-[#faf8f4]"
+//                     >
+//                       <span>
+//                         {isFurniture
+//                           ? "Furniture Dashboard"
+//                           : "Interior Dashboard"}
+//                       </span>
+//                     </button>
+//                     <div className="my-1 border-t border-[#f0ebe3]" />
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setSettingsOpen(false);
+//                         handleLogout();
+//                       }}
+//                       className="flex min-h-[44px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-red-600 transition-colors hover:bg-red-50"
+//                     >
+//                       <LogOut size={14} />
+//                       <span>Logout</span>
+//                     </button>
+//                   </div>
+//                 )}
+//               </div>
+
+//               <div className="relative border-l border-[#e8e2d8] pl-1.5 sm:pl-3">
+//                 <button
+//                   type="button"
+//                   onClick={() => {
+//                     setUserMenuOpen((v) => !v);
+//                     setNotifOpen(false);
+//                     setSettingsOpen(false);
+//                   }}
+//                   className="flex items-center gap-2 rounded-lg px-1 py-1 transition-colors hover:bg-[#f3ebe0]"
+//                 >
+//                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f3ebe0] text-xs font-bold text-[#8b7355]">
+//                     {avatarLetter}
+//                   </div>
+//                   <div className="hidden min-w-0 text-left md:block">
+//                     <p className="max-w-[120px] truncate text-xs font-semibold text-[#1a1a1a]">
+//                       {displayName}
+//                     </p>
+//                     <p className="text-[10px] text-[#8a847c]">{displayRole}</p>
+//                   </div>
+//                 </button>
+
+//                 {userMenuOpen && (
+//                   <div className="absolute right-0 z-50 mt-2 w-[min(13rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-[#e8e2d8] bg-white py-1 shadow-xl">
+//                     <div className="border-b border-[#f0ebe3] px-4 py-3">
+//                       <p className="text-sm font-semibold text-[#1a1a1a]">
+//                         {displayName}
+//                       </p>
+//                       <p className="text-xs text-[#8a847c]">{displayRole}</p>
+//                       <p className="mt-1 text-[10px] uppercase tracking-wide text-[#b8956c]">
+//                         {pathIsAdmin ? "Collective ERP" : `${moduleKey} module`}
+//                       </p>
+//                     </div>
+//                     {isAdmin && (
+//                       <button
+//                         type="button"
+//                         onClick={goToStaffUsers}
+//                         className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[#5c564e] hover:bg-[#faf8f4]"
+//                       >
+//                         <Users size={14} />
+//                         Manage users
+//                       </button>
+//                     )}
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setUserMenuOpen(false);
+//                         handleLogout();
+//                       }}
+//                       className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+//                     >
+//                       <LogOut size={14} />
+//                       Logout
+//                     </button>
+//                   </div>
+//                 )}
+//               </div>
+//             </div>
+//           </div>
+//         </header>
+
+//         {searchOpen && (
+//           <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 p-3 pt-[max(10vh,env(safe-area-inset-top))] sm:p-4 sm:pt-[12vh]">
+//             <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-[#e8e2d8] bg-white shadow-2xl">
+//               <form
+//                 onSubmit={runSearch}
+//                 className="flex items-center gap-2 border-b border-[#f0ebe3] px-3 py-3 sm:px-4"
+//               >
+//                 <Search size={18} className="shrink-0 text-[#a6a089]" />
+//                 <input
+//                   ref={searchInputRef}
+//                   value={searchQuery}
+//                   onChange={(e) => setSearchQuery(e.target.value)}
+//                   placeholder={`Search in ${moduleName}…`}
+//                   className="h-10 min-w-0 flex-1 border-0 bg-transparent text-base outline-none sm:text-sm"
+//                 />
+//                 <button
+//                   type="button"
+//                   onClick={() => {
+//                     setSearchOpen(false);
+//                     setSearchQuery("");
+//                   }}
+//                   className="rounded-lg p-2 text-[#a6a089] hover:bg-[#f3ebe0]"
+//                 >
+//                   <X size={16} />
+//                 </button>
+//               </form>
+//               <div className="max-h-[min(18rem,50vh)] overflow-y-auto py-2">
+//                 {filteredSearch.length === 0 ? (
+//                   <p className="px-4 py-6 text-center text-sm text-[#8a847c]">
+//                     No matching pages
+//                   </p>
+//                 ) : (
+//                   filteredSearch.map((item) => (
+//                     <button
+//                       key={item.href}
+//                       type="button"
+//                       onClick={() => {
+//                         const q = searchQuery.trim();
+//                         router.push(
+//                           q
+//                             ? `${item.href}?search=${encodeURIComponent(q)}`
+//                             : item.href
+//                         );
+//                         setSearchOpen(false);
+//                         setSearchQuery("");
+//                       }}
+//                       className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm text-[#5c564e] hover:bg-[#faf8f4] sm:py-2.5"
+//                     >
+//                       <span>{item.label}</span>
+//                       <span className="hidden shrink-0 text-[10px] text-[#a6a089] sm:inline">
+//                         {item.href}
+//                       </span>
+//                     </button>
+//                   ))
+//                 )}
+//               </div>
+//               <div className="border-t border-[#f0ebe3] px-4 py-2 text-[11px] text-[#a6a089]">
+//                 Enter to open · Esc to close
+//               </div>
+//             </div>
+//           </div>
+//         )}
+
+//         <main
+//           className="min-h-[calc(100vh-3.5rem)] overflow-x-hidden px-3 py-4 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:min-h-[calc(100vh-64px)] sm:p-6"
+//           style={{
+//             opacity: contentVisible ? 1 : 0,
+//             transform: contentVisible
+//               ? "translateY(0) scale(1)"
+//               : "translateY(8px) scale(0.99)",
+//           }}
+//         >
+//           {displayChildren}
+//         </main>
+//       </div>
+
+//       <style jsx global>{`
+//         @keyframes akrishSidebarIn {
+//           from {
+//             opacity: 0.7;
+//             transform: translateX(-12px);
+//           }
+//           to {
+//             opacity: 1;
+//             transform: translateX(0);
+//           }
+//         }
+//       `}</style>
+//     </div>
+//   );
+// }
+
+
+
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -8808,6 +10980,7 @@ import {
   X,
   Sofa,
   LayoutDashboard,
+  ExternalLink,
 } from "lucide-react";
 import {
   collection,
@@ -8959,16 +11132,17 @@ function getPageTitle(pathname: string) {
 function Logo() {
   return (
     <div className="flex min-w-0 items-center gap-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/Akrish.jpg"
         alt="Akrish"
-        className="h-9 w-9 shrink-0 rounded-lg object-cover shadow-sm"
+        className="h-9 w-9 shrink-0 rounded-lg object-cover shadow-sm ring-1 ring-[#e4e2da]"
       />
       <div className="min-w-0 leading-none">
-        <div className="truncate text-[18px] font-bold tracking-tight text-[#1f2937] sm:text-[20px]">
+        <div className="truncate font-display text-[18px] font-semibold tracking-tight text-[#1a1a1a] sm:text-[20px]">
           Akrish
         </div>
-        <div className="mt-1 hidden text-[8px] font-medium uppercase tracking-[0.16em] text-slate-400 sm:block">
+        <div className="mt-1 hidden text-[8px] font-medium uppercase tracking-[0.16em] text-[#176b5b] sm:block">
           Furniture and Interior
         </div>
       </div>
@@ -8976,23 +11150,16 @@ function Logo() {
   );
 }
 
-/** Compact on mobile, normal on sm+ */
-function HeaderModuleSwitcher({
-  isFurniture,
-}: {
-  isFurniture: boolean;
-  canInterior: boolean;
-  canFurniture: boolean;
-}) {
+function HeaderModuleSwitcher({ isFurniture }: { isFurniture: boolean }) {
   return (
     <div
-      className="relative flex h-8 shrink-0 items-center rounded-full border border-[#e0e6ef] bg-[#f8fafc] p-[2px] shadow-[0_1px_2px_rgba(15,23,42,0.06)] sm:h-[42px] sm:p-[3px]"
+      className="relative flex h-8 shrink-0 items-center rounded-full border border-[#e4e2da] bg-[#f7f7f4] p-[2px] shadow-sm sm:h-[42px] sm:p-[3px]"
       role="group"
       aria-label="Switch ERP module"
     >
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-[2px] top-[2px] w-[calc(50%-2px)] rounded-full border border-[#e4e9f0] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-all duration-200 sm:bottom-[3px] sm:top-[3px] sm:w-[calc(50%-3px)]"
+        className="pointer-events-none absolute bottom-[2px] top-[2px] w-[calc(50%-2px)] rounded-full border border-[#e4e2da] bg-white shadow-sm transition-all duration-200 sm:bottom-[3px] sm:top-[3px] sm:w-[calc(50%-3px)]"
         style={{ left: isFurniture ? "calc(50% + 0px)" : "2px" }}
       />
       <Link
@@ -9000,7 +11167,9 @@ function HeaderModuleSwitcher({
         title="Interior ERP"
         onClick={() => writeStoredModule("interior")}
         className={`relative z-10 flex h-full items-center justify-center gap-1 rounded-full px-2 text-[11px] font-semibold transition-colors sm:gap-1.5 sm:px-3 sm:text-[13px] ${
-          !isFurniture ? "text-[#176b57]" : "text-[#64748b] hover:text-slate-800"
+          !isFurniture
+            ? "text-[#1a1a1a]"
+            : "text-[#8a847c] hover:text-[#1a1a1a]"
         }`}
       >
         <LayoutDashboard size={13} className="sm:hidden" />
@@ -9012,7 +11181,9 @@ function HeaderModuleSwitcher({
         title="Furniture ERP"
         onClick={() => writeStoredModule("furniture")}
         className={`relative z-10 flex h-full items-center justify-center gap-1 rounded-full px-2 text-[11px] font-semibold transition-colors sm:gap-1.5 sm:px-3 sm:text-[13px] ${
-          isFurniture ? "text-[#08775f]" : "text-[#64748b] hover:text-slate-800"
+          isFurniture
+            ? "text-[#1a1a1a]"
+            : "text-[#8a847c] hover:text-[#1a1a1a]"
         }`}
       >
         <Sofa size={13} className="sm:hidden" />
@@ -9170,8 +11341,12 @@ export default function ERPLayout({
               body: product
                 ? `${name} · ${product}${source ? ` · ${source}` : ""}`
                 : message
-                  ? `${name}: ${message.slice(0, 60)}${message.length > 60 ? "…" : ""}`
-                  : `${name} sent a contact request${source ? ` (${source})` : ""}`,
+                  ? `${name}: ${message.slice(0, 60)}${
+                      message.length > 60 ? "…" : ""
+                    }`
+                  : `${name} sent a contact request${
+                      source ? ` (${source})` : ""
+                    }`,
               href: "/furniture/enquiries",
               time: formatRelativeTime(data.createdAt),
               read: false,
@@ -9347,7 +11522,7 @@ export default function ERPLayout({
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen min-h-[100dvh] overflow-x-hidden bg-[#f7f9f8] text-slate-800">
+    <div className="min-h-screen min-h-[100dvh] overflow-x-hidden bg-[#f7f7f4] text-[#1a1a1a]">
       {sidebarOpen && (
         <button
           type="button"
@@ -9362,11 +11537,11 @@ export default function ERPLayout({
           fixed z-50 flex flex-col bg-white
           transition-all duration-250 ease-out
           left-3 top-3 bottom-3 w-[min(17.5rem,calc(100vw-1.5rem))]
-          rounded-2xl border border-white/80
-          shadow-[0_12px_40px_rgba(0,0,0,0.18)] ring-1 ring-slate-900/5
+          rounded-2xl border border-[#e4e2da]
+          shadow-[0_12px_40px_rgba(26,26,26,0.12)]
           lg:left-0 lg:top-0 lg:bottom-0 lg:w-[215px]
-          lg:rounded-none lg:border-0 lg:border-r lg:border-slate-200
-          lg:shadow-none lg:ring-0
+          lg:rounded-none lg:border-0 lg:border-r lg:border-[#e4e2da]
+          lg:shadow-none
           ${
             sidebarOpen
               ? "translate-x-0 opacity-100"
@@ -9377,12 +11552,12 @@ export default function ERPLayout({
           animation: sidebarOpen ? "akrishSidebarIn 0.22s ease-out" : undefined,
         }}
       >
-        <div className="flex h-14 shrink-0 items-center border-b border-slate-100 px-4 sm:h-[64px] sm:px-5">
+        <div className="flex h-14 shrink-0 items-center border-b border-[#eeece6] px-4 sm:h-[64px] sm:px-5">
           <Logo />
           <button
             type="button"
             onClick={() => setSidebarOpen(false)}
-            className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 lg:hidden"
+            className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-[#8a847c] hover:bg-[#eef7f4] lg:hidden"
             aria-label="Close menu"
           >
             <X size={18} />
@@ -9392,7 +11567,7 @@ export default function ERPLayout({
         <nav className="mt-2 flex-1 overflow-y-auto overscroll-contain px-2.5 pb-3 sm:mt-3 sm:px-3">
           <p
             key={moduleKey + "-label"}
-            className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400"
+            className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-[#9a968c]"
           >
             {isFurniture ? "Furniture Management" : "Interior Management"}
           </p>
@@ -9415,25 +11590,25 @@ export default function ERPLayout({
                     setSidebarOpen(false);
                   }}
                   className={`group flex min-h-[42px] items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-200 sm:min-h-0 sm:rounded-lg ${
-                    item.nested ? "ml-2 border-l border-slate-200 pl-3" : ""
+                    item.nested ? "ml-2 border-l border-[#e4e2da] pl-3" : ""
                   } ${
                     active
-                      ? "bg-[#e8f5ef] text-[#176b57] shadow-sm"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      ? "bg-[#eef7f4] text-[#176b5b] shadow-sm"
+                      : "text-[#6b6560] hover:bg-[#f7f7f4] hover:text-[#1a1a1a]"
                   }`}
                 >
                   <span
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[13px] transition-colors duration-200 sm:h-6 sm:w-6 ${
                       active
-                        ? "bg-[#176b57] text-white"
-                        : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
+                        ? "bg-[#176b5b] text-white"
+                        : "bg-[#eef7f4] text-[#8a847c] group-hover:bg-[#e0f0ea]"
                     }`}
                   >
                     {item.icon}
                   </span>
                   <span className="truncate">{item.label}</span>
                   {active && (
-                    <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[#176b57]" />
+                    <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[#176b5b]" />
                   )}
                 </Link>
               );
@@ -9441,8 +11616,8 @@ export default function ERPLayout({
 
             {isAdmin && (
               <>
-                <div className="my-3 border-t border-slate-100" />
-                <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                <div className="my-3 border-t border-[#eeece6]" />
+                <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-[#9a968c]">
                   Administration
                 </p>
                 <button
@@ -9450,22 +11625,22 @@ export default function ERPLayout({
                   onClick={goToStaffUsers}
                   className={`group flex w-full min-h-[42px] items-center gap-3 rounded-xl px-3 py-2 text-left text-[13px] font-medium transition-all duration-200 sm:min-h-0 sm:rounded-lg ${
                     pathname.startsWith("/admin/users")
-                      ? "bg-[#e8f5ef] text-[#176b57] shadow-sm"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      ? "bg-[#eef7f4] text-[#176b5b] shadow-sm"
+                      : "text-[#6b6560] hover:bg-[#f7f7f4] hover:text-[#1a1a1a]"
                   }`}
                 >
                   <span
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-200 sm:h-6 sm:w-6 ${
                       pathname.startsWith("/admin/users")
-                        ? "bg-[#176b57] text-white"
-                        : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
+                        ? "bg-[#176b5b] text-white"
+                        : "bg-[#eef7f4] text-[#8a847c] group-hover:bg-[#e0f0ea]"
                     }`}
                   >
                     <Users size={14} />
                   </span>
                   <span>Staff Users</span>
                   {pathname.startsWith("/admin/users") && (
-                    <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[#176b57]" />
+                    <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[#176b5b]" />
                   )}
                 </button>
               </>
@@ -9473,33 +11648,33 @@ export default function ERPLayout({
           </div>
         </nav>
 
-        {/* Sidebar footer: Back to website + user */}
-        <div className="shrink-0 border-t border-slate-100 p-2.5 sm:p-3">
+        <div className="shrink-0 border-t border-[#eeece6] p-2.5 sm:p-3">
           <Link
             href={WEBSITE_URL}
             onClick={() => setSidebarOpen(false)}
-            className="mb-2 flex min-h-[40px] w-full items-center justify-center rounded-xl border border-[#dce8e3] bg-[#f4fbf8] px-3 text-[13px] font-semibold text-[#176b57] transition hover:bg-[#e8f5ef]"
+            className="mb-2 flex min-h-[40px] w-full items-center justify-center gap-2 rounded-xl border border-[#e4e2da] bg-[#f7f7f4] px-3 text-[13px] font-semibold text-[#1a1a1a] transition hover:border-[#176b5b] hover:bg-[#eef7f4] lg:hidden"
           >
+            <ExternalLink size={15} className="text-[#176b5b]" />
             Back to website
           </Link>
 
-          <div className="rounded-xl bg-slate-50 p-2.5 sm:rounded-lg sm:p-3">
+          <div className="rounded-xl bg-[#f7f7f4] p-2.5 sm:rounded-lg sm:p-3">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#176b57] text-xs font-bold text-white sm:h-8 sm:w-8">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#176b5b] text-xs font-bold text-white sm:h-8 sm:w-8">
                 {avatarLetter}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold text-slate-800">
+                <p className="truncate text-xs font-semibold text-[#1a1a1a]">
                   {displayName}
                 </p>
-                <p className="truncate text-[10px] text-slate-400">
+                <p className="truncate text-[10px] text-[#8a847c]">
                   {displayRole}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600 sm:h-7 sm:w-7"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[#a6a089] transition-colors hover:bg-red-50 hover:text-red-600 sm:h-7 sm:w-7"
                 title="Logout"
               >
                 <LogOut size={14} />
@@ -9510,23 +11685,23 @@ export default function ERPLayout({
       </aside>
 
       <div className="min-h-screen lg:pl-[215px]">
-        <header className="sticky top-0 z-30 h-14 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur sm:h-[64px]">
+        <header className="sticky top-0 z-30 h-14 border-b border-[#e4e2da] bg-white/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur sm:h-[64px]">
           <div className="flex h-full items-center justify-between gap-1.5 px-2.5 sm:gap-2 sm:px-4 md:px-6">
             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
               <button
                 type="button"
                 onClick={() => setSidebarOpen(true)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 sm:h-10 sm:w-10 lg:hidden"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#e4e2da] bg-white text-[#6b6560] shadow-sm transition-colors hover:bg-[#eef7f4] sm:h-10 sm:w-10 lg:hidden"
                 aria-label="Open navigation"
               >
                 ☰
               </button>
 
               <div key={moduleKey + "-title"} className="min-w-0">
-                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-[#176b5b]">
                   {moduleName}
                 </p>
-                <h1 className="truncate text-sm font-semibold leading-tight text-slate-800">
+                <h1 className="truncate text-sm font-semibold leading-tight text-[#1a1a1a]">
                   {pageTitle}
                 </h1>
               </div>
@@ -9536,20 +11711,7 @@ export default function ERPLayout({
               ref={headerActionsRef}
               className="relative flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-2"
             >
-              {/* Desktop only — mobile uses sidebar link */}
-              <Link
-                href={WEBSITE_URL}
-                title="Back to website"
-                className="hidden h-9 items-center rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-semibold text-[#176b57] transition hover:bg-[#e8f5ef] sm:inline-flex"
-              >
-                Back to website
-              </Link>
-
-              <HeaderModuleSwitcher
-                isFurniture={isFurniture}
-                canInterior={canInterior}
-                canFurniture={canFurniture}
-              />
+              <HeaderModuleSwitcher isFurniture={isFurniture} />
 
               <button
                 type="button"
@@ -9559,7 +11721,7 @@ export default function ERPLayout({
                   setSettingsOpen(false);
                   setUserMenuOpen(false);
                 }}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 sm:h-9 sm:w-9"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-[#8a847c] transition-colors hover:bg-[#eef7f4] hover:text-[#1a1a1a]"
                 aria-label="Search"
               >
                 <Search size={18} />
@@ -9574,7 +11736,7 @@ export default function ERPLayout({
                       setSettingsOpen(false);
                       setUserMenuOpen(false);
                     }}
-                    className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100"
+                    className="relative flex h-9 w-9 items-center justify-center rounded-lg text-[#8a847c] transition-colors hover:bg-[#eef7f4] hover:text-[#1a1a1a]"
                     aria-label="Notifications"
                   >
                     <Bell size={18} />
@@ -9586,16 +11748,16 @@ export default function ERPLayout({
                   </button>
 
                   {notifOpen && (
-                    <div className="absolute right-0 z-50 mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-                      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                        <p className="text-sm font-semibold text-slate-800">
+                    <div className="absolute right-0 z-50 mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-[#e4e2da] bg-white shadow-xl">
+                      <div className="flex items-center justify-between border-b border-[#eeece6] px-4 py-3">
+                        <p className="text-sm font-semibold text-[#1a1a1a]">
                           Notifications
                         </p>
                         {notifications.length > 0 && (
                           <button
                             type="button"
                             onClick={markAllRead}
-                            className="text-xs font-medium text-[#176b57] hover:underline"
+                            className="text-xs font-medium text-[#176b5b] hover:underline"
                           >
                             Clear all
                           </button>
@@ -9606,12 +11768,12 @@ export default function ERPLayout({
                           <div className="px-4 py-10 text-center">
                             <Bell
                               size={28}
-                              className="mx-auto mb-2 text-slate-300"
+                              className="mx-auto mb-2 text-[#d4d0c8]"
                             />
-                            <p className="text-sm font-medium text-slate-600">
+                            <p className="text-sm font-medium text-[#5c564e]">
                               No notifications
                             </p>
-                            <p className="mt-1 text-xs text-slate-400">
+                            <p className="mt-1 text-xs text-[#8a847c]">
                               New website enquiries will appear here
                             </p>
                           </div>
@@ -9621,17 +11783,17 @@ export default function ERPLayout({
                               key={n.id}
                               type="button"
                               onClick={() => openNotification(n)}
-                              className="flex w-full flex-col gap-0.5 border-b border-slate-50 bg-[#f4fbf8] px-4 py-3 text-left transition-colors hover:bg-slate-50"
+                              className="flex w-full flex-col gap-0.5 border-b border-[#f5f4f0] bg-[#f7f7f4] px-4 py-3 text-left transition-colors hover:bg-[#eef7f4]"
                             >
                               <div className="flex items-center justify-between gap-2">
-                                <p className="text-sm font-semibold text-slate-800">
+                                <p className="text-sm font-semibold text-[#1a1a1a]">
                                   {n.title}
                                 </p>
-                                <span className="shrink-0 text-[10px] text-slate-400">
+                                <span className="shrink-0 text-[10px] text-[#9a968c]">
                                   {n.time}
                                 </span>
                               </div>
-                              <p className="text-xs text-slate-500">{n.body}</p>
+                              <p className="text-xs text-[#6b6560]">{n.body}</p>
                             </button>
                           ))
                         )}
@@ -9643,7 +11805,7 @@ export default function ERPLayout({
                             setNotifOpen(false);
                             router.push("/furniture/enquiries");
                           }}
-                          className="w-full border-t border-slate-100 px-4 py-2.5 text-center text-xs font-semibold text-[#176b57] hover:bg-slate-50"
+                          className="w-full border-t border-[#eeece6] px-4 py-2.5 text-center text-xs font-semibold text-[#176b5b] hover:bg-[#f7f7f4]"
                         >
                           View all enquiries
                         </button>
@@ -9662,7 +11824,7 @@ export default function ERPLayout({
                     setUserMenuOpen(false);
                     setSearchOpen(false);
                   }}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-[#8a847c] transition-colors hover:bg-[#eef7f4] hover:text-[#1a1a1a]"
                   aria-label="Settings"
                   aria-expanded={settingsOpen}
                   title="Settings"
@@ -9671,12 +11833,12 @@ export default function ERPLayout({
                 </button>
 
                 {settingsOpen && (
-                  <div className="absolute right-0 top-full z-[70] mt-2 w-[230px] overflow-hidden rounded-[14px] border border-[#e1e7ef] bg-white py-1 shadow-[0_12px_28px_rgba(15,23,42,0.16)]">
+                  <div className="absolute right-0 top-full z-[70] mt-2 w-[230px] overflow-hidden rounded-2xl border border-[#e4e2da] bg-white py-1 shadow-[0_12px_28px_rgba(26,26,26,0.12)]">
                     {isAdmin && (
                       <button
                         type="button"
                         onClick={goToStaffUsers}
-                        className="flex min-h-[40px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-[#334155] transition-colors hover:bg-[#f8fafc]"
+                        className="flex min-h-[40px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-[#5c564e] transition-colors hover:bg-[#f7f7f4]"
                       >
                         <Users size={14} />
                         <span>Staff Users</span>
@@ -9692,7 +11854,7 @@ export default function ERPLayout({
                             : "/interior/reports"
                         );
                       }}
-                      className="flex min-h-[40px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-[#334155] transition-colors hover:bg-[#f8fafc]"
+                      className="flex min-h-[40px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-[#5c564e] transition-colors hover:bg-[#f7f7f4]"
                     >
                       <span>Reports</span>
                     </button>
@@ -9706,7 +11868,7 @@ export default function ERPLayout({
                             : "/interior/dashboard"
                         );
                       }}
-                      className="flex min-h-[40px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-[#334155] transition-colors hover:bg-[#f8fafc]"
+                      className="flex min-h-[40px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-[#5c564e] transition-colors hover:bg-[#f7f7f4]"
                     >
                       <span>
                         {isFurniture
@@ -9714,14 +11876,14 @@ export default function ERPLayout({
                           : "Interior Dashboard"}
                       </span>
                     </button>
-                    <div className="my-1 border-t border-[#edf0f4]" />
+                    <div className="my-1 border-t border-[#eeece6]" />
                     <button
                       type="button"
                       onClick={() => {
                         setSettingsOpen(false);
                         handleLogout();
                       }}
-                      className="flex min-h-[44px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-red-500 transition-colors hover:bg-red-50"
+                      className="flex min-h-[44px] w-full items-center gap-2.5 px-4 py-2.5 text-left text-red-600 transition-colors hover:bg-red-50"
                     >
                       <LogOut size={14} />
                       <span>Logout</span>
@@ -9730,7 +11892,7 @@ export default function ERPLayout({
                 )}
               </div>
 
-              <div className="relative border-l border-slate-200 pl-1.5 sm:pl-3">
+              <div className="relative border-l border-[#e4e2da] pl-1.5 sm:pl-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -9738,27 +11900,27 @@ export default function ERPLayout({
                     setNotifOpen(false);
                     setSettingsOpen(false);
                   }}
-                  className="flex items-center gap-2 rounded-lg px-1 py-1 transition-colors hover:bg-slate-50"
+                  className="flex items-center gap-2 rounded-lg px-1 py-1 transition-colors hover:bg-[#eef7f4]"
                 >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#dff1e8] text-xs font-bold text-[#176b57] sm:h-8 sm:w-8">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#eef7f4] text-xs font-bold text-[#176b5b]">
                     {avatarLetter}
                   </div>
                   <div className="hidden min-w-0 text-left md:block">
-                    <p className="max-w-[120px] truncate text-xs font-semibold text-slate-800">
+                    <p className="max-w-[120px] truncate text-xs font-semibold text-[#1a1a1a]">
                       {displayName}
                     </p>
-                    <p className="text-[10px] text-slate-400">{displayRole}</p>
+                    <p className="text-[10px] text-[#8a847c]">{displayRole}</p>
                   </div>
                 </button>
 
                 {userMenuOpen && (
-                  <div className="absolute right-0 z-50 mt-2 w-[min(13rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
-                    <div className="border-b border-slate-100 px-4 py-3">
-                      <p className="text-sm font-semibold text-slate-800">
+                  <div className="absolute right-0 z-50 mt-2 w-[min(13rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-[#e4e2da] bg-white py-1 shadow-xl">
+                    <div className="border-b border-[#eeece6] px-4 py-3">
+                      <p className="text-sm font-semibold text-[#1a1a1a]">
                         {displayName}
                       </p>
-                      <p className="text-xs text-slate-400">{displayRole}</p>
-                      <p className="mt-1 text-[10px] uppercase tracking-wide text-[#176b57]">
+                      <p className="text-xs text-[#8a847c]">{displayRole}</p>
+                      <p className="mt-1 text-[10px] uppercase tracking-wide text-[#176b5b]">
                         {pathIsAdmin ? "Collective ERP" : `${moduleKey} module`}
                       </p>
                     </div>
@@ -9766,7 +11928,7 @@ export default function ERPLayout({
                       <button
                         type="button"
                         onClick={goToStaffUsers}
-                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[#5c564e] hover:bg-[#f7f7f4]"
                       >
                         <Users size={14} />
                         Manage users
@@ -9792,12 +11954,12 @@ export default function ERPLayout({
 
         {searchOpen && (
           <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 p-3 pt-[max(10vh,env(safe-area-inset-top))] sm:p-4 sm:pt-[12vh]">
-            <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-[#e4e2da] bg-white shadow-2xl">
               <form
                 onSubmit={runSearch}
-                className="flex items-center gap-2 border-b border-slate-100 px-3 py-3 sm:px-4"
+                className="flex items-center gap-2 border-b border-[#eeece6] px-3 py-3 sm:px-4"
               >
-                <Search size={18} className="shrink-0 text-slate-400" />
+                <Search size={18} className="shrink-0 text-[#9a968c]" />
                 <input
                   ref={searchInputRef}
                   value={searchQuery}
@@ -9811,14 +11973,14 @@ export default function ERPLayout({
                     setSearchOpen(false);
                     setSearchQuery("");
                   }}
-                  className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+                  className="rounded-lg p-2 text-[#9a968c] hover:bg-[#eef7f4]"
                 >
                   <X size={16} />
                 </button>
               </form>
               <div className="max-h-[min(18rem,50vh)] overflow-y-auto py-2">
                 {filteredSearch.length === 0 ? (
-                  <p className="px-4 py-6 text-center text-sm text-slate-500">
+                  <p className="px-4 py-6 text-center text-sm text-[#8a847c]">
                     No matching pages
                   </p>
                 ) : (
@@ -9836,17 +11998,17 @@ export default function ERPLayout({
                         setSearchOpen(false);
                         setSearchQuery("");
                       }}
-                      className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 sm:py-2.5"
+                      className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm text-[#5c564e] hover:bg-[#f7f7f4] sm:py-2.5"
                     >
                       <span>{item.label}</span>
-                      <span className="hidden shrink-0 text-[10px] text-slate-400 sm:inline">
+                      <span className="hidden shrink-0 text-[10px] text-[#9a968c] sm:inline">
                         {item.href}
                       </span>
                     </button>
                   ))
                 )}
               </div>
-              <div className="border-t border-slate-100 px-4 py-2 text-[11px] text-slate-400">
+              <div className="border-t border-[#eeece6] px-4 py-2 text-[11px] text-[#9a968c]">
                 Enter to open · Esc to close
               </div>
             </div>

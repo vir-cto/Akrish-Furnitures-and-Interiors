@@ -94,8 +94,47 @@
 //   );
 // }
 
+// import "./globals.css";
+// import { Providers } from "./providers";
+
+// export default function RootLayout({
+//   children,
+// }: {
+//   children: React.ReactNode;
+// }) {
+//   return (
+//     <html lang="en">
+//       <body className="min-h-screen antialiased">
+//         <Providers>{children}</Providers>
+//       </body>
+//     </html>
+//   );
+// }
+
+
+import type { Metadata } from "next";
+import { DM_Sans, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  variable: "--font-cormorant",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+
+export const metadata: Metadata = {
+  title: "Akrish Furniture & Interior",
+  description: "Furniture and interior solutions",
+};
 
 export default function RootLayout({
   children,
@@ -103,8 +142,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen antialiased">
+    <html
+      lang="en"
+      className={`${dmSans.variable} ${cormorant.variable}`}
+    >
+      <body className="min-h-screen font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

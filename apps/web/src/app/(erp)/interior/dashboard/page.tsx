@@ -2006,9 +2006,14 @@ export default function InteriorDashboardPage() {
         <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-5 sm:py-5 lg:px-8">
           <div className="flex items-start justify-between gap-3 sm:items-center">
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+              {/* <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
                 Interior Dashboard
-              </h1>
+              </h1> */}
+
+              <h1 className="font-display text-[30px] font-semibold tracking-tight sm:text-3xl">
+              Interior Dashboard
+            </h1>
+
               <p className="mt-1 text-xs text-gray-500 sm:text-sm">
                 Overview of projects, revenue, payments and team activity.
                 {loading && (

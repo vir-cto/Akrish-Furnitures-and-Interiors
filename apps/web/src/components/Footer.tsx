@@ -965,6 +965,439 @@
 // }
 
 
+// "use client";
+
+// import Link from "next/link";
+// import { useEffect, useState } from "react";
+// import {
+//   Facebook,
+//   Instagram,
+//   Linkedin,
+//   Mail,
+//   MapPin,
+//   Phone,
+//   Twitter,
+// } from "lucide-react";
+// import { collection, getDocs } from "firebase/firestore";
+// import { db } from "@/lib/firebase";
+
+// interface CategoryItem {
+//   title: string;
+//   href: string;
+// }
+
+// export default function Footer() {
+//   const currentYear = new Date().getFullYear();
+//   const [categories, setCategories] = useState<CategoryItem[]>([]);
+
+//   useEffect(() => {
+//     const fetchCategories = async () => {
+//       try {
+//         const snapshot = await getDocs(collection(db, "furniture_products"));
+//         const categorySet = new Set<string>();
+
+//         snapshot.docs.forEach((docSnap) => {
+//           const data = docSnap.data();
+//           const status = String(data.status || "In Stock");
+//           const active = data.active !== false && status !== "Inactive";
+//           if (!active) return;
+//           const category = data.category;
+//           if (category && typeof category === "string") {
+//             categorySet.add(category.trim());
+//           }
+//         });
+
+//         setCategories(
+//           Array.from(categorySet)
+//             .sort()
+//             .slice(0, 5)
+//             .map((cat) => ({
+//               title: cat,
+//               href: `/products?category=${encodeURIComponent(cat)}`,
+//             }))
+//         );
+//       } catch (err) {
+//         console.error("Failed to load footer categories:", err);
+//       }
+//     };
+
+//     fetchCategories();
+//   }, []);
+
+//   return (
+//     <footer className="bg-[#17352f] text-white">
+//       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+//         {/* Brand + social */}
+//         <div className="flex items-center justify-between gap-4">
+//           <Link href="/" className="flex items-center gap-2.5">
+//             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#176b5b]">
+//               <span className="text-base font-bold">A</span>
+//             </div>
+//             <div>
+//               <p className="text-base font-bold leading-none">Akrish</p>
+//               <p className="mt-1 text-[9px] font-medium uppercase tracking-[0.16em] text-[#9a5b18]">
+//                 Furniture
+//               </p>
+//             </div>
+//           </Link>
+
+//           <div className="flex items-center gap-1.5">
+//             {[
+//               { icon: Facebook, label: "Facebook" },
+//               { icon: Instagram, label: "Instagram" },
+//               { icon: Twitter, label: "Twitter" },
+//               { icon: Linkedin, label: "LinkedIn" },
+//             ].map(({ icon: Icon, label }) => (
+//               <a
+//                 key={label}
+//                 href="#"
+//                 aria-label={label}
+//                 className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition hover:bg-[#176b5b]"
+//               >
+//                 <Icon size={15} />
+//               </a>
+//             ))}
+//           </div>
+//         </div>
+
+//         <p className="mt-4 max-w-md text-sm leading-6 text-white/60">
+//           Quality furniture for modern homes and workspaces.
+//         </p>
+
+//         <div className="my-8 h-px bg-white/10" />
+
+//         {/* 3 columns in one row on all screens */}
+//         <div className="grid grid-cols-3 gap-4 sm:gap-8">
+//           {/* Quick Links */}
+//           <div>
+//             <p className="text-[10px] font-semibold uppercase tracking-wider text-white sm:text-xs">
+//               Quick Links
+//             </p>
+//             <ul className="mt-3 space-y-2 text-xs text-white/60 sm:mt-3.5 sm:space-y-2.5 sm:text-sm">
+//               <li>
+//                 <Link href="/" className="hover:text-white">
+//                   Home
+//                 </Link>
+//               </li>
+//               <li>
+//                 <Link href="/products" className="hover:text-white">
+//                   Furniture
+//                 </Link>
+//               </li>
+//               <li>
+//                 <Link href="/about" className="hover:text-white">
+//                   About Us
+//                 </Link>
+//               </li>
+//               <li>
+//                 <Link href="/contact" className="hover:text-white">
+//                   Contact
+//                 </Link>
+//               </li>
+//             </ul>
+//           </div>
+
+//           {/* Categories */}
+//           <div>
+//             <p className="text-[10px] font-semibold uppercase tracking-wider text-white sm:text-xs">
+//               Categories
+//             </p>
+//             <ul className="mt-3 space-y-2 text-xs text-white/60 sm:mt-3.5 sm:space-y-2.5 sm:text-sm">
+//               {categories.length > 0 ? (
+//                 categories.map((cat) => (
+//                   <li key={cat.title}>
+//                     <Link href={cat.href} className="hover:text-white">
+//                       {cat.title}
+//                     </Link>
+//                   </li>
+//                 ))
+//               ) : (
+//                 <li>
+//                   <Link href="/products" className="hover:text-white">
+//                     All products
+//                   </Link>
+//                 </li>
+//               )}
+//             </ul>
+//           </div>
+
+//           {/* Contact */}
+//           <div>
+//             <p className="text-[10px] font-semibold uppercase tracking-wider text-white sm:text-xs">
+//               Contact Us
+//             </p>
+//             <ul className="mt-3 space-y-2.5 text-xs text-white/60 sm:mt-3.5 sm:space-y-3 sm:text-sm">
+//               <li className="flex items-start gap-1.5 sm:gap-2">
+//                 <MapPin
+//                   size={13}
+//                   className="mt-0.5 shrink-0 text-[#9a5b18]"
+//                 />
+//                 <span className="leading-snug">
+//                   Guntur, Andhra Pradesh
+//                 </span>
+//               </li>
+//               <li>
+//                 <a
+//                   href="tel:+919876543210"
+//                   className="flex items-center gap-1.5 hover:text-white sm:gap-2"
+//                 >
+//                   <Phone size={13} className="shrink-0 text-[#9a5b18]" />
+//                   <span className="leading-snug">+91 98765 43210</span>
+//                 </a>
+//               </li>
+//               <li>
+//                 <a
+//                   href="mailto:hello@akrish.in"
+//                   className="flex items-center gap-1.5 hover:text-white sm:gap-2"
+//                 >
+//                   <Mail size={13} className="shrink-0 text-[#9a5b18]" />
+//                   <span className="break-all leading-snug">hello@akrish.in</span>
+//                 </a>
+//               </li>
+//             </ul>
+//           </div>
+//         </div>
+
+//         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/40 sm:flex-row">
+//           <p>© {currentYear} Akrish Furniture</p>
+//           {/* <div className="flex gap-5">
+//             <Link href="/privacy" className="hover:text-white">
+//               Privacy
+//             </Link>
+//             <Link href="/terms" className="hover:text-white">
+//               Terms
+//             </Link>
+//           </div> */}
+//         </div>
+//       </div>
+//     </footer>
+//   );
+// }
+
+
+// "use client";
+
+// import Link from "next/link";
+// import { useEffect, useState } from "react";
+// import {
+//   Facebook,
+//   Instagram,
+//   Linkedin,
+//   Mail,
+//   MapPin,
+//   Phone,
+//   Twitter,
+// } from "lucide-react";
+// import { collection, getDocs } from "firebase/firestore";
+// import { db } from "@/lib/firebase";
+
+// interface CategoryItem {
+//   title: string;
+//   href: string;
+// }
+
+// export default function Footer() {
+//   const currentYear = new Date().getFullYear();
+//   const [categories, setCategories] = useState<CategoryItem[]>([]);
+
+//   useEffect(() => {
+//     const fetchCategories = async () => {
+//       try {
+//         const snapshot = await getDocs(collection(db, "furniture_products"));
+//         const categorySet = new Set<string>();
+
+//         snapshot.docs.forEach((docSnap) => {
+//           const data = docSnap.data();
+//           const status = String(data.status || "In Stock");
+//           const active = data.active !== false && status !== "Inactive";
+//           if (!active) return;
+//           const category = data.category;
+//           if (category && typeof category === "string") {
+//             categorySet.add(category.trim());
+//           }
+//         });
+
+//         setCategories(
+//           Array.from(categorySet)
+//             .sort()
+//             .slice(0, 6)
+//             .map((cat) => ({
+//               title: cat,
+//               href: `/products?category=${encodeURIComponent(cat)}`,
+//             }))
+//         );
+//       } catch (err) {
+//         console.error("Failed to load footer categories:", err);
+//       }
+//     };
+
+//     fetchCategories();
+//   }, []);
+
+//   return (
+//     <footer className="bg-[#1a1814] text-white">
+//       {/* Newsletter strip */}
+//       <div className="border-b border-white/10">
+//         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 py-8 sm:flex-row sm:items-center sm:px-6 lg:px-8">
+//           <div>
+//             <p className="font-display text-xl font-semibold text-white sm:text-2xl">
+//               Stay in the loop
+//             </p>
+//             <p className="mt-1 text-sm text-white/50">
+//               New arrivals and exclusive offers — no spam.
+//             </p>
+//           </div>
+//           {/* <form
+//             className="flex w-full max-w-md gap-2"
+//             onSubmit={(e) => e.preventDefault()}
+//           >
+//             <input
+//               type="email"
+//               placeholder="Enter your email"
+//               className="min-w-0 flex-1 rounded-full border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-[#b8956c]"
+//             />
+//             <button
+//               type="submit"
+//               className="shrink-0 rounded-full bg-[#b8956c] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#8b7355]"
+//             >
+//               Subscribe
+//             </button>
+//           </form> */}
+//         </div>
+//       </div>
+
+//       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+//         <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
+//           <div className="max-w-xs">
+//             <Link href="/" className="flex items-center gap-2.5">
+//               {/* eslint-disable-next-line @next/next/no-img-element */}
+//               <img
+//                 src="/Akrish.jpg"
+//                 alt="Akrish"
+//                 className="h-10 w-10 rounded-full object-cover ring-1 ring-white/20"
+//               />
+//               <div>
+//                 <p className="font-display text-lg font-semibold leading-none">
+//                   Akrish
+//                 </p>
+//                 <p className="mt-1 text-[9px] font-medium uppercase tracking-[0.16em] text-[#b8956c]">
+//                   Furniture &amp; Interior
+//                 </p>
+//               </div>
+//             </Link>
+//             <p className="mt-4 text-sm leading-6 text-white/50">
+//               Considered furniture for modern homes and workspaces — built to
+//               last, designed to feel calm.
+//             </p>
+//             <div className="mt-5 flex items-center gap-1.5">
+//               {[
+//                 { icon: Facebook, label: "Facebook" },
+//                 { icon: Instagram, label: "Instagram" },
+//                 { icon: Twitter, label: "Twitter" },
+//                 { icon: Linkedin, label: "LinkedIn" },
+//               ].map(({ icon: Icon, label }) => (
+//                 <a
+//                   key={label}
+//                   href="#"
+//                   aria-label={label}
+//                   className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition hover:bg-[#b8956c]"
+//                 >
+//                   <Icon size={15} />
+//                 </a>
+//               ))}
+//             </div>
+//           </div>
+
+//           <div className="grid flex-1 grid-cols-2 gap-8 sm:grid-cols-3 sm:gap-10">
+//             <div>
+//               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90">
+//                 Shop
+//               </p>
+//               <ul className="mt-3 space-y-2.5 text-sm text-white/50">
+//                 <li>
+//                   <Link href="/products" className="hover:text-white">
+//                     All products
+//                   </Link>
+//                 </li>
+//                 {categories.map((cat) => (
+//                   <li key={cat.title}>
+//                     <Link href={cat.href} className="hover:text-white">
+//                       {cat.title}
+//                     </Link>
+//                   </li>
+//                 ))}
+//               </ul>
+//             </div>
+//             <div>
+//               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90">
+//                 Company
+//               </p>
+//               <ul className="mt-3 space-y-2.5 text-sm text-white/50">
+//                 <li>
+//                   <Link href="/" className="hover:text-white">
+//                     Home
+//                   </Link>
+//                 </li>
+//                 <li>
+//                   <Link href="/about" className="hover:text-white">
+//                     About us
+//                   </Link>
+//                 </li>
+//                 <li>
+//                   <Link href="/services" className="hover:text-white">
+//                     Services
+//                   </Link>
+//                 </li>
+//                 <li>
+//                   <Link href="/contact" className="hover:text-white">
+//                     Contact
+//                   </Link>
+//                 </li>
+//               </ul>
+//             </div>
+//             <div className="col-span-2 sm:col-span-1">
+//               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90">
+//                 Contact
+//               </p>
+//               <ul className="mt-3 space-y-3 text-sm text-white/50">
+//                 <li className="flex items-start gap-2">
+//                   <MapPin size={14} className="mt-0.5 shrink-0 text-[#b8956c]" />
+//                   <span>Guntur, Andhra Pradesh</span>
+//                 </li>
+//                 <li>
+//                   <a
+//                     href="tel:+919876543210"
+//                     className="flex items-center gap-2 hover:text-white"
+//                   >
+//                     <Phone size={14} className="shrink-0 text-[#b8956c]" />
+//                     +91 98765 43210
+//                   </a>
+//                 </li>
+//                 <li>
+//                   <a
+//                     href="mailto:hello@akrish.in"
+//                     className="flex items-center gap-2 hover:text-white"
+//                   >
+//                     <Mail size={14} className="shrink-0 text-[#b8956c]" />
+//                     hello@akrish.in
+//                   </a>
+//                 </li>
+//               </ul>
+//             </div>
+//           </div>
+//         </div>
+
+//         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/35 sm:flex-row">
+//           <p>© {currentYear} Akrish Furniture &amp; Interior</p>
+//           <p className="text-white/30">Crafted for modern living</p>
+//         </div>
+//       </div>
+//     </footer>
+//   );
+// }
+
+
+
 "use client";
 
 import Link from "next/link";
@@ -1010,7 +1443,7 @@ export default function Footer() {
         setCategories(
           Array.from(categorySet)
             .sort()
-            .slice(0, 5)
+            .slice(0, 6)
             .map((cat) => ({
               title: cat,
               href: `/products?category=${encodeURIComponent(cat)}`,
@@ -1025,149 +1458,185 @@ export default function Footer() {
   }, []);
 
   return (
-    <footer className="bg-[#17352f] text-white">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-        {/* Brand + social */}
-        <div className="flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#176b5b]">
-              <span className="text-base font-bold">A</span>
-            </div>
-            <div>
-              <p className="text-base font-bold leading-none">Akrish</p>
-              <p className="mt-1 text-[9px] font-medium uppercase tracking-[0.16em] text-[#9a5b18]">
-                Furniture
-              </p>
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-1.5">
-            {[
-              { icon: Facebook, label: "Facebook" },
-              { icon: Instagram, label: "Instagram" },
-              { icon: Twitter, label: "Twitter" },
-              { icon: Linkedin, label: "LinkedIn" },
-            ].map(({ icon: Icon, label }) => (
-              <a
-                key={label}
-                href="#"
-                aria-label={label}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition hover:bg-[#176b5b]"
-              >
-                <Icon size={15} />
-              </a>
-            ))}
+    <footer className="bg-[#1a1814] text-white">
+      <div className="border-b border-white/10">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 py-8 sm:flex-row sm:items-center sm:px-6 lg:px-8">
+          <div>
+            <p className="font-display text-xl font-semibold text-white sm:text-2xl">
+              Stay in the loop
+            </p>
+            <p className="mt-1 text-sm text-white/50">
+              New arrivals and exclusive offers — no spam.
+            </p>
           </div>
         </div>
+      </div>
 
-        <p className="mt-4 max-w-md text-sm leading-6 text-white/60">
-          Quality furniture for modern homes and workspaces.
-        </p>
-
-        <div className="my-8 h-px bg-white/10" />
-
-        {/* 3 columns in one row on all screens */}
-        <div className="grid grid-cols-3 gap-4 sm:gap-8">
-          {/* Quick Links */}
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-white sm:text-xs">
-              Quick Links
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+        <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-12">
+          {/* Brand */}
+          <div className="max-w-xs shrink-0">
+            <Link href="/" className="flex items-center gap-2.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/Akrish.jpg"
+                alt="Akrish"
+                className="h-10 w-10 rounded-full object-cover ring-1 ring-white/20"
+              />
+              <div>
+                <p className="font-display text-lg font-semibold leading-none">
+                  Akrish
+                </p>
+                <p className="mt-1 text-[9px] font-medium uppercase tracking-[0.16em] text-[#b8956c]">
+                  Furniture &amp; Interior
+                </p>
+              </div>
+            </Link>
+            <p className="mt-4 text-sm leading-6 text-white/50">
+              Considered furniture for modern homes and workspaces — built to
+              last, designed to feel calm.
             </p>
-            <ul className="mt-3 space-y-2 text-xs text-white/60 sm:mt-3.5 sm:space-y-2.5 sm:text-sm">
-              <li>
-                <Link href="/" className="hover:text-white">
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link href="/products" className="hover:text-white">
-                  Furniture
-                </Link>
-              </li>
-              <li>
-                <Link href="/about" className="hover:text-white">
-                  About Us
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="hover:text-white">
-                  Contact
-                </Link>
-              </li>
-            </ul>
+            {/* <div className="mt-5 flex items-center gap-1.5">
+              {[
+                { icon: Facebook, label: "Facebook" },
+                { icon: Instagram, label: "Instagram" },
+                { icon: Twitter, label: "Twitter" },
+                { icon: Linkedin, label: "LinkedIn" },
+              ].map(({ icon: Icon, label }) => (
+                <a
+                  key={label}
+                  href="#"
+                  aria-label={label}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition hover:bg-[#b8956c]"
+                >
+                  <Icon size={15} />
+                </a>
+              ))}
+            </div> */}
           </div>
 
-          {/* Categories */}
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-white sm:text-xs">
-              Categories
-            </p>
-            <ul className="mt-3 space-y-2 text-xs text-white/60 sm:mt-3.5 sm:space-y-2.5 sm:text-sm">
-              {categories.length > 0 ? (
-                categories.map((cat) => (
-                  <li key={cat.title}>
-                    <Link href={cat.href} className="hover:text-white">
-                      {cat.title}
-                    </Link>
-                  </li>
-                ))
-              ) : (
+          {/* Link columns */}
+          <div className="grid flex-1 grid-cols-2 gap-8 sm:grid-cols-4 sm:gap-8">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90">
+                Shop
+              </p>
+              <ul className="mt-3 space-y-2.5 text-sm text-white/50">
                 <li>
                   <Link href="/products" className="hover:text-white">
                     All products
                   </Link>
                 </li>
-              )}
-            </ul>
-          </div>
+                {categories.map((cat) => (
+                  <li key={cat.title}>
+                    <Link href={cat.href} className="hover:text-white">
+                      {cat.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          {/* Contact */}
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-white sm:text-xs">
-              Contact Us
-            </p>
-            <ul className="mt-3 space-y-2.5 text-xs text-white/60 sm:mt-3.5 sm:space-y-3 sm:text-sm">
-              <li className="flex items-start gap-1.5 sm:gap-2">
-                <MapPin
-                  size={13}
-                  className="mt-0.5 shrink-0 text-[#9a5b18]"
-                />
-                <span className="leading-snug">
-                  Guntur, Andhra Pradesh
-                </span>
-              </li>
-              <li>
-                <a
-                  href="tel:+919876543210"
-                  className="flex items-center gap-1.5 hover:text-white sm:gap-2"
-                >
-                  <Phone size={13} className="shrink-0 text-[#9a5b18]" />
-                  <span className="leading-snug">+91 98765 43210</span>
-                </a>
-              </li>
-              <li>
-                <a
-                  href="mailto:hello@akrish.in"
-                  className="flex items-center gap-1.5 hover:text-white sm:gap-2"
-                >
-                  <Mail size={13} className="shrink-0 text-[#9a5b18]" />
-                  <span className="break-all leading-snug">hello@akrish.in</span>
-                </a>
-              </li>
-            </ul>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90">
+                Company
+              </p>
+              <ul className="mt-3 space-y-2.5 text-sm text-white/50">
+                <li>
+                  <Link href="/" className="hover:text-white">
+                    Home
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/about" className="hover:text-white">
+                    About us
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/services" className="hover:text-white">
+                    Services
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="hover:text-white">
+                    Contact
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Account — Staff / ERP (like Admin Login in reference) */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90">
+                Account
+              </p>
+              <ul className="mt-3 space-y-2.5 text-sm text-white/50">
+                <li>
+                  <Link href="/sign-in" className="hover:text-white">
+                    Customer login
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/register" className="hover:text-white">
+                    Create account
+                  </Link>
+                </li>
+                {/* <li>
+                  <Link href="/account/orders" className="hover:text-white">
+                    My orders
+                  </Link>
+                </li> */}
+                <li>
+                  <Link
+                    href="/login"
+                    className="font-medium text-[#b8956c] hover:text-white"
+                  >
+                    ERP / Admin panel
+                  </Link>
+                </li>
+                {/* <li>
+                  <Link href="/login" className="hover:text-white">
+                    ERP / Admin panel
+                  </Link>
+                </li> */}
+              </ul>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90">
+                Get in touch
+              </p>
+              <ul className="mt-3 space-y-3 text-sm text-white/50">
+                <li className="flex items-start gap-2">
+                  <MapPin size={14} className="mt-0.5 shrink-0 text-[#b8956c]" />
+                  <span>Guntur, Andhra Pradesh</span>
+                </li>
+                <li>
+                  <a
+                    href="tel:+919876543210"
+                    className="flex items-center gap-2 hover:text-white"
+                  >
+                    <Phone size={14} className="shrink-0 text-[#b8956c]" />
+                    +91 98765 43210
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="mailto:hello@akrish.in"
+                    className="flex items-center gap-2 hover:text-white"
+                  >
+                    <Mail size={14} className="shrink-0 text-[#b8956c]" />
+                    hello@akrish.in
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/40 sm:flex-row">
-          <p>© {currentYear} Akrish Furniture</p>
-          {/* <div className="flex gap-5">
-            <Link href="/privacy" className="hover:text-white">
-              Privacy
-            </Link>
-            <Link href="/terms" className="hover:text-white">
-              Terms
-            </Link>
-          </div> */}
+        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/35 sm:flex-row">
+          <p>© {currentYear} Akrish Furniture &amp; Interior</p>
+          <p className="text-white/30">Crafted for modern living</p>
         </div>
       </div>
     </footer>

@@ -1,4 +1,3 @@
-
 // "use client";
 
 // import Link from "next/link";
@@ -1128,16 +1127,337 @@
 // }
 
 
+// "use client";
+
+// import Link from "next/link";
+// import { useEffect, useState } from "react";
+// import { useRouter } from "next/navigation";
+// import {
+//   Heart,
+//   ShoppingBag,
+//   Trash2,
+//   Loader2,
+// } from "lucide-react";
+// import { onAuthStateChanged } from "firebase/auth";
+// import { auth } from "@/lib/firebase";
+// import {
+//   getWishlist,
+//   removeFromWishlist,
+//   type WishlistItem,
+// } from "@/services/wishlistService";
+// import {
+//   addToCart,
+//   removeFromCart,
+//   getCart,
+// } from "@/services/cartService";
+
+// function formatCurrency(value: number) {
+//   return new Intl.NumberFormat("en-IN", {
+//     style: "currency",
+//     currency: "INR",
+//     maximumFractionDigits: 0,
+//   }).format(value);
+// }
+
+// export default function WishlistPage() {
+//   const router = useRouter();
+//   const [authUid, setAuthUid] = useState<string | null>(null);
+//   const [authReady, setAuthReady] = useState(false);
+//   const [items, setItems] = useState<WishlistItem[]>([]);
+//   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
+//   const [loading, setLoading] = useState(true);
+//   const [busyId, setBusyId] = useState<string | null>(null);
+
+//   useEffect(() => {
+//     const unsub = onAuthStateChanged(auth, (user) => {
+//       setAuthUid(user?.uid ?? null);
+//       setAuthReady(true);
+//     });
+//     return () => unsub();
+//   }, []);
+
+//   useEffect(() => {
+//     if (!authReady) return;
+
+//     if (!authUid) {
+//       setItems([]);
+//       setLoading(false);
+//       router.replace("/sign-in?redirect=%2Fwishlist");
+//       return;
+//     }
+
+//     let cancelled = false;
+//     const uid = authUid;
+
+//     async function loadWishlist() {
+//       try {
+//         const list = await getWishlist(uid);
+//         if (!cancelled) setItems(list?.items ?? []);
+//       } catch (err) {
+//         console.error(err);
+//         if (!cancelled) setItems([]);
+//       } finally {
+//         if (!cancelled) setLoading(false);
+//       }
+//     }
+
+//     setLoading(true);
+//     void loadWishlist();
+
+//     const onWishlistUpdated = () => {
+//       void loadWishlist();
+//     };
+//     window.addEventListener("wishlistUpdated", onWishlistUpdated);
+
+//     return () => {
+//       cancelled = true;
+//       window.removeEventListener("wishlistUpdated", onWishlistUpdated);
+//     };
+//   }, [authUid, authReady, router]);
+
+//   useEffect(() => {
+//     if (!authUid) {
+//       setCartIds(new Set());
+//       return;
+//     }
+
+//     let cancelled = false;
+//     const uid = authUid;
+
+//     async function syncCart() {
+//       try {
+//         const cart = await getCart(uid);
+//         const ids = new Set((cart?.items ?? []).map((i) => i.productId));
+//         if (!cancelled) setCartIds(ids);
+//       } catch {
+//         if (!cancelled) setCartIds(new Set());
+//       }
+//     }
+
+//     void syncCart();
+
+//     const onCartUpdated = () => {
+//       void syncCart();
+//     };
+//     window.addEventListener("cartUpdated", onCartUpdated);
+
+//     return () => {
+//       cancelled = true;
+//       window.removeEventListener("cartUpdated", onCartUpdated);
+//     };
+//   }, [authUid]);
+
+//   async function handleRemoveFromWishlist(productId: string) {
+//     if (!authUid) {
+//       router.push("/sign-in?redirect=%2Fwishlist");
+//       return;
+//     }
+
+//     setBusyId(productId);
+//     try {
+//       const next = await removeFromWishlist(authUid, productId);
+//       setItems(next.items ?? []);
+//       window.dispatchEvent(new Event("wishlistUpdated"));
+//     } catch (err) {
+//       console.error(err);
+//     } finally {
+//       setBusyId(null);
+//     }
+//   }
+
+//   async function handleToggleCart(item: WishlistItem) {
+//     if (!authUid) {
+//       router.push("/sign-in?redirect=%2Fwishlist");
+//       return;
+//     }
+
+//     const inCart = cartIds.has(item.productId);
+//     setBusyId(item.productId);
+
+//     try {
+//       if (inCart) {
+//         await removeFromCart(authUid, item.productId);
+//         setCartIds((prev) => {
+//           const next = new Set(prev);
+//           next.delete(item.productId);
+//           return next;
+//         });
+//       } else {
+//         const cart = await getCart(authUid);
+//         const already = (cart?.items ?? []).some(
+//           (i) => i.productId === item.productId
+//         );
+//         if (!already) {
+//           await addToCart(authUid, {
+//             productId: item.productId,
+//             name: item.name,
+//             price: item.price,
+//             quantity: 1,
+//             image: item.image || "",
+//             category: item.category || "",
+//           });
+//         }
+//         setCartIds((prev) => new Set(prev).add(item.productId));
+//       }
+//       window.dispatchEvent(new Event("cartUpdated"));
+//     } catch (err) {
+//       console.error(err);
+//     } finally {
+//       setBusyId(null);
+//     }
+//   }
+
+//   if (!authReady || (authUid !== null && loading)) {
+//     return (
+//       <main className="flex min-h-[50vh] items-center justify-center bg-[#f7f9f8]">
+//         <Loader2 className="h-8 w-8 animate-spin text-[#176b5b]" />
+//       </main>
+//     );
+//   }
+
+//   return (
+//     <main className="min-h-screen bg-[#f7f9f8]">
+//       <div className="mx-auto max-w-6xl px-3 py-8 sm:px-6 sm:py-14 lg:px-8">
+//         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+//           <div>
+//             <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+//               Your Wishlist
+//             </h1>
+//             <p className="mt-1.5 text-sm text-slate-500">
+//               Items you have saved for later.
+//             </p>
+//           </div>
+//           <Link
+//             href="/products"
+//             className="mt-3 inline-flex min-h-[40px] w-fit items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-[#176b5b] hover:text-[#176b5b] sm:mt-0"
+//           >
+//             <ShoppingBag size={16} />
+//             Continue shopping
+//           </Link>
+//         </div>
+
+//         {items.length === 0 ? (
+//           <div className="mt-10 rounded-xl border border-dashed border-slate-300 bg-white py-14 text-center sm:mt-12 sm:rounded-2xl sm:py-20">
+//             <Heart
+//               size={36}
+//               className="mx-auto text-slate-300 sm:h-10 sm:w-10"
+//             />
+//             <h2 className="mt-4 text-base font-semibold text-slate-900 sm:text-lg">
+//               Your wishlist is empty
+//             </h2>
+//             <p className="mt-2 px-4 text-sm text-slate-500">
+//               Browse our collection and save the pieces you love.
+//             </p>
+//             <Link
+//               href="/products"
+//               className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-[#176b5b] px-5 py-3 text-sm font-semibold text-white"
+//             >
+//               <ShoppingBag size={16} />
+//               Explore Furniture
+//             </Link>
+//           </div>
+//         ) : (
+//           <div className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-5 lg:grid-cols-3">
+//             {items.map((item) => {
+//               const busy = busyId === item.productId;
+//               const inCart = cartIds.has(item.productId);
+
+//               return (
+//                 <article
+//                   key={item.productId}
+//                   className="overflow-hidden rounded-xl border border-slate-200 bg-white sm:rounded-2xl"
+//                 >
+//                   <Link
+//                     href={`/products/${item.productId}`}
+//                     className="relative flex aspect-square items-center justify-center bg-slate-100"
+//                   >
+//                     {item.image ? (
+//                       // eslint-disable-next-line @next/next/no-img-element
+//                       <img
+//                         src={item.image}
+//                         alt={item.name}
+//                         className="h-full w-full object-cover"
+//                       />
+//                     ) : (
+//                       <ShoppingBag
+//                         size={32}
+//                         className="text-slate-300 sm:h-10 sm:w-10"
+//                         strokeWidth={1.2}
+//                       />
+//                     )}
+//                   </Link>
+
+//                   <div className="p-2.5 sm:p-4">
+//                     <p className="truncate text-[9px] font-semibold uppercase tracking-wider text-slate-400 sm:text-[10px]">
+//                       {item.category || "Furniture"}
+//                     </p>
+//                     <Link href={`/products/${item.productId}`}>
+//                       <h2 className="mt-1 line-clamp-2 text-xs font-bold leading-snug text-slate-900 sm:line-clamp-1 sm:text-base">
+//                         {item.name}
+//                       </h2>
+//                     </Link>
+//                     <p className="mt-1.5 text-sm font-bold text-slate-900 sm:mt-2 sm:text-lg">
+//                       {formatCurrency(item.price)}
+//                     </p>
+
+//                     <div className="mt-2.5 flex gap-1.5 sm:mt-4 sm:gap-2">
+//                       <button
+//                         type="button"
+//                         disabled={busy}
+//                         onClick={() => handleToggleCart(item)}
+//                         className={`flex h-9 min-w-0 flex-1 items-center justify-center gap-1 rounded-lg px-2 text-[11px] font-semibold text-white disabled:opacity-60 sm:gap-1.5 sm:px-3 sm:text-xs ${
+//                           inCart
+//                             ? "bg-red-600 hover:bg-red-700"
+//                             : "bg-[#176b5b] hover:bg-[#125849]"
+//                         }`}
+//                       >
+//                         {busy ? (
+//                           <Loader2 size={13} className="animate-spin" />
+//                         ) : inCart ? (
+//                           <>
+//                             <Trash2 size={13} className="shrink-0" />
+//                             <span className="truncate">Remove</span>
+//                           </>
+//                         ) : (
+//                           <>
+//                             <ShoppingBag size={13} className="shrink-0" />
+//                             <span className="truncate">Add to cart</span>
+//                           </>
+//                         )}
+//                       </button>
+//                       <button
+//                         type="button"
+//                         disabled={busy}
+//                         onClick={() =>
+//                           handleRemoveFromWishlist(item.productId)
+//                         }
+//                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-60 sm:w-10"
+//                         aria-label="Remove from wishlist"
+//                       >
+//                         <Trash2 size={15} />
+//                       </button>
+//                     </div>
+//                   </div>
+//                 </article>
+//               );
+//             })}
+//           </div>
+//         )}
+//       </div>
+//     </main>
+//   );
+// }
+
+
 "use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   Heart,
+  Loader2,
   ShoppingBag,
   Trash2,
-  Loader2,
 } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -1147,10 +1467,11 @@ import {
   type WishlistItem,
 } from "@/services/wishlistService";
 import {
-  addToCart,
-  removeFromCart,
+  addToCart as addToFirebaseCart,
   getCart,
+  removeFromCart as removeFromFirebaseCart,
 } from "@/services/cartService";
+import { useRouter } from "next/navigation";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -1165,9 +1486,9 @@ export default function WishlistPage() {
   const [authUid, setAuthUid] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [items, setItems] = useState<WishlistItem[]>([]);
-  const [cartIds, setCartIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [cartIds, setCartIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -1179,21 +1500,18 @@ export default function WishlistPage() {
 
   useEffect(() => {
     if (!authReady) return;
-
     if (!authUid) {
       setItems([]);
       setLoading(false);
-      router.replace("/sign-in?redirect=%2Fwishlist");
       return;
     }
 
     let cancelled = false;
-    const uid = authUid;
-
-    async function loadWishlist() {
+    async function load() {
+      setLoading(true);
       try {
-        const list = await getWishlist(uid);
-        if (!cancelled) setItems(list?.items ?? []);
+        const list = await getWishlist(authUid!);
+        if (!cancelled) setItems(list?.items || []);
       } catch (err) {
         console.error(err);
         if (!cancelled) setItems([]);
@@ -1201,63 +1519,46 @@ export default function WishlistPage() {
         if (!cancelled) setLoading(false);
       }
     }
+    load();
 
-    setLoading(true);
-    void loadWishlist();
-
-    const onWishlistUpdated = () => {
-      void loadWishlist();
-    };
-    window.addEventListener("wishlistUpdated", onWishlistUpdated);
-
+    const onWish = () => load();
+    window.addEventListener("wishlistUpdated", onWish);
     return () => {
       cancelled = true;
-      window.removeEventListener("wishlistUpdated", onWishlistUpdated);
+      window.removeEventListener("wishlistUpdated", onWish);
     };
-  }, [authUid, authReady, router]);
+  }, [authUid, authReady]);
 
   useEffect(() => {
     if (!authUid) {
       setCartIds(new Set());
       return;
     }
-
     let cancelled = false;
-    const uid = authUid;
-
     async function syncCart() {
       try {
-        const cart = await getCart(uid);
-        const ids = new Set((cart?.items ?? []).map((i) => i.productId));
-        if (!cancelled) setCartIds(ids);
+        const cart = await getCart(authUid!);
+        if (!cancelled) {
+          setCartIds(new Set((cart?.items || []).map((i) => i.productId)));
+        }
       } catch {
         if (!cancelled) setCartIds(new Set());
       }
     }
-
-    void syncCart();
-
-    const onCartUpdated = () => {
-      void syncCart();
-    };
-    window.addEventListener("cartUpdated", onCartUpdated);
-
+    syncCart();
+    window.addEventListener("cartUpdated", syncCart);
     return () => {
       cancelled = true;
-      window.removeEventListener("cartUpdated", onCartUpdated);
+      window.removeEventListener("cartUpdated", syncCart);
     };
   }, [authUid]);
 
-  async function handleRemoveFromWishlist(productId: string) {
-    if (!authUid) {
-      router.push("/sign-in?redirect=%2Fwishlist");
-      return;
-    }
-
+  async function handleRemove(productId: string) {
+    if (!authUid) return;
     setBusyId(productId);
     try {
-      const next = await removeFromWishlist(authUid, productId);
-      setItems(next.items ?? []);
+      await removeFromWishlist(authUid, productId);
+      setItems((prev) => prev.filter((i) => i.productId !== productId));
       window.dispatchEvent(new Event("wishlistUpdated"));
     } catch (err) {
       console.error(err);
@@ -1266,18 +1567,15 @@ export default function WishlistPage() {
     }
   }
 
-  async function handleToggleCart(item: WishlistItem) {
+  async function handleCart(item: WishlistItem) {
     if (!authUid) {
-      router.push("/sign-in?redirect=%2Fwishlist");
+      router.push("/sign-in");
       return;
     }
-
-    const inCart = cartIds.has(item.productId);
     setBusyId(item.productId);
-
     try {
-      if (inCart) {
-        await removeFromCart(authUid, item.productId);
+      if (cartIds.has(item.productId)) {
+        await removeFromFirebaseCart(authUid, item.productId);
         setCartIds((prev) => {
           const next = new Set(prev);
           next.delete(item.productId);
@@ -1285,11 +1583,11 @@ export default function WishlistPage() {
         });
       } else {
         const cart = await getCart(authUid);
-        const already = (cart?.items ?? []).some(
+        const already = cart?.items?.some(
           (i) => i.productId === item.productId
         );
         if (!already) {
-          await addToCart(authUid, {
+          await addToFirebaseCart(authUid, {
             productId: item.productId,
             name: item.name,
             price: item.price,
@@ -1308,143 +1606,153 @@ export default function WishlistPage() {
     }
   }
 
-  if (!authReady || (authUid !== null && loading)) {
+  if (!authReady || (authUid && loading)) {
     return (
-      <main className="flex min-h-[50vh] items-center justify-center bg-[#f7f9f8]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#176b5b]" />
-      </main>
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#b8956c]" />
+      </div>
+    );
+  }
+
+  if (!authUid) {
+    return (
+      <div className="flex min-h-[320px] flex-col items-center justify-center py-12 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f3ebe0] text-[#b8956c]">
+          <Heart size={24} />
+        </div>
+        <h2 className="mt-5 font-display text-xl font-semibold text-[#1a1a1a]">
+          Sign in to view wishlist
+        </h2>
+        <p className="mt-2 max-w-sm text-sm text-[#6b6560]">
+          Save pieces you love and access them across devices.
+        </p>
+        <Link
+          href="/sign-in"
+          className="mt-6 inline-flex rounded-full bg-[#1a1a1a] px-6 py-2.5 text-sm font-semibold text-white"
+        >
+          Sign in
+        </Link>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f9f8]">
-      <div className="mx-auto max-w-6xl px-3 py-8 sm:px-6 sm:py-14 lg:px-8">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-              Your Wishlist
-            </h1>
-            <p className="mt-1.5 text-sm text-slate-500">
-              Items you have saved for later.
-            </p>
-          </div>
+    <div>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-semibold text-[#1a1a1a] sm:text-3xl">
+            Your wishlist
+          </h1>
+          <p className="mt-1.5 text-sm text-[#6b6560]">
+            Items you have saved for later.
+          </p>
+        </div>
+        <Link
+          href="/products"
+          className="inline-flex w-fit items-center gap-2 rounded-full border border-[#e8e2d8] bg-white px-4 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#faf8f4]"
+        >
+          <ShoppingBag size={15} />
+          Continue shopping
+        </Link>
+      </div>
+
+      {items.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-[#e8e2d8] bg-[#faf8f4]/50 py-14 text-center sm:py-20">
+          <Heart size={36} className="mx-auto text-[#d4cdc2]" strokeWidth={1.25} />
+          <h2 className="mt-4 font-display text-base font-semibold text-[#1a1a1a] sm:text-lg">
+            Your wishlist is empty
+          </h2>
+          <p className="mt-2 px-4 text-sm text-[#6b6560]">
+            Browse our collection and save the pieces you love.
+          </p>
           <Link
             href="/products"
-            className="mt-3 inline-flex min-h-[40px] w-fit items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-[#176b5b] hover:text-[#176b5b] sm:mt-0"
+            className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-semibold text-white"
           >
             <ShoppingBag size={16} />
-            Continue shopping
+            Explore furniture
           </Link>
         </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
+          {items.map((item) => {
+            const busy = busyId === item.productId;
+            const inCart = cartIds.has(item.productId);
 
-        {items.length === 0 ? (
-          <div className="mt-10 rounded-xl border border-dashed border-slate-300 bg-white py-14 text-center sm:mt-12 sm:rounded-2xl sm:py-20">
-            <Heart
-              size={36}
-              className="mx-auto text-slate-300 sm:h-10 sm:w-10"
-            />
-            <h2 className="mt-4 text-base font-semibold text-slate-900 sm:text-lg">
-              Your wishlist is empty
-            </h2>
-            <p className="mt-2 px-4 text-sm text-slate-500">
-              Browse our collection and save the pieces you love.
-            </p>
-            <Link
-              href="/products"
-              className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-[#176b5b] px-5 py-3 text-sm font-semibold text-white"
-            >
-              <ShoppingBag size={16} />
-              Explore Furniture
-            </Link>
-          </div>
-        ) : (
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-5 lg:grid-cols-3">
-            {items.map((item) => {
-              const busy = busyId === item.productId;
-              const inCart = cartIds.has(item.productId);
-
-              return (
-                <article
-                  key={item.productId}
-                  className="overflow-hidden rounded-xl border border-slate-200 bg-white sm:rounded-2xl"
+            return (
+              <article
+                key={item.productId}
+                className="group overflow-hidden rounded-2xl border border-[#e8e2d8] bg-white"
+              >
+                <Link
+                  href={`/products/${item.productId}`}
+                  className="relative flex aspect-square items-center justify-center bg-[#f3eee6]"
                 >
-                  <Link
-                    href={`/products/${item.productId}`}
-                    className="relative flex aspect-square items-center justify-center bg-slate-100"
-                  >
-                    {item.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <ShoppingBag
-                        size={32}
-                        className="text-slate-300 sm:h-10 sm:w-10"
-                        strokeWidth={1.2}
-                      />
-                    )}
+                  {item.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                    />
+                  ) : (
+                    <ShoppingBag size={32} className="text-[#d4cdc2]" />
+                  )}
+                </Link>
+
+                <div className="p-3 sm:p-4">
+                  {item.category && (
+                    <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#b8956c]">
+                      {item.category}
+                    </p>
+                  )}
+                  <Link href={`/products/${item.productId}`}>
+                    <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-[#1a1a1a]">
+                      {item.name}
+                    </h2>
                   </Link>
+                  <p className="mt-2 text-sm font-semibold text-[#1a1a1a]">
+                    {formatCurrency(item.price || 0)}
+                  </p>
 
-                  <div className="p-2.5 sm:p-4">
-                    <p className="truncate text-[9px] font-semibold uppercase tracking-wider text-slate-400 sm:text-[10px]">
-                      {item.category || "Furniture"}
-                    </p>
-                    <Link href={`/products/${item.productId}`}>
-                      <h2 className="mt-1 line-clamp-2 text-xs font-bold leading-snug text-slate-900 sm:line-clamp-1 sm:text-base">
-                        {item.name}
-                      </h2>
-                    </Link>
-                    <p className="mt-1.5 text-sm font-bold text-slate-900 sm:mt-2 sm:text-lg">
-                      {formatCurrency(item.price)}
-                    </p>
-
-                    <div className="mt-2.5 flex gap-1.5 sm:mt-4 sm:gap-2">
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleToggleCart(item)}
-                        className={`flex h-9 min-w-0 flex-1 items-center justify-center gap-1 rounded-lg px-2 text-[11px] font-semibold text-white disabled:opacity-60 sm:gap-1.5 sm:px-3 sm:text-xs ${
-                          inCart
-                            ? "bg-red-600 hover:bg-red-700"
-                            : "bg-[#176b5b] hover:bg-[#125849]"
-                        }`}
-                      >
-                        {busy ? (
-                          <Loader2 size={13} className="animate-spin" />
-                        ) : inCart ? (
-                          <>
-                            <Trash2 size={13} className="shrink-0" />
-                            <span className="truncate">Remove</span>
-                          </>
-                        ) : (
-                          <>
-                            <ShoppingBag size={13} className="shrink-0" />
-                            <span className="truncate">Add to cart</span>
-                          </>
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() =>
-                          handleRemoveFromWishlist(item.productId)
-                        }
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-60 sm:w-10"
-                        aria-label="Remove from wishlist"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleCart(item)}
+                      className={`inline-flex h-9 flex-1 items-center justify-center gap-1 rounded-full text-xs font-semibold text-white disabled:opacity-60 ${
+                        inCart
+                          ? "bg-[#c45c4a] hover:bg-[#b04e3d]"
+                          : "bg-[#1a1a1a] hover:bg-[#2c2a26]"
+                      }`}
+                    >
+                      {busy ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : inCart ? (
+                        "In cart"
+                      ) : (
+                        <>
+                          <ShoppingBag size={13} />
+                          Add
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleRemove(item.productId)}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#e8e2d8] text-[#6b6560] hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                      aria-label="Remove from wishlist"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </main>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

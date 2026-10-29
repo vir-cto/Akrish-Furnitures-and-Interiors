@@ -123,6 +123,77 @@
 
 // export default config;
 
+// import type { Config } from "tailwindcss";
+
+// const config: Config = {
+//   content: [
+//     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+//     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+//     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+//     "./src/core/**/*.{js,ts,jsx,tsx,mdx}",
+//     "./src/modules/**/*.{js,ts,jsx,tsx,mdx}",
+//   ],
+
+//   theme: {
+//     screens: {
+//       xs: "375px",
+//       sm: "640px",
+//       md: "768px",
+//       lg: "1024px",
+//       xl: "1280px",
+//       "2xl": "1536px",
+//     },
+//     extend: {
+//       colors: {
+//         akrish: {
+//           green: "#176b5b",
+//           brown: "#9a5b18",
+//           cream: "#f7f7f4",
+//           border: "#e4e2da",
+//           dark: "#17352f",
+//         },
+//       },
+//       fontFamily: {
+//         sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+//       },
+//       boxShadow: {
+//         card: "0 2px 10px rgba(0, 0, 0, 0.05)",
+//         soft: "0 4px 20px rgba(0, 0, 0, 0.08)",
+//         product: "0 8px 30px rgba(0, 0, 0, 0.10)",
+//       },
+//       borderRadius: {
+//         card: "12px",
+//       },
+//       spacing: {
+//         "safe-b": "env(safe-area-inset-bottom, 0px)",
+//         "safe-t": "env(safe-area-inset-top, 0px)",
+//       },
+//       minHeight: {
+//         touch: "44px",
+//       },
+//       animation: {
+//         "fade-in": "fadeIn 0.3s ease-out",
+//         "slide-up": "slideUp 0.3s ease-out",
+//       },
+//       keyframes: {
+//         fadeIn: {
+//           from: { opacity: "0" },
+//           to: { opacity: "1" },
+//         },
+//         slideUp: {
+//           from: { opacity: "0", transform: "translateY(10px)" },
+//           to: { opacity: "1", transform: "translateY(0)" },
+//         },
+//       },
+//     },
+//   },
+
+//   plugins: [],
+// };
+
+// export default config;
+
+
 import type { Config } from "tailwindcss";
 
 const config: Config = {
@@ -146,23 +217,49 @@ const config: Config = {
     extend: {
       colors: {
         akrish: {
+          // Legacy (ERP / gradual migration)
           green: "#176b5b",
           brown: "#9a5b18",
-          cream: "#f7f7f4",
-          border: "#e4e2da",
-          dark: "#17352f",
+          cream: "#f7f3ec",
+          border: "#e8e2d8",
+          dark: "#1a1814",
+          // Luma-style storefront
+          bg: "#f7f3ec",
+          surface: "#ffffff",
+          soft: "#faf7f2",
+          text: "#1a1a1a",
+          muted: "#6b6560",
+          accent: "#b8956c",
+          "accent-dark": "#8b7355",
+          "accent-soft": "#e8dfd0",
+          cta: "#1a1a1a",
+          footer: "#1a1814",
+          sale: "#c45c4a",
+          star: "#c4a574",
         },
       },
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: [
+          "var(--font-dm-sans)",
+          "Inter",
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif",
+        ],
+        display: [
+          "var(--font-cormorant)",
+          "Georgia",
+          "Times New Roman",
+          "serif",
+        ],
       },
       boxShadow: {
-        card: "0 2px 10px rgba(0, 0, 0, 0.05)",
-        soft: "0 4px 20px rgba(0, 0, 0, 0.08)",
-        product: "0 8px 30px rgba(0, 0, 0, 0.10)",
+        card: "0 2px 12px rgba(26, 24, 20, 0.06)",
+        soft: "0 8px 28px rgba(26, 24, 20, 0.08)",
+        product: "0 12px 36px rgba(26, 24, 20, 0.10)",
       },
       borderRadius: {
-        card: "12px",
+        card: "14px",
       },
       spacing: {
         "safe-b": "env(safe-area-inset-bottom, 0px)",

@@ -1198,6 +1198,1170 @@
 // }
 
 
+// import {
+//   collection,
+//   getDocs,
+//   getDoc,
+//   addDoc,
+//   updateDoc,
+//   deleteDoc,
+//   doc,
+//   query,
+//   orderBy,
+//   where,
+//   serverTimestamp,
+//   Timestamp,
+// } from "firebase/firestore";
+// import { db } from "@/core/config/firebaseClient";
+
+// export type FurnitureProduct = {
+//   id: string;
+//   name: string;
+//   sku?: string;
+//   code?: string;
+//   category?: string;
+//   /** Available colour hex values for this product */
+//   colors?: string[];
+//   /** Available sizes / seaters e.g. "2-seater", "3-seater" */
+//   sizes?: string[];
+//   subcategory?: string;
+//   material?: string;
+//   finish?: string;
+//   color?: string;
+//   dimensions?: string;
+//   description?: string;
+//   price?: number;
+//   sellingPrice?: number;
+//   costPrice?: number;
+//   /** 0–100. Intended for products aged ≥ 7 days. */
+//   discountPercent?: number;
+//   stock?: number;
+//   unit?: string;
+//   minStock?: number;
+//   reorderLevel?: number;
+//   status?: string;
+//   supplier?: string;
+//   location?: string;
+//   warehouseLocation?: string;
+//   imageUrl?: string;
+//   image?: string;
+//   images?: string[];
+//   leadTime?: string;
+//   warranty?: string;
+//   salesCount?: number;
+//   revenue?: number;
+//   publishedAt?: Timestamp | null;
+//   createdAt?: Timestamp | null;
+//   updatedAt?: Timestamp | null;
+// };
+
+// export type StockMovement = {
+//   id: string;
+//   productId: string;
+//   type: "Add" | "Remove";
+//   quantity: number;
+//   previousStock: number;
+//   newStock: number;
+//   reason?: string;
+//   createdAt?: Timestamp | null;
+// };
+
+// export type ProductActivity = {
+//   id: string;
+//   productId: string;
+//   action: "created" | "updated" | "stock_add" | "stock_remove" | "deleted";
+//   summary: string;
+//   details?: string;
+//   createdAt?: Timestamp | null;
+// };
+
+// // export const AGEING_DISCOUNT_DAYS = 7;
+
+// // export function getProductAgeDays(p: {
+// //   createdAt?: { toMillis?: () => number } | null;
+// //   publishedAt?: { toMillis?: () => number } | null;
+// // }): number {
+// //   const ms =
+// //     p.createdAt?.toMillis?.() ??
+// //     p.publishedAt?.toMillis?.() ??
+// //     Date.now();
+// //   return Math.max(0, Math.floor((Date.now() - ms) / (1000 * 60 * 60 * 24)));
+// // }
+
+// export const DEFAULT_AGEING_DISCOUNT_DAYS = 7;
+
+// /** @deprecated use DEFAULT_AGEING_DISCOUNT_DAYS + settings */
+// export const AGEING_DISCOUNT_DAYS = DEFAULT_AGEING_DISCOUNT_DAYS;
+
+// export function getProductAgeDays(p: {
+//   createdAt?: { toMillis?: () => number } | null;
+//   publishedAt?: { toMillis?: () => number } | null;
+// }): number {
+//   const ms =
+//     p.createdAt?.toMillis?.() ??
+//     p.publishedAt?.toMillis?.() ??
+//     Date.now();
+//   return Math.max(0, Math.floor((Date.now() - ms) / (1000 * 60 * 60 * 24)));
+// }
+
+// // export function canSetAgeingDiscount(p: {
+// //   createdAt?: { toMillis?: () => number } | null;
+// //   publishedAt?: { toMillis?: () => number } | null;
+// // }): boolean {
+// //   return getProductAgeDays(p) >= AGEING_DISCOUNT_DAYS;
+// // }
+
+// export function canSetAgeingDiscount(
+//   p: {
+//     createdAt?: { toMillis?: () => number } | null;
+//     publishedAt?: { toMillis?: () => number } | null;
+//   },
+//   thresholdDays: number = DEFAULT_AGEING_DISCOUNT_DAYS
+// ): boolean {
+//   const threshold = Math.min(365, Math.max(1, Number(thresholdDays) || 7));
+//   return getProductAgeDays(p) >= threshold;
+// }
+
+// // export function getEffectiveSellingPrice(
+// //   sellingPrice: number,
+// //   discountPercent?: number | null
+// // ): number {
+// //   const base = Math.max(0, Number(sellingPrice) || 0);
+// //   const pct = Math.min(100, Math.max(0, Number(discountPercent) || 0));
+// //   if (pct <= 0) return base;
+// //   return Math.round(base * (1 - pct / 100));
+// // }
+
+// export function getEffectiveSellingPrice(
+//   sellingPrice: number,
+//   discountPercent?: number | null
+// ): number {
+//   const base = Math.max(0, Number(sellingPrice) || 0);
+//   const pct = Math.min(100, Math.max(0, Number(discountPercent) || 0));
+//   if (pct <= 0) return base;
+//   return Math.round(base * (1 - pct / 100));
+// }
+
+// const COLLECTION = "furniture_products";
+// const MOVEMENTS = "furniture_stock_movements";
+// const ACTIVITY = "furniture_product_activity";
+
+// function matchProductByKey(
+//   products: FurnitureProduct[],
+//   key: string
+// ): FurnitureProduct | null {
+//   const k = key.toLowerCase().trim();
+//   if (!k) return null;
+
+//   return (
+//     products.find((p) => p.name?.toLowerCase().trim() === k) ||
+//     products.find(
+//       (p) =>
+//         (p.sku || "").toLowerCase().trim() === k ||
+//         (p.code || "").toLowerCase().trim() === k
+//     ) ||
+//     products.find((p) => p.name?.toLowerCase().includes(k)) ||
+//     null
+//   );
+// }
+
+// export async function getAllProducts(): Promise<FurnitureProduct[]> {
+//   try {
+//     const snap = await getDocs(
+//       query(collection(db, COLLECTION), orderBy("createdAt", "desc"))
+//     );
+//     return snap.docs.map(
+//       (d) => ({ id: d.id, ...d.data() } as FurnitureProduct)
+//     );
+//   } catch {
+//     const snap = await getDocs(collection(db, COLLECTION));
+//     return snap.docs.map(
+//       (d) => ({ id: d.id, ...d.data() } as FurnitureProduct)
+//     );
+//   }
+// }
+
+// export async function getProductById(
+//   id: string
+// ): Promise<FurnitureProduct | null> {
+//   const snap = await getDoc(doc(db, COLLECTION, id));
+//   if (!snap.exists()) return null;
+//   return { id: snap.id, ...snap.data() } as FurnitureProduct;
+// }
+
+// // export async function createProduct(
+// //   data: Omit<FurnitureProduct, "id" | "createdAt" | "updatedAt">
+// // ): Promise<string> {
+// //   const payload = {
+// //     ...data,
+// //     discountPercent: Math.min(
+// //       100,
+// //       Math.max(0, Number(data.discountPercent) || 0)
+// //     ),
+// //     createdAt: serverTimestamp(),
+// //     updatedAt: serverTimestamp(),
+// //   };
+
+// //   const ref = await addDoc(collection(db, COLLECTION), payload);
+
+// //   await addDoc(collection(db, ACTIVITY), {
+// //     productId: ref.id,
+// //     action: "created",
+// //     summary: `Product created: ${data.name || "Untitled"}`,
+// //     details: data.sku || data.code || "",
+// //     createdAt: serverTimestamp(),
+// //   });
+
+// //   return ref.id;
+// // }
+
+// export async function createProduct(
+//   data: Omit<FurnitureProduct, "id" | "createdAt" | "updatedAt">
+// ): Promise<string> {
+//   const images = Array.isArray(data.images)
+//     ? data.images.map((u) => String(u || "").trim()).filter(Boolean)
+//     : [];
+//   const primary =
+//     images[0] || String(data.imageUrl || data.image || "").trim() || "";
+
+//   const payload = {
+//     ...data,
+//     images,
+//     imageUrl: primary,
+//     image: primary,
+//     discountPercent: Math.min(
+//       100,
+//       Math.max(0, Number(data.discountPercent) || 0)
+//     ),
+//     createdAt: serverTimestamp(),
+//     updatedAt: serverTimestamp(),
+//   };
+
+//   const ref = await addDoc(collection(db, COLLECTION), payload);
+//   // ... activity same as before
+//   return ref.id;
+// }
+
+// // export async function updateProduct(
+// //   id: string,
+// //   data: Partial<FurnitureProduct>
+// // ): Promise<void> {
+// //   const next: Record<string, unknown> = {
+// //     ...data,
+// //     updatedAt: serverTimestamp(),
+// //   };
+
+// //   if (data.discountPercent !== undefined) {
+// //     next.discountPercent = Math.min(
+// //       100,
+// //       Math.max(0, Number(data.discountPercent) || 0)
+// //     );
+// //   }
+
+// //   await updateDoc(doc(db, COLLECTION, id), next);
+// // }
+
+// export async function updateProduct(
+//   id: string,
+//   data: Partial<FurnitureProduct>
+// ): Promise<void> {
+//   const next: Record<string, unknown> = {
+//     ...data,
+//     updatedAt: serverTimestamp(),
+//   };
+
+//   if (data.discountPercent !== undefined) {
+//     next.discountPercent = Math.min(
+//       100,
+//       Math.max(0, Number(data.discountPercent) || 0)
+//     );
+//   }
+
+//   if (data.images !== undefined) {
+//     const images = Array.isArray(data.images)
+//       ? data.images.map((u) => String(u || "").trim()).filter(Boolean)
+//       : [];
+//     next.images = images;
+//     const primary =
+//       images[0] || String(data.imageUrl || data.image || "").trim() || "";
+//     if (primary) {
+//       next.imageUrl = primary;
+//       next.image = primary;
+//     }
+//   }
+
+//   await updateDoc(doc(db, COLLECTION, id), next);
+// }
+
+// export async function deleteProduct(id: string): Promise<void> {
+//   await deleteDoc(doc(db, COLLECTION, id));
+// }
+
+// export async function recordStockMovement(input: {
+//   productId: string;
+//   type: "Add" | "Remove";
+//   quantity: number;
+//   previousStock: number;
+//   newStock: number;
+//   reason?: string;
+// }): Promise<void> {
+//   await addDoc(collection(db, MOVEMENTS), {
+//     productId: input.productId,
+//     type: input.type,
+//     quantity: input.quantity,
+//     previousStock: input.previousStock,
+//     newStock: input.newStock,
+//     reason: input.reason || "",
+//     createdAt: serverTimestamp(),
+//   });
+
+//   await addDoc(collection(db, ACTIVITY), {
+//     productId: input.productId,
+//     action: input.type === "Add" ? "stock_add" : "stock_remove",
+//     summary:
+//       input.type === "Add"
+//         ? `Stock added: +${input.quantity}`
+//         : `Stock removed: −${input.quantity}`,
+//     details: input.reason || `Stock ${input.previousStock} → ${input.newStock}`,
+//     createdAt: serverTimestamp(),
+//   });
+// }
+
+// export async function recordProductUpdateActivity(
+//   productId: string,
+//   summary: string,
+//   details?: string
+// ): Promise<void> {
+//   await addDoc(collection(db, ACTIVITY), {
+//     productId,
+//     action: "updated",
+//     summary,
+//     details: details || "",
+//     createdAt: serverTimestamp(),
+//   });
+// }
+
+// export async function getStockMovements(
+//   productId: string
+// ): Promise<StockMovement[]> {
+//   try {
+//     const snap = await getDocs(
+//       query(
+//         collection(db, MOVEMENTS),
+//         where("productId", "==", productId),
+//         orderBy("createdAt", "desc")
+//       )
+//     );
+//     return snap.docs.map(
+//       (d) => ({ id: d.id, ...d.data() } as StockMovement)
+//     );
+//   } catch {
+//     const snap = await getDocs(
+//       query(collection(db, MOVEMENTS), where("productId", "==", productId))
+//     );
+//     const rows = snap.docs.map(
+//       (d) => ({ id: d.id, ...d.data() } as StockMovement)
+//     );
+//     return rows.sort((a, b) => {
+//       const ta = a.createdAt?.toMillis?.() ?? 0;
+//       const tb = b.createdAt?.toMillis?.() ?? 0;
+//       return tb - ta;
+//     });
+//   }
+// }
+
+// export async function getProductActivity(
+//   productId: string
+// ): Promise<ProductActivity[]> {
+//   try {
+//     const snap = await getDocs(
+//       query(
+//         collection(db, ACTIVITY),
+//         where("productId", "==", productId),
+//         orderBy("createdAt", "desc")
+//       )
+//     );
+//     return snap.docs.map(
+//       (d) => ({ id: d.id, ...d.data() } as ProductActivity)
+//     );
+//   } catch {
+//     const snap = await getDocs(
+//       query(collection(db, ACTIVITY), where("productId", "==", productId))
+//     );
+//     const rows = snap.docs.map(
+//       (d) => ({ id: d.id, ...d.data() } as ProductActivity)
+//     );
+//     return rows.sort((a, b) => {
+//       const ta = a.createdAt?.toMillis?.() ?? 0;
+//       const tb = b.createdAt?.toMillis?.() ?? 0;
+//       return tb - ta;
+//     });
+//   }
+// }
+
+// export async function getPublishedProducts(): Promise<FurnitureProduct[]> {
+//   const all = await getAllProducts();
+//   return all.filter(
+//     (p) => p.status === "Published" || p.status === "In Stock" || !p.status
+//   );
+// }
+
+// export async function getLowStockProducts(
+//   threshold = 5
+// ): Promise<FurnitureProduct[]> {
+//   const all = await getAllProducts();
+//   return all.filter(
+//     (p) =>
+//       (p.stock ?? 0) > 0 &&
+//       (p.stock ?? 0) <= (p.minStock ?? p.reorderLevel ?? threshold)
+//   );
+// }
+
+// export async function getOutOfStockProducts(): Promise<FurnitureProduct[]> {
+//   const all = await getAllProducts();
+//   return all.filter((p) => (p.stock ?? 0) <= 0);
+// }
+
+// // export async function getAgeingProducts(
+// //   daysThreshold = AGEING_DISCOUNT_DAYS
+// // ): Promise<(FurnitureProduct & { daysPublished: number })[]> {
+// //   const published = await getPublishedProducts();
+
+// //   return published
+// //     .map((p) => ({
+// //       ...p,
+// //       daysPublished: getProductAgeDays(p),
+// //     }))
+// //     .filter((p) => p.daysPublished >= daysThreshold)
+// //     .sort((a, b) => b.daysPublished - a.daysPublished);
+// // }
+
+// export async function getAgeingProducts(
+//   daysThreshold?: number
+// ): Promise<(FurnitureProduct & { daysPublished: number })[]> {
+//   const threshold =
+//     daysThreshold != null
+//       ? Math.min(365, Math.max(1, Number(daysThreshold) || 7))
+//       : DEFAULT_AGEING_DISCOUNT_DAYS;
+
+//   const published = await getPublishedProducts();
+
+//   return published
+//     .map((p) => ({
+//       ...p,
+//       daysPublished: getProductAgeDays(p),
+//     }))
+//     .filter((p) => p.daysPublished >= threshold)
+//     .sort((a, b) => b.daysPublished - a.daysPublished);
+// }
+
+// export async function decrementProductStock(input: {
+//   productId?: string;
+//   productName?: string;
+//   quantity: number;
+//   reason?: string;
+// }): Promise<boolean> {
+//   const qty = Math.max(0, Math.floor(Number(input.quantity) || 0));
+//   if (qty <= 0) return false;
+
+//   let product: FurnitureProduct | null = null;
+
+//   if (input.productId) {
+//     product = await getProductById(input.productId);
+//   }
+
+//   if (!product && input.productName) {
+//     const all = await getAllProducts();
+//     product = matchProductByKey(all, input.productName);
+//   }
+
+//   if (!product) {
+//     console.warn("decrementProductStock: product not found", input);
+//     return false;
+//   }
+
+//   const previous = Number(product.stock ?? 0) || 0;
+//   const next = Math.max(0, previous - qty);
+//   const reorder = Number(product.reorderLevel ?? product.minStock ?? 0) || 0;
+
+//   let status = product.status;
+//   if (next <= 0) status = "Out of Stock";
+//   else if (next <= reorder) status = "Low Stock";
+//   else if (status === "Out of Stock" || status === "Low Stock") {
+//     status = "In Stock";
+//   }
+
+//   await updateProduct(product.id, { stock: next, status });
+
+//   try {
+//     await recordStockMovement({
+//       productId: product.id,
+//       type: "Remove",
+//       quantity: qty,
+//       previousStock: previous,
+//       newStock: next,
+//       reason: input.reason || "Order delivery",
+//     });
+//   } catch (e) {
+//     console.warn("recordStockMovement failed:", e);
+//   }
+
+//   return true;
+// }
+
+// export async function incrementProductStock(input: {
+//   productId?: string;
+//   productName?: string;
+//   quantity: number;
+//   reason?: string;
+// }): Promise<boolean> {
+//   const qty = Math.max(0, Math.floor(Number(input.quantity) || 0));
+//   if (qty <= 0) return false;
+
+//   let product: FurnitureProduct | null = null;
+//   if (input.productId) product = await getProductById(input.productId);
+
+//   if (!product && input.productName) {
+//     const all = await getAllProducts();
+//     product = matchProductByKey(all, input.productName);
+//   }
+
+//   if (!product) {
+//     console.warn("incrementProductStock: product not found", input);
+//     return false;
+//   }
+
+//   const previous = Number(product.stock ?? 0) || 0;
+//   const next = previous + qty;
+//   const reorder = Number(product.reorderLevel ?? product.minStock ?? 0) || 0;
+
+//   let status = product.status;
+//   if (next <= 0) status = "Out of Stock";
+//   else if (next <= reorder) status = "Low Stock";
+//   else status = "In Stock";
+
+//   await updateProduct(product.id, { stock: next, status });
+
+//   try {
+//     await recordStockMovement({
+//       productId: product.id,
+//       type: "Add",
+//       quantity: qty,
+//       previousStock: previous,
+//       newStock: next,
+//       reason: input.reason || "Stock restore",
+//     });
+//   } catch {
+//     /* ignore */
+//   }
+
+//   return true;
+// }
+
+// export async function applyDeliveryStockDeduction(order: {
+//   orderNo?: string;
+//   product?: string;
+//   productName?: string;
+//   quantity?: number;
+//   items?: {
+//     productId?: string;
+//     name?: string;
+//     qty?: number;
+//     quantity?: number;
+//   }[];
+// }): Promise<void> {
+//   const reason = `Delivered order ${order.orderNo || ""}`.trim();
+//   const items = order.items || [];
+
+//   if (items.length > 0) {
+//     for (const item of items) {
+//       await decrementProductStock({
+//         productId: item.productId,
+//         productName: item.name,
+//         quantity: Number(item.qty ?? item.quantity ?? 1) || 1,
+//         reason,
+//       });
+//     }
+//     return;
+//   }
+
+//   await decrementProductStock({
+//     productName: order.product || order.productName,
+//     quantity: Number(order.quantity) || 1,
+//     reason,
+//   });
+// }
+
+
+
+// import {
+//   collection,
+//   getDocs,
+//   getDoc,
+//   addDoc,
+//   updateDoc,
+//   deleteDoc,
+//   doc,
+//   query,
+//   orderBy,
+//   where,
+//   serverTimestamp,
+//   Timestamp,
+// } from "firebase/firestore";
+// import { db } from "@/core/config/firebaseClient";
+
+// export type FurnitureProduct = {
+//   id: string;
+//   name: string;
+//   sku?: string;
+//   code?: string;
+//   category?: string;
+//   colors?: string[];
+//   sizes?: string[];
+//   subcategory?: string;
+//   material?: string;
+//   finish?: string;
+//   color?: string;
+//   dimensions?: string;
+//   description?: string;
+//   price?: number;
+//   sellingPrice?: number;
+//   costPrice?: number;
+//   discountPercent?: number;
+//   stock?: number;
+//   unit?: string;
+//   minStock?: number;
+//   reorderLevel?: number;
+//   status?: string;
+//   supplier?: string;
+//   location?: string;
+//   warehouseLocation?: string;
+//   imageUrl?: string;
+//   image?: string;
+//   images?: string[];
+//   leadTime?: string;
+//   warranty?: string;
+//   salesCount?: number;
+//   revenue?: number;
+//   publishedAt?: Timestamp | null;
+//   createdAt?: Timestamp | null;
+//   updatedAt?: Timestamp | null;
+// };
+
+// export type StockMovement = {
+//   id: string;
+//   productId: string;
+//   type: "Add" | "Remove";
+//   quantity: number;
+//   previousStock: number;
+//   newStock: number;
+//   reason?: string;
+//   createdAt?: Timestamp | null;
+// };
+
+// export type ProductActivity = {
+//   id: string;
+//   productId: string;
+//   action: "created" | "updated" | "stock_add" | "stock_remove" | "deleted";
+//   summary: string;
+//   details?: string;
+//   createdAt?: Timestamp | null;
+// };
+
+// export const DEFAULT_AGEING_DISCOUNT_DAYS = 7;
+// export const AGEING_DISCOUNT_DAYS = DEFAULT_AGEING_DISCOUNT_DAYS;
+// /** Default when both reorderLevel and minStock are missing */
+// export const DEFAULT_REORDER_THRESHOLD = 5;
+
+// export function getProductAgeDays(p: {
+//   createdAt?: { toMillis?: () => number } | null;
+//   publishedAt?: { toMillis?: () => number } | null;
+// }): number {
+//   const ms =
+//     p.createdAt?.toMillis?.() ??
+//     p.publishedAt?.toMillis?.() ??
+//     Date.now();
+//   return Math.max(0, Math.floor((Date.now() - ms) / (1000 * 60 * 60 * 24)));
+// }
+
+// export function canSetAgeingDiscount(
+//   p: {
+//     createdAt?: { toMillis?: () => number } | null;
+//     publishedAt?: { toMillis?: () => number } | null;
+//   },
+//   thresholdDays: number = DEFAULT_AGEING_DISCOUNT_DAYS
+// ): boolean {
+//   const threshold = Math.min(365, Math.max(1, Number(thresholdDays) || 7));
+//   return getProductAgeDays(p) >= threshold;
+// }
+
+// export function getEffectiveSellingPrice(
+//   sellingPrice: number,
+//   discountPercent?: number | null
+// ): number {
+//   const base = Math.max(0, Number(sellingPrice) || 0);
+//   const pct = Math.min(100, Math.max(0, Number(discountPercent) || 0));
+//   if (pct <= 0) return base;
+//   return Math.round(base * (1 - pct / 100));
+// }
+
+// /** reorderLevel → minStock → default 5 */
+// export function getReorderThreshold(
+//   p: { minStock?: number; reorderLevel?: number },
+//   fallback = DEFAULT_REORDER_THRESHOLD
+// ): number {
+//   const raw = p.reorderLevel ?? p.minStock;
+//   if (raw !== undefined && raw !== null && !Number.isNaN(Number(raw))) {
+//     return Math.max(0, Number(raw));
+//   }
+//   return fallback;
+// }
+
+// /**
+//  * Live inventory status from stock.
+//  * Inactive / Draft / Archived are preserved.
+//  */
+// export function deriveStockStatus(
+//   p: Pick<FurnitureProduct, "stock" | "minStock" | "reorderLevel" | "status">
+// ): "In Stock" | "Low Stock" | "Out of Stock" | "Inactive" | "Draft" | "Archived" {
+//   const lower = String(p.status || "").trim().toLowerCase();
+
+//   if (lower === "inactive") return "Inactive";
+//   if (lower === "draft") return "Draft";
+//   if (lower === "archived") return "Archived";
+
+//   const stock = Math.max(0, Number(p.stock ?? 0) || 0);
+//   const reorder = getReorderThreshold(p, DEFAULT_REORDER_THRESHOLD);
+
+//   if (stock <= 0) return "Out of Stock";
+//   if (stock <= reorder) return "Low Stock";
+//   return "In Stock";
+// }
+
+// export function isLowStockProduct(p: FurnitureProduct): boolean {
+//   return deriveStockStatus(p) === "Low Stock";
+// }
+
+// export function isOutOfStockProduct(p: FurnitureProduct): boolean {
+//   return deriveStockStatus(p) === "Out of Stock";
+// }
+
+// export function isInStockProduct(p: FurnitureProduct): boolean {
+//   return deriveStockStatus(p) === "In Stock";
+// }
+
+// const COLLECTION = "furniture_products";
+// const MOVEMENTS = "furniture_stock_movements";
+// const ACTIVITY = "furniture_product_activity";
+
+// function matchProductByKey(
+//   products: FurnitureProduct[],
+//   key: string
+// ): FurnitureProduct | null {
+//   const k = key.toLowerCase().trim();
+//   if (!k) return null;
+
+//   return (
+//     products.find((p) => p.name?.toLowerCase().trim() === k) ||
+//     products.find(
+//       (p) =>
+//         (p.sku || "").toLowerCase().trim() === k ||
+//         (p.code || "").toLowerCase().trim() === k
+//     ) ||
+//     products.find((p) => p.name?.toLowerCase().includes(k)) ||
+//     null
+//   );
+// }
+
+// export async function getAllProducts(): Promise<FurnitureProduct[]> {
+//   try {
+//     const snap = await getDocs(
+//       query(collection(db, COLLECTION), orderBy("createdAt", "desc"))
+//     );
+//     return snap.docs.map(
+//       (d) => ({ id: d.id, ...d.data() } as FurnitureProduct)
+//     );
+//   } catch {
+//     const snap = await getDocs(collection(db, COLLECTION));
+//     return snap.docs.map(
+//       (d) => ({ id: d.id, ...d.data() } as FurnitureProduct)
+//     );
+//   }
+// }
+
+// export async function getProductById(
+//   id: string
+// ): Promise<FurnitureProduct | null> {
+//   const snap = await getDoc(doc(db, COLLECTION, id));
+//   if (!snap.exists()) return null;
+//   return { id: snap.id, ...snap.data() } as FurnitureProduct;
+// }
+
+// export async function createProduct(
+//   data: Omit<FurnitureProduct, "id" | "createdAt" | "updatedAt">
+// ): Promise<string> {
+//   const images = Array.isArray(data.images)
+//     ? data.images.map((u) => String(u || "").trim()).filter(Boolean)
+//     : [];
+//   const primary =
+//     images[0] || String(data.imageUrl || data.image || "").trim() || "";
+
+//   const stock = Math.max(0, Number(data.stock ?? 0) || 0);
+//   const status =
+//     data.status &&
+//     ["Inactive", "Draft", "Archived"].includes(String(data.status))
+//       ? data.status
+//       : deriveStockStatus({ ...data, stock });
+
+//   const payload = {
+//     ...data,
+//     images,
+//     imageUrl: primary,
+//     image: primary,
+//     stock,
+//     status,
+//     discountPercent: Math.min(
+//       100,
+//       Math.max(0, Number(data.discountPercent) || 0)
+//     ),
+//     createdAt: serverTimestamp(),
+//     updatedAt: serverTimestamp(),
+//   };
+
+//   const ref = await addDoc(collection(db, COLLECTION), payload);
+
+//   try {
+//     await addDoc(collection(db, ACTIVITY), {
+//       productId: ref.id,
+//       action: "created",
+//       summary: `Product created: ${data.name || "Untitled"}`,
+//       details: data.sku || data.code || "",
+//       createdAt: serverTimestamp(),
+//     });
+//   } catch {
+//     /* ignore */
+//   }
+
+//   return ref.id;
+// }
+
+// export async function updateProduct(
+//   id: string,
+//   data: Partial<FurnitureProduct>
+// ): Promise<void> {
+//   const next: Record<string, unknown> = {
+//     ...data,
+//     updatedAt: serverTimestamp(),
+//   };
+
+//   if (data.discountPercent !== undefined) {
+//     next.discountPercent = Math.min(
+//       100,
+//       Math.max(0, Number(data.discountPercent) || 0)
+//     );
+//   }
+
+//   if (data.images !== undefined) {
+//     const images = Array.isArray(data.images)
+//       ? data.images.map((u) => String(u || "").trim()).filter(Boolean)
+//       : [];
+//     next.images = images;
+//     const primary =
+//       images[0] || String(data.imageUrl || data.image || "").trim() || "";
+//     if (primary) {
+//       next.imageUrl = primary;
+//       next.image = primary;
+//     }
+//   }
+
+//   // Keep status in sync when stock / thresholds change
+//   if (
+//     data.stock !== undefined ||
+//     data.reorderLevel !== undefined ||
+//     data.minStock !== undefined
+//   ) {
+//     const existing = await getProductById(id);
+//     if (existing) {
+//       const merged = { ...existing, ...data };
+//       const lower = String(merged.status || "").toLowerCase();
+//       if (!["inactive", "draft", "archived"].includes(lower)) {
+//         next.status = deriveStockStatus(merged);
+//       }
+//     }
+//   }
+
+//   await updateDoc(doc(db, COLLECTION, id), next);
+// }
+
+// export async function deleteProduct(id: string): Promise<void> {
+//   await deleteDoc(doc(db, COLLECTION, id));
+// }
+
+// export async function recordStockMovement(input: {
+//   productId: string;
+//   type: "Add" | "Remove";
+//   quantity: number;
+//   previousStock: number;
+//   newStock: number;
+//   reason?: string;
+// }): Promise<void> {
+//   await addDoc(collection(db, MOVEMENTS), {
+//     productId: input.productId,
+//     type: input.type,
+//     quantity: input.quantity,
+//     previousStock: input.previousStock,
+//     newStock: input.newStock,
+//     reason: input.reason || "",
+//     createdAt: serverTimestamp(),
+//   });
+
+//   await addDoc(collection(db, ACTIVITY), {
+//     productId: input.productId,
+//     action: input.type === "Add" ? "stock_add" : "stock_remove",
+//     summary:
+//       input.type === "Add"
+//         ? `Stock added: +${input.quantity}`
+//         : `Stock removed: −${input.quantity}`,
+//     details: input.reason || `Stock ${input.previousStock} → ${input.newStock}`,
+//     createdAt: serverTimestamp(),
+//   });
+// }
+
+// export async function recordProductUpdateActivity(
+//   productId: string,
+//   summary: string,
+//   details?: string
+// ): Promise<void> {
+//   await addDoc(collection(db, ACTIVITY), {
+//     productId,
+//     action: "updated",
+//     summary,
+//     details: details || "",
+//     createdAt: serverTimestamp(),
+//   });
+// }
+
+// export async function getStockMovements(
+//   productId: string
+// ): Promise<StockMovement[]> {
+//   try {
+//     const snap = await getDocs(
+//       query(
+//         collection(db, MOVEMENTS),
+//         where("productId", "==", productId),
+//         orderBy("createdAt", "desc")
+//       )
+//     );
+//     return snap.docs.map(
+//       (d) => ({ id: d.id, ...d.data() } as StockMovement)
+//     );
+//   } catch {
+//     const snap = await getDocs(
+//       query(collection(db, MOVEMENTS), where("productId", "==", productId))
+//     );
+//     const rows = snap.docs.map(
+//       (d) => ({ id: d.id, ...d.data() } as StockMovement)
+//     );
+//     return rows.sort((a, b) => {
+//       const ta = a.createdAt?.toMillis?.() ?? 0;
+//       const tb = b.createdAt?.toMillis?.() ?? 0;
+//       return tb - ta;
+//     });
+//   }
+// }
+
+// export async function getProductActivity(
+//   productId: string
+// ): Promise<ProductActivity[]> {
+//   try {
+//     const snap = await getDocs(
+//       query(
+//         collection(db, ACTIVITY),
+//         where("productId", "==", productId),
+//         orderBy("createdAt", "desc")
+//       )
+//     );
+//     return snap.docs.map(
+//       (d) => ({ id: d.id, ...d.data() } as ProductActivity)
+//     );
+//   } catch {
+//     const snap = await getDocs(
+//       query(collection(db, ACTIVITY), where("productId", "==", productId))
+//     );
+//     const rows = snap.docs.map(
+//       (d) => ({ id: d.id, ...d.data() } as ProductActivity)
+//     );
+//     return rows.sort((a, b) => {
+//       const ta = a.createdAt?.toMillis?.() ?? 0;
+//       const tb = b.createdAt?.toMillis?.() ?? 0;
+//       return tb - ta;
+//     });
+//   }
+// }
+
+// export async function getPublishedProducts(): Promise<FurnitureProduct[]> {
+//   const all = await getAllProducts();
+//   return all.filter((p) => {
+//     const s = deriveStockStatus(p);
+//     return s === "In Stock" || s === "Low Stock" || s === "Out of Stock";
+//   });
+// }
+
+// export async function getLowStockProducts(): Promise<FurnitureProduct[]> {
+//   const all = await getAllProducts();
+//   return all.filter(isLowStockProduct);
+// }
+
+// export async function getOutOfStockProducts(): Promise<FurnitureProduct[]> {
+//   const all = await getAllProducts();
+//   return all.filter(isOutOfStockProduct);
+// }
+
+// export async function getAgeingProducts(
+//   daysThreshold?: number
+// ): Promise<(FurnitureProduct & { daysPublished: number })[]> {
+//   const threshold =
+//     daysThreshold != null
+//       ? Math.min(365, Math.max(1, Number(daysThreshold) || 7))
+//       : DEFAULT_AGEING_DISCOUNT_DAYS;
+
+//   const published = await getPublishedProducts();
+
+//   return published
+//     .map((p) => ({
+//       ...p,
+//       daysPublished: getProductAgeDays(p),
+//     }))
+//     .filter((p) => p.daysPublished >= threshold)
+//     .sort((a, b) => b.daysPublished - a.daysPublished);
+// }
+
+// export async function decrementProductStock(input: {
+//   productId?: string;
+//   productName?: string;
+//   quantity: number;
+//   reason?: string;
+// }): Promise<boolean> {
+//   const qty = Math.max(0, Math.floor(Number(input.quantity) || 0));
+//   if (qty <= 0) return false;
+
+//   let product: FurnitureProduct | null = null;
+
+//   if (input.productId) {
+//     product = await getProductById(input.productId);
+//   }
+
+//   if (!product && input.productName) {
+//     const all = await getAllProducts();
+//     product = matchProductByKey(all, input.productName);
+//   }
+
+//   if (!product) {
+//     console.warn("decrementProductStock: product not found", input);
+//     return false;
+//   }
+
+//   const previous = Number(product.stock ?? 0) || 0;
+//   const next = Math.max(0, previous - qty);
+//   const status = deriveStockStatus({ ...product, stock: next });
+
+//   await updateProduct(product.id, { stock: next, status });
+
+//   try {
+//     await recordStockMovement({
+//       productId: product.id,
+//       type: "Remove",
+//       quantity: qty,
+//       previousStock: previous,
+//       newStock: next,
+//       reason: input.reason || "Order delivery",
+//     });
+//   } catch (e) {
+//     console.warn("recordStockMovement failed:", e);
+//   }
+
+//   return true;
+// }
+
+// export async function incrementProductStock(input: {
+//   productId?: string;
+//   productName?: string;
+//   quantity: number;
+//   reason?: string;
+// }): Promise<boolean> {
+//   const qty = Math.max(0, Math.floor(Number(input.quantity) || 0));
+//   if (qty <= 0) return false;
+
+//   let product: FurnitureProduct | null = null;
+//   if (input.productId) product = await getProductById(input.productId);
+
+//   if (!product && input.productName) {
+//     const all = await getAllProducts();
+//     product = matchProductByKey(all, input.productName);
+//   }
+
+//   if (!product) {
+//     console.warn("incrementProductStock: product not found", input);
+//     return false;
+//   }
+
+//   const previous = Number(product.stock ?? 0) || 0;
+//   const next = previous + qty;
+//   const status = deriveStockStatus({ ...product, stock: next });
+
+//   await updateProduct(product.id, { stock: next, status });
+
+//   try {
+//     await recordStockMovement({
+//       productId: product.id,
+//       type: "Add",
+//       quantity: qty,
+//       previousStock: previous,
+//       newStock: next,
+//       reason: input.reason || "Stock restore",
+//     });
+//   } catch {
+//     /* ignore */
+//   }
+
+//   return true;
+// }
+
+// export async function applyDeliveryStockDeduction(order: {
+//   orderNo?: string;
+//   product?: string;
+//   productName?: string;
+//   quantity?: number;
+//   items?: {
+//     productId?: string;
+//     name?: string;
+//     qty?: number;
+//     quantity?: number;
+//   }[];
+// }): Promise<void> {
+//   const reason = `Delivered order ${order.orderNo || ""}`.trim();
+//   const items = order.items || [];
+
+//   if (items.length > 0) {
+//     for (const item of items) {
+//       await decrementProductStock({
+//         productId: item.productId,
+//         productName: item.name,
+//         quantity: Number(item.qty ?? item.quantity ?? 1) || 1,
+//         reason,
+//       });
+//     }
+//     return;
+//   }
+
+//   await decrementProductStock({
+//     productName: order.product || order.productName,
+//     quantity: Number(order.quantity) || 1,
+//     reason,
+//   });
+// }
+
+
 import {
   collection,
   getDocs,
@@ -1220,6 +2384,8 @@ export type FurnitureProduct = {
   sku?: string;
   code?: string;
   category?: string;
+  colors?: string[];
+  sizes?: string[];
   subcategory?: string;
   material?: string;
   finish?: string;
@@ -1229,7 +2395,6 @@ export type FurnitureProduct = {
   price?: number;
   sellingPrice?: number;
   costPrice?: number;
-  /** 0–100. Intended for products aged ≥ 7 days. */
   discountPercent?: number;
   stock?: number;
   unit?: string;
@@ -1271,23 +2436,9 @@ export type ProductActivity = {
   createdAt?: Timestamp | null;
 };
 
-// export const AGEING_DISCOUNT_DAYS = 7;
-
-// export function getProductAgeDays(p: {
-//   createdAt?: { toMillis?: () => number } | null;
-//   publishedAt?: { toMillis?: () => number } | null;
-// }): number {
-//   const ms =
-//     p.createdAt?.toMillis?.() ??
-//     p.publishedAt?.toMillis?.() ??
-//     Date.now();
-//   return Math.max(0, Math.floor((Date.now() - ms) / (1000 * 60 * 60 * 24)));
-// }
-
 export const DEFAULT_AGEING_DISCOUNT_DAYS = 7;
-
-/** @deprecated use DEFAULT_AGEING_DISCOUNT_DAYS + settings */
 export const AGEING_DISCOUNT_DAYS = DEFAULT_AGEING_DISCOUNT_DAYS;
+export const DEFAULT_REORDER_THRESHOLD = 5;
 
 export function getProductAgeDays(p: {
   createdAt?: { toMillis?: () => number } | null;
@@ -1300,13 +2451,6 @@ export function getProductAgeDays(p: {
   return Math.max(0, Math.floor((Date.now() - ms) / (1000 * 60 * 60 * 24)));
 }
 
-// export function canSetAgeingDiscount(p: {
-//   createdAt?: { toMillis?: () => number } | null;
-//   publishedAt?: { toMillis?: () => number } | null;
-// }): boolean {
-//   return getProductAgeDays(p) >= AGEING_DISCOUNT_DAYS;
-// }
-
 export function canSetAgeingDiscount(
   p: {
     createdAt?: { toMillis?: () => number } | null;
@@ -1318,16 +2462,6 @@ export function canSetAgeingDiscount(
   return getProductAgeDays(p) >= threshold;
 }
 
-// export function getEffectiveSellingPrice(
-//   sellingPrice: number,
-//   discountPercent?: number | null
-// ): number {
-//   const base = Math.max(0, Number(sellingPrice) || 0);
-//   const pct = Math.min(100, Math.max(0, Number(discountPercent) || 0));
-//   if (pct <= 0) return base;
-//   return Math.round(base * (1 - pct / 100));
-// }
-
 export function getEffectiveSellingPrice(
   sellingPrice: number,
   discountPercent?: number | null
@@ -1336,6 +2470,63 @@ export function getEffectiveSellingPrice(
   const pct = Math.min(100, Math.max(0, Number(discountPercent) || 0));
   if (pct <= 0) return base;
   return Math.round(base * (1 - pct / 100));
+}
+
+export function getReorderThreshold(
+  p: { minStock?: number; reorderLevel?: number },
+  fallback = DEFAULT_REORDER_THRESHOLD
+): number {
+  const raw = p.reorderLevel ?? p.minStock;
+  if (raw !== undefined && raw !== null && !Number.isNaN(Number(raw))) {
+    return Math.max(0, Number(raw));
+  }
+  return fallback;
+}
+
+export function deriveStockStatus(
+  p: Pick<FurnitureProduct, "stock" | "minStock" | "reorderLevel" | "status">
+): "In Stock" | "Low Stock" | "Out of Stock" | "Inactive" | "Draft" | "Archived" {
+  const lower = String(p.status || "").trim().toLowerCase();
+
+  if (lower === "inactive") return "Inactive";
+  if (lower === "draft") return "Draft";
+  if (lower === "archived") return "Archived";
+
+  const stock = Math.max(0, Number(p.stock ?? 0) || 0);
+  const reorder = getReorderThreshold(p, DEFAULT_REORDER_THRESHOLD);
+
+  if (stock <= 0) return "Out of Stock";
+  if (stock <= reorder) return "Low Stock";
+  return "In Stock";
+}
+
+export function isLowStockProduct(p: FurnitureProduct): boolean {
+  return deriveStockStatus(p) === "Low Stock";
+}
+
+export function isOutOfStockProduct(p: FurnitureProduct): boolean {
+  return deriveStockStatus(p) === "Out of Stock";
+}
+
+export function isInStockProduct(p: FurnitureProduct): boolean {
+  return deriveStockStatus(p) === "In Stock";
+}
+
+/** Trim + uppercase + collapse spaces for uniqueness */
+export function normalizeProductCode(raw: string): string {
+  return String(raw || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "-");
+}
+
+export class DuplicateProductCodeError extends Error {
+  constructor(code: string) {
+    super(
+      `Product code "${code}" is already in use. Please enter a different code.`
+    );
+    this.name = "DuplicateProductCodeError";
+  }
 }
 
 const COLLECTION = "furniture_products";
@@ -1377,6 +2568,26 @@ export async function getAllProducts(): Promise<FurnitureProduct[]> {
   }
 }
 
+/**
+ * True if sku/code already used.
+ * Pass excludeId when editing so the same product can keep its code.
+ */
+export async function isProductCodeTaken(
+  code: string,
+  excludeId?: string
+): Promise<boolean> {
+  const normalized = normalizeProductCode(code);
+  if (!normalized) return false;
+
+  const all = await getAllProducts();
+  return all.some((p) => {
+    if (excludeId && p.id === excludeId) return false;
+    const sku = normalizeProductCode(p.sku || "");
+    const c = normalizeProductCode(p.code || "");
+    return sku === normalized || c === normalized;
+  });
+}
+
 export async function getProductById(
   id: string
 ): Promise<FurnitureProduct | null> {
@@ -1385,46 +2596,40 @@ export async function getProductById(
   return { id: snap.id, ...snap.data() } as FurnitureProduct;
 }
 
-// export async function createProduct(
-//   data: Omit<FurnitureProduct, "id" | "createdAt" | "updatedAt">
-// ): Promise<string> {
-//   const payload = {
-//     ...data,
-//     discountPercent: Math.min(
-//       100,
-//       Math.max(0, Number(data.discountPercent) || 0)
-//     ),
-//     createdAt: serverTimestamp(),
-//     updatedAt: serverTimestamp(),
-//   };
-
-//   const ref = await addDoc(collection(db, COLLECTION), payload);
-
-//   await addDoc(collection(db, ACTIVITY), {
-//     productId: ref.id,
-//     action: "created",
-//     summary: `Product created: ${data.name || "Untitled"}`,
-//     details: data.sku || data.code || "",
-//     createdAt: serverTimestamp(),
-//   });
-
-//   return ref.id;
-// }
-
 export async function createProduct(
   data: Omit<FurnitureProduct, "id" | "createdAt" | "updatedAt">
 ): Promise<string> {
+  const sku = normalizeProductCode(data.sku || data.code || "");
+  if (!sku) {
+    throw new Error("Product code is required.");
+  }
+
+  if (await isProductCodeTaken(sku)) {
+    throw new DuplicateProductCodeError(sku);
+  }
+
   const images = Array.isArray(data.images)
     ? data.images.map((u) => String(u || "").trim()).filter(Boolean)
     : [];
   const primary =
     images[0] || String(data.imageUrl || data.image || "").trim() || "";
 
+  const stock = Math.max(0, Number(data.stock ?? 0) || 0);
+  const status =
+    data.status &&
+    ["Inactive", "Draft", "Archived"].includes(String(data.status))
+      ? data.status
+      : deriveStockStatus({ ...data, stock });
+
   const payload = {
     ...data,
+    sku,
+    code: sku,
     images,
     imageUrl: primary,
     image: primary,
+    stock,
+    status,
     discountPercent: Math.min(
       100,
       Math.max(0, Number(data.discountPercent) || 0)
@@ -1434,28 +2639,21 @@ export async function createProduct(
   };
 
   const ref = await addDoc(collection(db, COLLECTION), payload);
-  // ... activity same as before
+
+  try {
+    await addDoc(collection(db, ACTIVITY), {
+      productId: ref.id,
+      action: "created",
+      summary: `Product created: ${data.name || "Untitled"}`,
+      details: sku,
+      createdAt: serverTimestamp(),
+    });
+  } catch {
+    /* ignore */
+  }
+
   return ref.id;
 }
-
-// export async function updateProduct(
-//   id: string,
-//   data: Partial<FurnitureProduct>
-// ): Promise<void> {
-//   const next: Record<string, unknown> = {
-//     ...data,
-//     updatedAt: serverTimestamp(),
-//   };
-
-//   if (data.discountPercent !== undefined) {
-//     next.discountPercent = Math.min(
-//       100,
-//       Math.max(0, Number(data.discountPercent) || 0)
-//     );
-//   }
-
-//   await updateDoc(doc(db, COLLECTION, id), next);
-// }
 
 export async function updateProduct(
   id: string,
@@ -1465,6 +2663,19 @@ export async function updateProduct(
     ...data,
     updatedAt: serverTimestamp(),
   };
+
+  if (data.sku !== undefined || data.code !== undefined) {
+    const sku = normalizeProductCode(
+      String(data.sku ?? data.code ?? "")
+    );
+    if (sku) {
+      if (await isProductCodeTaken(sku, id)) {
+        throw new DuplicateProductCodeError(sku);
+      }
+      next.sku = sku;
+      next.code = sku;
+    }
+  }
 
   if (data.discountPercent !== undefined) {
     next.discountPercent = Math.min(
@@ -1483,6 +2694,21 @@ export async function updateProduct(
     if (primary) {
       next.imageUrl = primary;
       next.image = primary;
+    }
+  }
+
+  if (
+    data.stock !== undefined ||
+    data.reorderLevel !== undefined ||
+    data.minStock !== undefined
+  ) {
+    const existing = await getProductById(id);
+    if (existing) {
+      const merged = { ...existing, ...data };
+      const lower = String(merged.status || "").toLowerCase();
+      if (!["inactive", "draft", "archived"].includes(lower)) {
+        next.status = deriveStockStatus(merged);
+      }
     }
   }
 
@@ -1597,40 +2823,21 @@ export async function getProductActivity(
 
 export async function getPublishedProducts(): Promise<FurnitureProduct[]> {
   const all = await getAllProducts();
-  return all.filter(
-    (p) => p.status === "Published" || p.status === "In Stock" || !p.status
-  );
+  return all.filter((p) => {
+    const s = deriveStockStatus(p);
+    return s === "In Stock" || s === "Low Stock" || s === "Out of Stock";
+  });
 }
 
-export async function getLowStockProducts(
-  threshold = 5
-): Promise<FurnitureProduct[]> {
+export async function getLowStockProducts(): Promise<FurnitureProduct[]> {
   const all = await getAllProducts();
-  return all.filter(
-    (p) =>
-      (p.stock ?? 0) > 0 &&
-      (p.stock ?? 0) <= (p.minStock ?? p.reorderLevel ?? threshold)
-  );
+  return all.filter(isLowStockProduct);
 }
 
 export async function getOutOfStockProducts(): Promise<FurnitureProduct[]> {
   const all = await getAllProducts();
-  return all.filter((p) => (p.stock ?? 0) <= 0);
+  return all.filter(isOutOfStockProduct);
 }
-
-// export async function getAgeingProducts(
-//   daysThreshold = AGEING_DISCOUNT_DAYS
-// ): Promise<(FurnitureProduct & { daysPublished: number })[]> {
-//   const published = await getPublishedProducts();
-
-//   return published
-//     .map((p) => ({
-//       ...p,
-//       daysPublished: getProductAgeDays(p),
-//     }))
-//     .filter((p) => p.daysPublished >= daysThreshold)
-//     .sort((a, b) => b.daysPublished - a.daysPublished);
-// }
 
 export async function getAgeingProducts(
   daysThreshold?: number
@@ -1678,14 +2885,7 @@ export async function decrementProductStock(input: {
 
   const previous = Number(product.stock ?? 0) || 0;
   const next = Math.max(0, previous - qty);
-  const reorder = Number(product.reorderLevel ?? product.minStock ?? 0) || 0;
-
-  let status = product.status;
-  if (next <= 0) status = "Out of Stock";
-  else if (next <= reorder) status = "Low Stock";
-  else if (status === "Out of Stock" || status === "Low Stock") {
-    status = "In Stock";
-  }
+  const status = deriveStockStatus({ ...product, stock: next });
 
   await updateProduct(product.id, { stock: next, status });
 
@@ -1729,12 +2929,7 @@ export async function incrementProductStock(input: {
 
   const previous = Number(product.stock ?? 0) || 0;
   const next = previous + qty;
-  const reorder = Number(product.reorderLevel ?? product.minStock ?? 0) || 0;
-
-  let status = product.status;
-  if (next <= 0) status = "Out of Stock";
-  else if (next <= reorder) status = "Low Stock";
-  else status = "In Stock";
+  const status = deriveStockStatus({ ...product, stock: next });
 
   await updateProduct(product.id, { stock: next, status });
 
@@ -1787,4 +2982,3 @@ export async function applyDeliveryStockDeduction(order: {
     reason,
   });
 }
- 

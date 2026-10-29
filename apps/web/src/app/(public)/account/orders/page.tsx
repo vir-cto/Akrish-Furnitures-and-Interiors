@@ -1372,6 +1372,471 @@
 //   );
 // }
 
+// "use client";
+
+// import Link from "next/link";
+// import { useEffect, useMemo, useState } from "react";
+// import {
+//   ArrowRight,
+//   CalendarDays,
+//   ChevronRight,
+//   Loader2,
+//   Package,
+//   Search,
+//   ShoppingBag,
+//   Truck,
+// } from "lucide-react";
+// import { onAuthStateChanged } from "firebase/auth";
+// import { auth } from "@/lib/firebase";
+// import {
+//   getUserOrders,
+//   type Order as FirebaseOrder,
+//   type OrderStatus as FirebaseOrderStatus,
+// } from "@/services/checkoutService";
+
+// type UiOrderStatus =
+//   | "Processing"
+//   | "Shipped"
+//   | "Delivered"
+//   | "Cancelled"
+//   | "Pending"
+//   | "Confirmed";
+
+// interface UiOrderItem {
+//   name: string;
+//   quantity: number;
+//   price: number;
+// }
+
+// interface UiOrder {
+//   id: string;
+//   orderNumber: string;
+//   date: string;
+//   status: UiOrderStatus;
+//   total: number;
+//   items: UiOrderItem[];
+//   delivery: string;
+// }
+
+// const STATUS_STYLES: Record<string, string> = {
+//   Pending: "bg-slate-50 text-slate-700 ring-slate-200",
+//   Confirmed: "bg-indigo-50 text-indigo-700 ring-indigo-200",
+//   Processing: "bg-amber-50 text-amber-700 ring-amber-200",
+//   Shipped: "bg-blue-50 text-blue-700 ring-blue-200",
+//   Delivered: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+//   Cancelled: "bg-red-50 text-red-700 ring-red-200",
+// };
+
+// const FILTERS = [
+//   "All orders",
+//   "Processing",
+//   "Shipped",
+//   "Delivered",
+//   "Cancelled",
+// ] as const;
+
+// function formatCurrency(value: number) {
+//   return new Intl.NumberFormat("en-IN", {
+//     style: "currency",
+//     currency: "INR",
+//     maximumFractionDigits: 0,
+//   }).format(value);
+// }
+
+// function formatDate(value: unknown): string {
+//   try {
+//     if (
+//       value &&
+//       typeof value === "object" &&
+//       "toDate" in value &&
+//       typeof (value as { toDate: () => Date }).toDate === "function"
+//     ) {
+//       return (value as { toDate: () => Date }).toDate().toLocaleDateString(
+//         "en-IN",
+//         {
+//           day: "numeric",
+//           month: "short",
+//           year: "numeric",
+//         }
+//       );
+//     }
+//     if (value instanceof Date) {
+//       return value.toLocaleDateString("en-IN", {
+//         day: "numeric",
+//         month: "short",
+//         year: "numeric",
+//       });
+//     }
+//   } catch {
+//     /* ignore */
+//   }
+//   return "—";
+// }
+
+// function mapStatus(status?: FirebaseOrderStatus | string): UiOrderStatus {
+//   return (status || "Pending") as UiOrderStatus;
+// }
+
+// function deliveryText(status: UiOrderStatus, dateStr: string): string {
+//   if (status === "Delivered") return `Delivered on ${dateStr}`;
+//   if (status === "Shipped") return "Expected delivery in a few days";
+//   if (status === "Cancelled") return "Order cancelled";
+//   if (
+//     status === "Processing" ||
+//     status === "Confirmed" ||
+//     status === "Pending"
+//   ) {
+//     return "Estimated delivery in 5–7 days";
+//   }
+//   return "";
+// }
+
+// function mapOrder(o: FirebaseOrder): UiOrder {
+//   const dateStr = formatDate(o.createdAt);
+//   const status = mapStatus(o.orderStatus);
+//   return {
+//     id: o.id,
+//     orderNumber: o.orderNumber || o.id.slice(0, 10).toUpperCase(),
+//     date: dateStr,
+//     status,
+//     total: o.totalAmount ?? 0,
+//     items: (o.items || []).map((item) => ({
+//       name: item.name,
+//       quantity: item.quantity,
+//       price: item.price,
+//     })),
+//     delivery: deliveryText(status, dateStr),
+//   };
+// }
+
+// export default function OrdersPage() {
+//   const [orders, setOrders] = useState<UiOrder[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [filter, setFilter] = useState<string>("All orders");
+//   const [search, setSearch] = useState("");
+//   const [userId, setUserId] = useState<string | null>(null);
+
+//   useEffect(() => {
+//     let cancelled = false;
+//     const unsub = onAuthStateChanged(auth, async (user) => {
+//       if (cancelled) return;
+//       if (!user) {
+//         setUserId(null);
+//         setOrders([]);
+//         setLoading(false);
+//         return;
+//       }
+//       setUserId(user.uid);
+//       setLoading(true);
+//       try {
+//         const data = await getUserOrders(user.uid);
+//         if (cancelled) return;
+//         const mapped = data
+//           .map(mapOrder)
+//           .sort((a, b) => (a.date < b.date ? 1 : -1));
+//         setOrders(mapped);
+//       } catch (err) {
+//         console.error("Failed to load orders:", err);
+//         if (!cancelled) setOrders([]);
+//       } finally {
+//         if (!cancelled) setLoading(false);
+//       }
+//     });
+//     return () => {
+//       cancelled = true;
+//       unsub();
+//     };
+//   }, []);
+
+//   const filteredOrders = useMemo(() => {
+//     const query = search.trim().toLowerCase();
+//     return orders.filter((order) => {
+//       const matchesFilter =
+//         filter === "All orders" ||
+//         order.status === filter ||
+//         (filter === "Processing" &&
+//           (order.status === "Processing" ||
+//             order.status === "Pending" ||
+//             order.status === "Confirmed"));
+//       const matchesSearch =
+//         !query ||
+//         order.orderNumber.toLowerCase().includes(query) ||
+//         order.id.toLowerCase().includes(query) ||
+//         order.items.some((item) => item.name.toLowerCase().includes(query));
+//       return matchesFilter && matchesSearch;
+//     });
+//   }, [orders, filter, search]);
+
+//   const totalOrders = orders.length;
+//   const activeOrders = orders.filter(
+//     (o) =>
+//       o.status === "Processing" ||
+//       o.status === "Shipped" ||
+//       o.status === "Pending" ||
+//       o.status === "Confirmed"
+//   ).length;
+//   const deliveredCount = orders.filter((o) => o.status === "Delivered").length;
+
+//   if (loading) {
+//     return (
+//       <div className="flex min-h-[40vh] items-center justify-center">
+//         <Loader2 className="h-8 w-8 animate-spin text-[#176b5b]" />
+//       </div>
+//     );
+//   }
+
+//   if (!userId) {
+//     return (
+//       <div className="rounded-xl border border-slate-200 bg-white px-4 py-12 text-center sm:px-6 sm:py-16">
+//         <ShoppingBag className="mx-auto text-slate-400" size={28} />
+//         <h2 className="mt-4 text-lg font-bold text-slate-900">
+//           Sign in to view orders
+//         </h2>
+//         <p className="mt-2 text-sm text-slate-500">
+//           Your order history is saved to your account.
+//         </p>
+//         <Link
+//           href="/sign-in"
+//           className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-[#176b5b] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#125849]"
+//         >
+//           Sign in
+//           <ArrowRight size={16} />
+//         </Link>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="w-full">
+//       {/* Header */}
+//       <div className="mb-5 sm:mb-8">
+//         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+//           <div>
+//             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 sm:text-xs">
+//               Account
+//             </p>
+//             <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-slate-900 sm:mt-2 sm:text-3xl">
+//               My Orders
+//             </h1>
+//             <p className="mt-1.5 text-sm text-slate-500 sm:mt-2">
+//               View orders, delivery status and details.
+//             </p>
+//           </div>
+//           <Link
+//             href="/products"
+//             className="inline-flex min-h-[40px] w-fit items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+//           >
+//             Continue shopping
+//             <ArrowRight size={16} />
+//           </Link>
+//         </div>
+//       </div>
+
+//       {/* Stats — 3 in one row on mobile */}
+//       <div className="mb-4 grid grid-cols-3 gap-2 sm:mb-6 sm:gap-4">
+//         <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-5">
+//           <div className="flex items-start justify-between gap-1">
+//             <div className="min-w-0">
+//               <p className="text-[10px] font-medium text-slate-500 sm:text-xs">
+//                 Total
+//               </p>
+//               <p className="mt-1 text-xl font-bold text-slate-900 sm:mt-2 sm:text-2xl">
+//                 {totalOrders}
+//               </p>
+//             </div>
+//             <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 sm:flex sm:h-10 sm:w-10">
+//               <ShoppingBag size={18} />
+//             </div>
+//           </div>
+//         </div>
+//         <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-5">
+//           <div className="flex items-start justify-between gap-1">
+//             <div className="min-w-0">
+//               <p className="text-[10px] font-medium text-slate-500 sm:text-xs">
+//                 Active
+//               </p>
+//               <p className="mt-1 text-xl font-bold text-slate-900 sm:mt-2 sm:text-2xl">
+//                 {activeOrders}
+//               </p>
+//             </div>
+//             <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 sm:flex sm:h-10 sm:w-10">
+//               <Truck size={18} />
+//             </div>
+//           </div>
+//         </div>
+//         <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-5">
+//           <div className="flex items-start justify-between gap-1">
+//             <div className="min-w-0">
+//               <p className="text-[10px] font-medium text-slate-500 sm:text-xs">
+//                 Delivered
+//               </p>
+//               <p className="mt-1 text-xl font-bold text-slate-900 sm:mt-2 sm:text-2xl">
+//                 {deliveredCount}
+//               </p>
+//             </div>
+//             <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 sm:flex sm:h-10 sm:w-10">
+//               <Package size={18} />
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Filters + search */}
+//       <div className="mb-4 rounded-xl border border-slate-200 bg-white p-3 sm:mb-6 sm:p-4">
+//         {/* Horizontal scroll chips on mobile */}
+//         <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none sm:flex-wrap sm:overflow-visible">
+//           {FILTERS.map((item) => {
+//             const active = filter === item;
+//             return (
+//               <button
+//                 key={item}
+//                 type="button"
+//                 onClick={() => setFilter(item)}
+//                 className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-semibold transition sm:px-3.5 sm:text-xs ${
+//                   active
+//                     ? "bg-slate-900 text-white"
+//                     : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+//                 }`}
+//               >
+//                 {item}
+//               </button>
+//             );
+//           })}
+//         </div>
+//         <div className="relative mt-3">
+//           <Search
+//             size={16}
+//             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+//           />
+//           <input
+//             type="search"
+//             value={search}
+//             onChange={(e) => setSearch(e.target.value)}
+//             placeholder="Search orders..."
+//             className="h-10 w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+//           />
+//         </div>
+//       </div>
+
+//       {/* Order cards */}
+//       <div className="space-y-3 sm:space-y-4">
+//         {filteredOrders.map((order) => (
+//           <article
+//             key={order.id}
+//             className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+//           >
+//             <div className="border-b border-slate-100 bg-slate-50/70 px-3 py-3 sm:px-6 sm:py-4">
+//               <div className="flex items-start justify-between gap-2">
+//                 <div className="min-w-0">
+//                   <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+//                     Order
+//                   </p>
+//                   <p className="mt-0.5 truncate text-sm font-bold text-slate-900">
+//                     {order.orderNumber}
+//                   </p>
+//                   <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500 sm:text-xs">
+//                     <CalendarDays size={12} className="shrink-0" />
+//                     {order.date}
+//                   </div>
+//                 </div>
+//                 <span
+//                   className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset sm:px-2.5 sm:py-1 sm:text-xs ${
+//                     STATUS_STYLES[order.status] || STATUS_STYLES.Pending
+//                   }`}
+//                 >
+//                   {order.status}
+//                 </span>
+//               </div>
+//             </div>
+
+//             <div className="p-3 sm:p-6">
+//               <div className="divide-y divide-slate-100">
+//                 {order.items.map((item, index) => (
+//                   <div
+//                     key={`${order.id}-${index}`}
+//                     className="flex gap-3 py-2.5 first:pt-0 last:pb-0 sm:gap-4 sm:py-3"
+//                   >
+//                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400 sm:h-14 sm:w-14">
+//                       <Package size={18} className="sm:h-[22px] sm:w-[22px]" />
+//                     </div>
+//                     <div className="min-w-0 flex-1">
+//                       <h2 className="line-clamp-2 text-xs font-semibold leading-snug text-slate-900 sm:text-sm">
+//                         {item.name}
+//                       </h2>
+//                       <p className="mt-0.5 text-[11px] text-slate-500 sm:mt-1 sm:text-xs">
+//                         Qty: {item.quantity}
+//                       </p>
+//                     </div>
+//                     <p className="shrink-0 text-xs font-semibold text-slate-900 sm:text-sm">
+//                       {formatCurrency(item.price * item.quantity)}
+//                     </p>
+//                   </div>
+//                 ))}
+//               </div>
+
+//               <div className="mt-3 border-t border-slate-100 pt-3 sm:mt-5 sm:pt-5">
+//                 <p className="text-[11px] text-slate-500 sm:text-xs">
+//                   {order.delivery}
+//                 </p>
+//                 <p className="mt-1 text-sm font-bold text-slate-900">
+//                   Total: {formatCurrency(order.total)}
+//                 </p>
+
+//                 <div className="mt-3 grid grid-cols-2 gap-2">
+//                   <Link
+//                     href={`/account/orders/${order.id}`}
+//                     className="inline-flex min-h-[40px] items-center justify-center gap-1 rounded-lg border border-slate-200 px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+//                   >
+//                     View details
+//                     <ChevronRight size={14} />
+//                   </Link>
+//                   {order.status !== "Cancelled" ? (
+//                     <Link
+//                       href={`/account/orders/${order.id}/track`}
+//                       className="inline-flex min-h-[40px] items-center justify-center gap-1 rounded-lg bg-slate-900 px-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+//                     >
+//                       Track order
+//                       <ArrowRight size={14} />
+//                     </Link>
+//                   ) : (
+//                     <div />
+//                   )}
+//                 </div>
+//               </div>
+//             </div>
+//           </article>
+//         ))}
+//       </div>
+
+//       {filteredOrders.length === 0 && (
+//         <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-12 text-center sm:px-6 sm:py-14">
+//           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+//             <ShoppingBag size={22} />
+//           </div>
+//           <h2 className="mt-4 text-base font-bold text-slate-900">
+//             {orders.length === 0 ? "No orders yet" : "No orders found"}
+//           </h2>
+//           <p className="mt-1 text-sm text-slate-500">
+//             {orders.length === 0
+//               ? "When you place an order, it will show up here."
+//               : "Try changing the filter or search term."}
+//           </p>
+//           {orders.length === 0 && (
+//             <Link
+//               href="/products"
+//               className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+//             >
+//               Browse products
+//               <ArrowRight size={16} />
+//             </Link>
+//           )}
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+
 "use client";
 
 import Link from "next/link";
@@ -1419,11 +1884,11 @@ interface UiOrder {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  Pending: "bg-slate-50 text-slate-700 ring-slate-200",
+  Pending: "bg-[#f5f1ea] text-[#5c564e] ring-[#e8e2d8]",
   Confirmed: "bg-indigo-50 text-indigo-700 ring-indigo-200",
-  Processing: "bg-amber-50 text-amber-700 ring-amber-200",
-  Shipped: "bg-blue-50 text-blue-700 ring-blue-200",
-  Delivered: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  Processing: "bg-amber-50 text-amber-800 ring-amber-200",
+  Shipped: "bg-sky-50 text-sky-800 ring-sky-200",
+  Delivered: "bg-emerald-50 text-emerald-800 ring-emerald-200",
   Cancelled: "bg-red-50 text-red-700 ring-red-200",
 };
 
@@ -1453,11 +1918,7 @@ function formatDate(value: unknown): string {
     ) {
       return (value as { toDate: () => Date }).toDate().toLocaleDateString(
         "en-IN",
-        {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        }
+        { day: "numeric", month: "short", year: "numeric" }
       );
     }
     if (value instanceof Date) {
@@ -1580,24 +2041,24 @@ export default function OrdersPage() {
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#176b5b]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#b8956c]" />
       </div>
     );
   }
 
   if (!userId) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white px-4 py-12 text-center sm:px-6 sm:py-16">
-        <ShoppingBag className="mx-auto text-slate-400" size={28} />
-        <h2 className="mt-4 text-lg font-bold text-slate-900">
+      <div className="rounded-2xl border border-[#e8e2d8] bg-white px-4 py-12 text-center sm:px-6 sm:py-16">
+        <ShoppingBag className="mx-auto text-[#d4cdc2]" size={28} />
+        <h2 className="mt-4 font-display text-lg font-semibold text-[#1a1a1a]">
           Sign in to view orders
         </h2>
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-2 text-sm text-[#6b6560]">
           Your order history is saved to your account.
         </p>
         <Link
           href="/sign-in"
-          className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-[#176b5b] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#125849]"
+          className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[#1a1a1a] px-5 py-2.5 text-sm font-semibold text-white"
         >
           Sign in
           <ArrowRight size={16} />
@@ -1608,23 +2069,22 @@ export default function OrdersPage() {
 
   return (
     <div className="w-full">
-      {/* Header */}
       <div className="mb-5 sm:mb-8">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 sm:text-xs">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#b8956c] sm:text-xs">
               Account
             </p>
-            <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-slate-900 sm:mt-2 sm:text-3xl">
-              My Orders
+            <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl">
+              My orders
             </h1>
-            <p className="mt-1.5 text-sm text-slate-500 sm:mt-2">
+            <p className="mt-1.5 text-sm text-[#6b6560]">
               View orders, delivery status and details.
             </p>
           </div>
           <Link
             href="/products"
-            className="inline-flex min-h-[40px] w-fit items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="inline-flex min-h-[40px] w-fit items-center gap-2 rounded-full bg-[#1a1a1a] px-4 py-2.5 text-sm font-semibold text-white"
           >
             Continue shopping
             <ArrowRight size={16} />
@@ -1632,59 +2092,35 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* Stats — 3 in one row on mobile */}
       <div className="mb-4 grid grid-cols-3 gap-2 sm:mb-6 sm:gap-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-5">
-          <div className="flex items-start justify-between gap-1">
-            <div className="min-w-0">
-              <p className="text-[10px] font-medium text-slate-500 sm:text-xs">
-                Total
-              </p>
-              <p className="mt-1 text-xl font-bold text-slate-900 sm:mt-2 sm:text-2xl">
-                {totalOrders}
-              </p>
-            </div>
-            <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 sm:flex sm:h-10 sm:w-10">
-              <ShoppingBag size={18} />
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-5">
-          <div className="flex items-start justify-between gap-1">
-            <div className="min-w-0">
-              <p className="text-[10px] font-medium text-slate-500 sm:text-xs">
-                Active
-              </p>
-              <p className="mt-1 text-xl font-bold text-slate-900 sm:mt-2 sm:text-2xl">
-                {activeOrders}
-              </p>
-            </div>
-            <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 sm:flex sm:h-10 sm:w-10">
-              <Truck size={18} />
+        {[
+          { label: "Total", value: totalOrders, icon: ShoppingBag },
+          { label: "Active", value: activeOrders, icon: Truck },
+          { label: "Delivered", value: deliveredCount, icon: Package },
+        ].map(({ label, value, icon: Icon }) => (
+          <div
+            key={label}
+            className="rounded-2xl border border-[#e8e2d8] bg-white p-3 sm:p-5"
+          >
+            <div className="flex items-start justify-between gap-1">
+              <div className="min-w-0">
+                <p className="text-[10px] font-medium text-[#8a847c] sm:text-xs">
+                  {label}
+                </p>
+                <p className="mt-1 text-xl font-semibold text-[#1a1a1a] sm:text-2xl">
+                  {value}
+                </p>
+              </div>
+              <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f3ebe0] text-[#b8956c] sm:flex">
+                <Icon size={18} />
+              </div>
             </div>
           </div>
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-5">
-          <div className="flex items-start justify-between gap-1">
-            <div className="min-w-0">
-              <p className="text-[10px] font-medium text-slate-500 sm:text-xs">
-                Delivered
-              </p>
-              <p className="mt-1 text-xl font-bold text-slate-900 sm:mt-2 sm:text-2xl">
-                {deliveredCount}
-              </p>
-            </div>
-            <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 sm:flex sm:h-10 sm:w-10">
-              <Package size={18} />
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Filters + search */}
-      <div className="mb-4 rounded-xl border border-slate-200 bg-white p-3 sm:mb-6 sm:p-4">
-        {/* Horizontal scroll chips on mobile */}
-        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none sm:flex-wrap sm:overflow-visible">
+      <div className="mb-4 rounded-2xl border border-[#e8e2d8] bg-white p-3 sm:mb-6 sm:p-4">
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap">
           {FILTERS.map((item) => {
             const active = filter === item;
             return (
@@ -1692,10 +2128,10 @@ export default function OrdersPage() {
                 key={item}
                 type="button"
                 onClick={() => setFilter(item)}
-                className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-semibold transition sm:px-3.5 sm:text-xs ${
+                className={`shrink-0 rounded-full px-3.5 py-2 text-[11px] font-semibold transition sm:text-xs ${
                   active
-                    ? "bg-slate-900 text-white"
-                    : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                    ? "bg-[#1a1a1a] text-white"
+                    : "bg-[#faf8f4] text-[#5c564e] hover:bg-[#f0ebe3]"
                 }`}
               >
                 {item}
@@ -1706,41 +2142,40 @@ export default function OrdersPage() {
         <div className="relative mt-3">
           <Search
             size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8a847c]"
           />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search orders..."
-            className="h-10 w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+            placeholder="Search orders…"
+            className="h-10 w-full rounded-full border border-[#e8e2d8] bg-[#faf8f4] py-2 pl-9 pr-3 text-sm outline-none transition placeholder:text-[#8a847c] focus:border-[#b8956c] focus:bg-white"
           />
         </div>
       </div>
 
-      {/* Order cards */}
       <div className="space-y-3 sm:space-y-4">
         {filteredOrders.map((order) => (
           <article
             key={order.id}
-            className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+            className="overflow-hidden rounded-2xl border border-[#e8e2d8] bg-white"
           >
-            <div className="border-b border-slate-100 bg-slate-50/70 px-3 py-3 sm:px-6 sm:py-4">
+            <div className="border-b border-[#f0ebe3] bg-[#faf8f4]/80 px-3 py-3 sm:px-6 sm:py-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-[#8a847c]">
                     Order
                   </p>
-                  <p className="mt-0.5 truncate text-sm font-bold text-slate-900">
+                  <p className="mt-0.5 truncate text-sm font-semibold text-[#1a1a1a]">
                     {order.orderNumber}
                   </p>
-                  <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500 sm:text-xs">
+                  <div className="mt-1 flex items-center gap-1.5 text-[11px] text-[#6b6560] sm:text-xs">
                     <CalendarDays size={12} className="shrink-0" />
                     {order.date}
                   </div>
                 </div>
                 <span
-                  className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset sm:px-2.5 sm:py-1 sm:text-xs ${
+                  className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset sm:text-xs ${
                     STATUS_STYLES[order.status] || STATUS_STYLES.Pending
                   }`}
                 >
@@ -1750,42 +2185,42 @@ export default function OrdersPage() {
             </div>
 
             <div className="p-3 sm:p-6">
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-[#f0ebe3]">
                 {order.items.map((item, index) => (
                   <div
                     key={`${order.id}-${index}`}
                     className="flex gap-3 py-2.5 first:pt-0 last:pb-0 sm:gap-4 sm:py-3"
                   >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400 sm:h-14 sm:w-14">
-                      <Package size={18} className="sm:h-[22px] sm:w-[22px]" />
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f3ebe0] text-[#b8956c] sm:h-14 sm:w-14">
+                      <Package size={18} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="line-clamp-2 text-xs font-semibold leading-snug text-slate-900 sm:text-sm">
+                      <h2 className="line-clamp-2 text-xs font-semibold leading-snug text-[#1a1a1a] sm:text-sm">
                         {item.name}
                       </h2>
-                      <p className="mt-0.5 text-[11px] text-slate-500 sm:mt-1 sm:text-xs">
+                      <p className="mt-0.5 text-[11px] text-[#8a847c] sm:text-xs">
                         Qty: {item.quantity}
                       </p>
                     </div>
-                    <p className="shrink-0 text-xs font-semibold text-slate-900 sm:text-sm">
+                    <p className="shrink-0 text-xs font-semibold text-[#1a1a1a] sm:text-sm">
                       {formatCurrency(item.price * item.quantity)}
                     </p>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-3 border-t border-slate-100 pt-3 sm:mt-5 sm:pt-5">
-                <p className="text-[11px] text-slate-500 sm:text-xs">
+              <div className="mt-3 border-t border-[#f0ebe3] pt-3 sm:mt-5 sm:pt-5">
+                <p className="text-[11px] text-[#6b6560] sm:text-xs">
                   {order.delivery}
                 </p>
-                <p className="mt-1 text-sm font-bold text-slate-900">
+                <p className="mt-1 text-sm font-semibold text-[#1a1a1a]">
                   Total: {formatCurrency(order.total)}
                 </p>
 
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <Link
                     href={`/account/orders/${order.id}`}
-                    className="inline-flex min-h-[40px] items-center justify-center gap-1 rounded-lg border border-slate-200 px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="inline-flex min-h-[40px] items-center justify-center gap-1 rounded-full border border-[#e8e2d8] px-2 text-xs font-semibold text-[#1a1a1a] hover:bg-[#faf8f4]"
                   >
                     View details
                     <ChevronRight size={14} />
@@ -1793,7 +2228,7 @@ export default function OrdersPage() {
                   {order.status !== "Cancelled" ? (
                     <Link
                       href={`/account/orders/${order.id}/track`}
-                      className="inline-flex min-h-[40px] items-center justify-center gap-1 rounded-lg bg-slate-900 px-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                      className="inline-flex min-h-[40px] items-center justify-center gap-1 rounded-full bg-[#1a1a1a] px-2 text-xs font-semibold text-white"
                     >
                       Track order
                       <ArrowRight size={14} />
@@ -1809,14 +2244,14 @@ export default function OrdersPage() {
       </div>
 
       {filteredOrders.length === 0 && (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-12 text-center sm:px-6 sm:py-14">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+        <div className="rounded-2xl border border-dashed border-[#e8e2d8] bg-white px-4 py-12 text-center sm:px-6 sm:py-14">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f3ebe0] text-[#b8956c]">
             <ShoppingBag size={22} />
           </div>
-          <h2 className="mt-4 text-base font-bold text-slate-900">
+          <h2 className="mt-4 font-display text-base font-semibold text-[#1a1a1a]">
             {orders.length === 0 ? "No orders yet" : "No orders found"}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-[#6b6560]">
             {orders.length === 0
               ? "When you place an order, it will show up here."
               : "Try changing the filter or search term."}
@@ -1824,7 +2259,7 @@ export default function OrdersPage() {
           {orders.length === 0 && (
             <Link
               href="/products"
-              className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+              className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[#1a1a1a] px-5 py-2.5 text-sm font-semibold text-white"
             >
               Browse products
               <ArrowRight size={16} />

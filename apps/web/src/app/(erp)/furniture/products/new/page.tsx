@@ -4738,13 +4738,4552 @@
 // }
 
 
+// "use client";
+
+// import { useState, useRef, useEffect, useMemo } from "react";
+// import { useRouter } from "next/navigation";
+// import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+// import { storage } from "@/core/config/firebaseClient";
+// import { createProduct } from "@/modules/furniture/services/productService";
+// import {
+//   getAllCategories,
+//   type FurnitureCategory,
+// } from "@/modules/furniture/services/categoryService";
+// import {
+//   getAllSubCategories,
+//   type FurnitureSubCategory,
+// } from "@/modules/furniture/services/subCategoryService";
+// import {
+//   getAllMaterials,
+//   type FurnitureMaterial,
+// } from "@/modules/furniture/services/materialService";
+// import {
+//   getAllFinishes,
+//   type FurnitureFinish,
+// } from "@/modules/furniture/services/finishService";
+
+// const units = ["Nos", "Set", "Sq.Ft", "Meter", "Piece"];
+
+// const suppliers = [
+//   "Akrish Furniture Suppliers",
+//   "Local Supplier",
+//   "ABC Furniture Supplier",
+//   "Direct Manufacturer",
+// ];
+
+// const MAX_IMAGES = 8;
+
+// export default function NewProductPage() {
+//   const router = useRouter();
+//   const fileInputRef = useRef<HTMLInputElement>(null);
+
+//   const [categories, setCategories] = useState<FurnitureCategory[]>([]);
+//   const [subCategories, setSubCategories] = useState<FurnitureSubCategory[]>(
+//     []
+//   );
+//   const [materials, setMaterials] = useState<FurnitureMaterial[]>([]);
+//   const [finishes, setFinishes] = useState<FurnitureFinish[]>([]);
+//   const [optionsLoading, setOptionsLoading] = useState(true);
+
+//   const [form, setForm] = useState({
+//     productName: "",
+//     productCode: "",
+//     category: "",
+//     subcategory: "",
+//     material: "",
+//     finish: "",
+//     color: "",
+//     dimensions: "",
+//     description: "",
+//     sellingPrice: "",
+//     costPrice: "",
+//     stock: "",
+//     unit: "Nos",
+//     reorderLevel: "",
+//     leadTime: "",
+//     warranty: "",
+//     supplier: "",
+//     warehouseLocation: "Main Warehouse",
+//     status: "In Stock",
+//   });
+
+//   /** Local files pending upload */
+//   const [imageFiles, setImageFiles] = useState<File[]>([]);
+//   /** Preview data URLs aligned with imageFiles */
+//   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+//   /** Optional: paste one URL per line */
+//   const [imageUrlInput, setImageUrlInput] = useState("");
+//   const [uploadingImage, setUploadingImage] = useState(false);
+//   const [errors, setErrors] = useState<Record<string, string>>({});
+//   const [saving, setSaving] = useState(false);
+//   const [successOpen, setSuccessOpen] = useState(false);
+//   const [createdProductName, setCreatedProductName] = useState("");
+//   const [saveError, setSaveError] = useState("");
+
+//   useEffect(() => {
+//     let cancelled = false;
+
+//     async function loadOptions() {
+//       setOptionsLoading(true);
+//       try {
+//         const [cats, subs, mats, fins] = await Promise.all([
+//           getAllCategories(),
+//           getAllSubCategories(),
+//           getAllMaterials(),
+//           getAllFinishes(),
+//         ]);
+//         if (cancelled) return;
+
+//         setCategories(cats.filter((c) => (c.status || "Active") === "Active"));
+//         setSubCategories(
+//           subs.filter((s) => (s.status || "Active") === "Active")
+//         );
+//         setMaterials(mats.filter((m) => (m.status || "Active") === "Active"));
+//         setFinishes(fins.filter((f) => (f.status || "Active") === "Active"));
+//       } catch (err) {
+//         console.error("Failed to load product options:", err);
+//       } finally {
+//         if (!cancelled) setOptionsLoading(false);
+//       }
+//     }
+
+//     loadOptions();
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, []);
+
+//   const filteredSubCategories = useMemo(() => {
+//     if (!form.category) return [];
+//     const parent = categories.find((c) => c.name === form.category);
+//     if (!parent) {
+//       return subCategories.filter((s) => s.categoryName === form.category);
+//     }
+//     return subCategories.filter((s) => s.categoryId === parent.id);
+//   }, [form.category, categories, subCategories]);
+
+//   const updateField = (field: string, value: string) => {
+//     setForm((prev) => {
+//       const next = { ...prev, [field]: value };
+//       if (field === "category") next.subcategory = "";
+//       return next;
+//     });
+//     if (errors[field]) {
+//       setErrors((prev) => ({ ...prev, [field]: "" }));
+//     }
+//   };
+
+//   const calculateProfit = () => {
+//     const selling = Number(form.sellingPrice) || 0;
+//     const cost = Number(form.costPrice) || 0;
+//     return selling - cost;
+//   };
+
+//   const calculateMargin = () => {
+//     const selling = Number(form.sellingPrice) || 0;
+//     const cost = Number(form.costPrice) || 0;
+//     if (!selling) return 0;
+//     return ((selling - cost) / selling) * 100;
+//   };
+
+//   const validateForm = () => {
+//     const newErrors: Record<string, string> = {};
+//     if (!form.productName.trim())
+//       newErrors.productName = "Product name is required";
+//     if (!form.productCode.trim())
+//       newErrors.productCode = "Product code is required";
+//     if (!form.category) newErrors.category = "Please select a category";
+//     if (!form.material) newErrors.material = "Please select material";
+//     if (!form.sellingPrice)
+//       newErrors.sellingPrice = "Selling price is required";
+//     if (!form.costPrice) newErrors.costPrice = "Cost price is required";
+//     if (!form.stock) newErrors.stock = "Opening stock is required";
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
+
+//   const rebuildPreviews = (files: File[]) => {
+//     Promise.all(
+//       files.map(
+//         (f) =>
+//           new Promise<string>((resolve) => {
+//             const reader = new FileReader();
+//             reader.onload = () => resolve(reader.result as string);
+//             reader.readAsDataURL(f);
+//           })
+//       )
+//     ).then(setImagePreviews);
+//   };
+
+//   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     const picked = Array.from(e.target.files || []);
+//     if (!picked.length) return;
+
+//     const valid: File[] = [];
+//     for (const file of picked) {
+//       if (!file.type.startsWith("image/")) {
+//         setSaveError("Only image files are allowed (JPG, PNG, WebP).");
+//         continue;
+//       }
+//       if (file.size > 5 * 1024 * 1024) {
+//         setSaveError("Each image must be under 5 MB.");
+//         continue;
+//       }
+//       valid.push(file);
+//     }
+
+//     if (!valid.length) {
+//       if (fileInputRef.current) fileInputRef.current.value = "";
+//       return;
+//     }
+
+//     setSaveError("");
+//     setImageFiles((prev) => {
+//       const next = [...prev, ...valid].slice(0, MAX_IMAGES);
+//       rebuildPreviews(next);
+//       return next;
+//     });
+
+//     if (fileInputRef.current) fileInputRef.current.value = "";
+//   };
+
+//   const removeImageAt = (index: number) => {
+//     setImageFiles((prev) => {
+//       const next = prev.filter((_, i) => i !== index);
+//       rebuildPreviews(next);
+//       return next;
+//     });
+//   };
+
+//   const uploadImages = async (): Promise<string[]> => {
+//     const urls: string[] = [];
+
+//     imageUrlInput
+//       .split("\n")
+//       .map((s) => s.trim())
+//       .filter(Boolean)
+//       .forEach((u) => urls.push(u));
+
+//     if (!imageFiles.length) {
+//       return Array.from(new Set(urls)).slice(0, MAX_IMAGES);
+//     }
+
+//     setUploadingImage(true);
+//     try {
+//       for (const file of imageFiles) {
+//         const timestamp = Date.now();
+//         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
+//         const storageRef = ref(
+//           storage,
+//           `furniture/products/${timestamp}_${Math.random()
+//             .toString(36)
+//             .slice(2, 8)}_${safeName}`
+//         );
+//         await uploadBytes(storageRef, file);
+//         urls.push(await getDownloadURL(storageRef));
+//       }
+//       return Array.from(new Set(urls)).slice(0, MAX_IMAGES);
+//     } catch (err) {
+//       console.error("Image upload failed:", err);
+//       setSaveError("Failed to upload one or more images. Please try again.");
+//       return [];
+//     } finally {
+//       setUploadingImage(false);
+//     }
+//   };
+
+//   const resetForm = () => {
+//     setForm({
+//       productName: "",
+//       productCode: "",
+//       category: "",
+//       subcategory: "",
+//       material: "",
+//       finish: "",
+//       color: "",
+//       dimensions: "",
+//       description: "",
+//       sellingPrice: "",
+//       costPrice: "",
+//       stock: "",
+//       unit: "Nos",
+//       reorderLevel: "",
+//       leadTime: "",
+//       warranty: "",
+//       supplier: "",
+//       warehouseLocation: "Main Warehouse",
+//       status: "In Stock",
+//     });
+//     setImageFiles([]);
+//     setImagePreviews([]);
+//     setImageUrlInput("");
+//     setErrors({});
+//     setSaveError("");
+//     if (fileInputRef.current) fileInputRef.current.value = "";
+//   };
+
+//   const handleSave = async () => {
+//     setSaveError("");
+
+//     if (!validateForm()) {
+//       window.scrollTo({ top: 0, behavior: "smooth" });
+//       return;
+//     }
+
+//     setSaving(true);
+
+//     try {
+//       const images = await uploadImages();
+
+//       if (imageFiles.length > 0 && images.length === 0) {
+//         setSaving(false);
+//         return;
+//       }
+
+//       const primary = images[0] || "";
+
+//       await createProduct({
+//         name: form.productName.trim(),
+//         sku: form.productCode.trim().toUpperCase(),
+//         code: form.productCode.trim().toUpperCase(),
+//         category: form.category,
+//         subcategory: form.subcategory || "",
+//         material: form.material,
+//         finish: form.finish || "",
+//         color: form.color || "",
+//         dimensions: form.dimensions || "",
+//         description: form.description || "",
+//         sellingPrice: Number(form.sellingPrice),
+//         price: Number(form.sellingPrice),
+//         costPrice: Number(form.costPrice),
+//         stock: Number(form.stock),
+//         unit: form.unit,
+//         reorderLevel: Number(form.reorderLevel || 0),
+//         minStock: Number(form.reorderLevel || 0),
+//         leadTime: form.leadTime || "",
+//         warranty: form.warranty || "",
+//         supplier: form.supplier || "",
+//         location: form.warehouseLocation || "Main Warehouse",
+//         warehouseLocation: form.warehouseLocation || "Main Warehouse",
+//         images,
+//         imageUrl: primary,
+//         image: primary,
+//         status: form.status as
+//           | "In Stock"
+//           | "Low Stock"
+//           | "Out of Stock"
+//           | "Inactive",
+//       });
+
+//       setCreatedProductName(form.productName.trim());
+//       setSuccessOpen(true);
+//     } catch (err) {
+//       console.error("Create product failed:", err);
+//       setSaveError("Failed to create product. Please try again.");
+//     } finally {
+//       setSaving(false);
+//     }
+//   };
+
+//   const handleCancel = () => router.push("/furniture/products");
+
+//   const fieldClass = (hasError?: boolean) =>
+//     `h-11 w-full rounded-lg border px-3.5 text-sm outline-none transition focus:border-[#176b5b] focus:ring-2 focus:ring-[#176b5b]/10 ${
+//       hasError ? "border-red-400" : "border-[#d9d7cf]"
+//     }`;
+
+//   return (
+//     <div className="min-h-screen bg-[#f7f7f4] text-[#252525]">
+//       <div className="border-b border-[#e4e2da] bg-white">
+//         <div className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-5 lg:px-8">
+//           <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
+//             {/* <div className="min-w-0">
+//               <div className="mb-1 flex items-center gap-2 text-xs text-gray-500 sm:mb-2 sm:text-sm">
+//                 <button
+//                   type="button"
+//                   onClick={() => router.push("/furniture/products")}
+//                   className="hover:text-[#176b5b]"
+//                 >
+//                   Products
+//                 </button>
+//                 <span>/</span>
+//                 <span className="text-gray-700">New Product</span>
+//               </div>
+//               <h1 className="text-xl font-bold text-[#222] sm:text-2xl">
+//                 Add New Product
+//               </h1>
+//               <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+//                 Create a new furniture product in your inventory.
+//               </p>
+//             </div> */}
+
+//             <div className="min-w-0">
+//               <div className="mb-1 flex items-center gap-2 text-xs text-gray-500 sm:mb-2 sm:text-sm">
+//                 <button
+//                   type="button"
+//                   onClick={() => router.back()}
+//                   className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#e4e2da] bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 active:scale-95"
+//                   aria-label="Go back"
+//                   title="Go back"
+//                 >
+//                   <svg
+//                     xmlns="http://www.w3.org/2000/svg"
+//                     viewBox="0 0 20 20"
+//                     fill="currentColor"
+//                     className="h-4 w-4"
+//                   >
+//                     <path
+//                       fillRule="evenodd"
+//                       d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+//                       clipRule="evenodd"
+//                     />
+//                   </svg>
+//                 </button>
+//                 <button
+//                   type="button"
+//                   onClick={() => router.push("/furniture/products")}
+//                   className="font-semibold text-[#9a5b18] hover:underline"
+//                 >
+//                   Products
+//                 </button>
+//                 <span>/</span>
+//                 <span className="text-gray-700">New Product</span>
+//               </div>
+//               <h1 className="text-xl font-bold text-[#222] sm:text-2xl">
+//                 Add New Product
+//               </h1>
+//               <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+//                 Create a new furniture product in your inventory.
+//               </p>
+//             </div>
+
+//             <div className="flex gap-2 sm:gap-3">
+//               <button
+//                 type="button"
+//                 onClick={handleCancel}
+//                 className="min-h-[44px] flex-1 rounded-lg border border-[#d9d7cf] bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:flex-none sm:px-5"
+//               >
+//                 Cancel
+//               </button>
+//               <button
+//                 type="button"
+//                 onClick={handleSave}
+//                 disabled={saving || uploadingImage}
+//                 className="min-h-[44px] flex-1 rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#125548] disabled:opacity-60 sm:flex-none sm:px-5"
+//               >
+//                 {uploadingImage
+//                   ? "Uploading…"
+//                   : saving
+//                     ? "Saving…"
+//                     : "Save Product"}
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+
+//       <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+//         {saveError && (
+//           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+//             {saveError}
+//           </div>
+//         )}
+
+//         <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-[1fr_320px]">
+//           <div className="space-y-4 sm:space-y-6">
+//             {/* Basic */}
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">
+//                   Basic Information
+//                 </h2>
+//                 <p className="mt-0.5 text-xs text-gray-500">
+//                   Product name, code, category and description.
+//                 </p>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:gap-5 sm:p-5 md:grid-cols-2">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Product Name <span className="text-red-500">*</span>
+//                   </label>
+//                   <input
+//                     value={form.productName}
+//                     onChange={(e) => updateField("productName", e.target.value)}
+//                     placeholder="e.g. Modern L-Shape Sofa"
+//                     className={fieldClass(!!errors.productName)}
+//                   />
+//                   {errors.productName && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.productName}
+//                     </p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Product Code <span className="text-red-500">*</span>
+//                   </label>
+//                   <input
+//                     value={form.productCode}
+//                     onChange={(e) =>
+//                       updateField("productCode", e.target.value.toUpperCase())
+//                     }
+//                     placeholder="e.g. SOFA-001"
+//                     className={`${fieldClass(!!errors.productCode)} uppercase`}
+//                   />
+//                   {errors.productCode && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.productCode}
+//                     </p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Category <span className="text-red-500">*</span>
+//                   </label>
+//                   <select
+//                     value={form.category}
+//                     onChange={(e) => updateField("category", e.target.value)}
+//                     disabled={optionsLoading}
+//                     className={`${fieldClass(!!errors.category)} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {optionsLoading ? "Loading…" : "Select category"}
+//                     </option>
+//                     {categories.map((c) => (
+//                       <option key={c.id} value={c.name}>
+//                         {c.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                   {errors.category && (
+//                     <p className="mt-1 text-xs text-red-500">{errors.category}</p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Subcategory
+//                   </label>
+//                   <select
+//                     value={form.subcategory}
+//                     onChange={(e) => updateField("subcategory", e.target.value)}
+//                     disabled={!form.category || optionsLoading}
+//                     className={`${fieldClass()} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {!form.category
+//                         ? "Select category first"
+//                         : filteredSubCategories.length === 0
+//                           ? "No sub categories"
+//                           : "Select subcategory"}
+//                     </option>
+//                     {filteredSubCategories.map((s) => (
+//                       <option key={s.id} value={s.name}>
+//                         {s.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Material <span className="text-red-500">*</span>
+//                   </label>
+//                   <select
+//                     value={form.material}
+//                     onChange={(e) => updateField("material", e.target.value)}
+//                     disabled={optionsLoading}
+//                     className={`${fieldClass(!!errors.material)} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {optionsLoading ? "Loading…" : "Select material"}
+//                     </option>
+//                     {materials.map((m) => (
+//                       <option key={m.id} value={m.name}>
+//                         {m.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                   {errors.material && (
+//                     <p className="mt-1 text-xs text-red-500">{errors.material}</p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Finish
+//                   </label>
+//                   <select
+//                     value={form.finish}
+//                     onChange={(e) => updateField("finish", e.target.value)}
+//                     disabled={optionsLoading}
+//                     className={`${fieldClass()} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {optionsLoading ? "Loading…" : "Select finish"}
+//                     </option>
+//                     {finishes.map((f) => (
+//                       <option key={f.id} value={f.name}>
+//                         {f.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Color
+//                   </label>
+//                   <input
+//                     value={form.color}
+//                     onChange={(e) => updateField("color", e.target.value)}
+//                     placeholder="e.g. Light Grey"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Dimensions
+//                   </label>
+//                   <input
+//                     value={form.dimensions}
+//                     onChange={(e) => updateField("dimensions", e.target.value)}
+//                     placeholder="e.g. 280 × 180 × 85 cm"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div className="md:col-span-2">
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Description
+//                   </label>
+//                   <textarea
+//                     rows={4}
+//                     value={form.description}
+//                     onChange={(e) => updateField("description", e.target.value)}
+//                     placeholder="Enter product description..."
+//                     className="w-full resize-none rounded-lg border border-[#d9d7cf] px-3.5 py-2.5 text-sm outline-none focus:border-[#176b5b] focus:ring-2 focus:ring-[#176b5b]/10"
+//                   />
+//                 </div>
+//               </div>
+//             </section>
+
+//             {/* Pricing */}
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">Pricing</h2>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-5 sm:p-5">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Selling Price <span className="text-red-500">*</span>
+//                   </label>
+//                   <div className="relative">
+//                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+//                       ₹
+//                     </span>
+//                     <input
+//                       type="number"
+//                       min="0"
+//                       value={form.sellingPrice}
+//                       onChange={(e) =>
+//                         updateField("sellingPrice", e.target.value)
+//                       }
+//                       className={`${fieldClass(!!errors.sellingPrice)} pl-8`}
+//                     />
+//                   </div>
+//                   {errors.sellingPrice && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.sellingPrice}
+//                     </p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Cost Price <span className="text-red-500">*</span>
+//                   </label>
+//                   <div className="relative">
+//                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+//                       ₹
+//                     </span>
+//                     <input
+//                       type="number"
+//                       min="0"
+//                       value={form.costPrice}
+//                       onChange={(e) => updateField("costPrice", e.target.value)}
+//                       className={`${fieldClass(!!errors.costPrice)} pl-8`}
+//                     />
+//                   </div>
+//                   {errors.costPrice && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.costPrice}
+//                     </p>
+//                   )}
+//                 </div>
+//               </div>
+//               <div className="grid grid-cols-2 gap-3 border-t border-[#e4e2da] bg-[#fafaf8] p-4 sm:gap-4 sm:p-5">
+//                 <div className="rounded-lg border border-[#e4e2da] bg-white p-3 sm:p-4">
+//                   <p className="text-xs text-gray-500">Est. Profit</p>
+//                   <p className="mt-1 text-lg font-bold text-[#176b5b] sm:text-xl">
+//                     ₹{calculateProfit().toLocaleString("en-IN")}
+//                   </p>
+//                 </div>
+//                 <div className="rounded-lg border border-[#e4e2da] bg-white p-3 sm:p-4">
+//                   <p className="text-xs text-gray-500">Est. Margin</p>
+//                   <p className="mt-1 text-lg font-bold text-[#176b5b] sm:text-xl">
+//                     {calculateMargin().toFixed(1)}%
+//                   </p>
+//                 </div>
+//               </div>
+//             </section>
+
+//             {/* Inventory */}
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">Inventory</h2>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-5 sm:p-5 md:grid-cols-3">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Opening Stock <span className="text-red-500">*</span>
+//                   </label>
+//                   <input
+//                     type="number"
+//                     min="0"
+//                     value={form.stock}
+//                     onChange={(e) => updateField("stock", e.target.value)}
+//                     className={fieldClass(!!errors.stock)}
+//                   />
+//                   {errors.stock && (
+//                     <p className="mt-1 text-xs text-red-500">{errors.stock}</p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Unit
+//                   </label>
+//                   <select
+//                     value={form.unit}
+//                     onChange={(e) => updateField("unit", e.target.value)}
+//                     className={`${fieldClass()} bg-white`}
+//                   >
+//                     {units.map((u) => (
+//                       <option key={u} value={u}>
+//                         {u}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Reorder Level
+//                   </label>
+//                   <input
+//                     type="number"
+//                     min="0"
+//                     value={form.reorderLevel}
+//                     onChange={(e) =>
+//                       updateField("reorderLevel", e.target.value)
+//                     }
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Warehouse
+//                   </label>
+//                   <input
+//                     value={form.warehouseLocation}
+//                     onChange={(e) =>
+//                       updateField("warehouseLocation", e.target.value)
+//                     }
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Status
+//                   </label>
+//                   <select
+//                     value={form.status}
+//                     onChange={(e) => updateField("status", e.target.value)}
+//                     className={`${fieldClass()} bg-white`}
+//                   >
+//                     <option value="In Stock">In Stock</option>
+//                     <option value="Low Stock">Low Stock</option>
+//                     <option value="Out of Stock">Out of Stock</option>
+//                     <option value="Inactive">Inactive</option>
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Lead Time
+//                   </label>
+//                   <input
+//                     value={form.leadTime}
+//                     onChange={(e) => updateField("leadTime", e.target.value)}
+//                     placeholder="e.g. 7–10 Days"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//               </div>
+//             </section>
+
+//             {/* Supplier */}
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">
+//                   Supplier & Warranty
+//                 </h2>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-5 sm:p-5">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Supplier
+//                   </label>
+//                   <select
+//                     value={form.supplier}
+//                     onChange={(e) => updateField("supplier", e.target.value)}
+//                     className={`${fieldClass()} bg-white`}
+//                   >
+//                     <option value="">Select supplier</option>
+//                     {suppliers.map((s) => (
+//                       <option key={s} value={s}>
+//                         {s}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Warranty
+//                   </label>
+//                   <input
+//                     value={form.warranty}
+//                     onChange={(e) => updateField("warranty", e.target.value)}
+//                     placeholder="e.g. 2 Years"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//               </div>
+//             </section>
+//           </div>
+
+//           {/* Sidebar */}
+//           <div className="space-y-4 sm:space-y-6">
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">
+//                   Product images
+//                 </h2>
+//                 <p className="mt-0.5 text-xs text-gray-500">
+//                   Up to {MAX_IMAGES} views (front, side, detail…). First image
+//                   is the cover.
+//                 </p>
+//               </div>
+//               <div className="p-4 sm:p-5">
+//                 {imagePreviews.length > 0 ? (
+//                   <div className="mb-3 grid grid-cols-3 gap-2">
+//                     {imagePreviews.map((src, i) => (
+//                       <div
+//                         key={`${i}-${src.slice(0, 24)}`}
+//                         className="relative aspect-square overflow-hidden rounded-lg border border-[#e4e2da] bg-[#fafaf8]"
+//                       >
+//                         {/* eslint-disable-next-line @next/next/no-img-element */}
+//                         <img
+//                           src={src}
+//                           alt={`Preview ${i + 1}`}
+//                           className="h-full w-full object-cover"
+//                         />
+//                         {i === 0 && (
+//                           <span className="absolute left-1 top-1 rounded bg-[#176b5b] px-1.5 py-0.5 text-[9px] font-bold text-white">
+//                             Cover
+//                           </span>
+//                         )}
+//                         <button
+//                           type="button"
+//                           onClick={() => removeImageAt(i)}
+//                           className="absolute right-1 top-1 rounded bg-black/60 px-1.5 text-[10px] text-white"
+//                         >
+//                           ✕
+//                         </button>
+//                       </div>
+//                     ))}
+//                   </div>
+//                 ) : (
+//                   <div className="mb-3 flex aspect-[4/3] items-center justify-center rounded-xl border border-dashed border-[#cfcdbf] bg-[#fafaf8]">
+//                     <div className="px-4 text-center">
+//                       <p className="text-sm font-medium text-gray-700">
+//                         No images yet
+//                       </p>
+//                       <p className="mt-1 text-xs text-gray-400">
+//                         Upload multiple views
+//                       </p>
+//                     </div>
+//                   </div>
+//                 )}
+
+//                 <input
+//                   ref={fileInputRef}
+//                   type="file"
+//                   accept="image/*"
+//                   multiple
+//                   onChange={handleFileChange}
+//                   className="hidden"
+//                   id="product-images-upload"
+//                 />
+//                 <label
+//                   htmlFor="product-images-upload"
+//                   className="flex min-h-[44px] w-full cursor-pointer items-center justify-center rounded-lg border border-[#176b5b] bg-[#eef7f4] px-4 text-sm font-semibold text-[#176b5b]"
+//                 >
+//                   {imageFiles.length ? "Add more images" : "Upload images"}
+//                 </label>
+//                 <p className="mt-1.5 text-center text-[11px] text-gray-400">
+//                   JPG, PNG, WebP · Max 5 MB each · {imageFiles.length}/
+//                   {MAX_IMAGES}
+//                 </p>
+
+//                 <div className="relative my-4">
+//                   <div className="absolute inset-0 flex items-center">
+//                     <div className="w-full border-t border-[#e4e2da]" />
+//                   </div>
+//                   <div className="relative flex justify-center text-xs">
+//                     <span className="bg-white px-2 text-gray-400">
+//                       OR paste URLs (one per line)
+//                     </span>
+//                   </div>
+//                 </div>
+//                 <textarea
+//                   rows={3}
+//                   value={imageUrlInput}
+//                   onChange={(e) => setImageUrlInput(e.target.value)}
+//                   placeholder={
+//                     "https://.../front.jpg\nhttps://.../side.jpg\nhttps://.../detail.jpg"
+//                   }
+//                   className="w-full rounded-lg border border-[#d9d7cf] px-3 py-2 text-sm outline-none focus:border-[#176b5b]"
+//                 />
+//               </div>
+//             </section>
+
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">Preview</h2>
+//               </div>
+//               <div className="p-4 sm:p-5">
+//                 <div className="mb-3 flex items-center justify-between gap-2">
+//                   <span className="rounded-full bg-[#eaf5f1] px-2.5 py-1 text-xs font-semibold text-[#176b5b]">
+//                     {form.status}
+//                   </span>
+//                   <span className="truncate text-xs text-gray-400">
+//                     {form.productCode || "CODE"}
+//                   </span>
+//                 </div>
+//                 <h3 className="text-base font-bold text-[#222] sm:text-lg">
+//                   {form.productName || "Product Name"}
+//                 </h3>
+//                 <p className="mt-1 text-sm text-gray-500">
+//                   {form.category || "Category"}
+//                   {form.subcategory ? ` · ${form.subcategory}` : ""}
+//                 </p>
+//                 <div className="my-3 border-t border-[#e4e2da] sm:my-4" />
+//                 <div className="space-y-2 text-sm">
+//                   <div className="flex justify-between gap-3">
+//                     <span className="text-gray-500">Material</span>
+//                     <span className="text-right font-medium">
+//                       {form.material || "—"}
+//                     </span>
+//                   </div>
+//                   <div className="flex justify-between gap-3">
+//                     <span className="text-gray-500">Stock</span>
+//                     <span className="font-medium">
+//                       {form.stock || "0"} {form.unit}
+//                     </span>
+//                   </div>
+//                   <div className="flex justify-between gap-3">
+//                     <span className="text-gray-500">Images</span>
+//                     <span className="font-medium">
+//                       {imageFiles.length ||
+//                         imageUrlInput.split("\n").filter((l) => l.trim())
+//                           .length ||
+//                         0}
+//                     </span>
+//                   </div>
+//                 </div>
+//                 <div className="mt-4 rounded-lg bg-[#f7f7f4] p-3 sm:p-4">
+//                   <p className="text-xs text-gray-500">Selling Price</p>
+//                   <p className="mt-1 text-xl font-bold text-[#176b5b] sm:text-2xl">
+//                     ₹{Number(form.sellingPrice || 0).toLocaleString("en-IN")}
+//                   </p>
+//                 </div>
+//               </div>
+//             </section>
+//           </div>
+//         </div>
+
+//         <div className="mt-4 flex flex-col-reverse gap-2 rounded-xl border border-[#e4e2da] bg-white p-3 sm:mt-6 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:p-4">
+//           <button
+//             type="button"
+//             onClick={handleCancel}
+//             className="min-h-[44px] rounded-lg border border-[#d9d7cf] px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+//           >
+//             Cancel
+//           </button>
+//           <button
+//             type="button"
+//             onClick={handleSave}
+//             disabled={saving || uploadingImage}
+//             className="min-h-[44px] rounded-lg bg-[#176b5b] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#125548] disabled:opacity-60"
+//           >
+//             {uploadingImage
+//               ? "Uploading images..."
+//               : saving
+//                 ? "Saving..."
+//                 : "Create Product"}
+//           </button>
+//         </div>
+//       </main>
+
+//       {successOpen && (
+//         <div
+//           className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+//           role="dialog"
+//           aria-modal="true"
+//           aria-labelledby="product-created-title"
+//         >
+//           <button
+//             type="button"
+//             aria-label="Close success message"
+//             className="absolute inset-0 bg-black/40"
+//             onClick={() => setSuccessOpen(false)}
+//           />
+//           <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+//             <div className="bg-[#eef7f4] px-5 pb-5 pt-7 text-center sm:px-6 sm:pb-6 sm:pt-8">
+//               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#176b5b] text-2xl text-white sm:h-16 sm:w-16 sm:text-3xl">
+//                 ✓
+//               </div>
+//               <h2
+//                 id="product-created-title"
+//                 className="mt-3 text-lg font-bold text-[#222] sm:mt-4 sm:text-xl"
+//               >
+//                 Product created
+//               </h2>
+//               <p className="mt-2 text-sm text-gray-600">
+//                 <span className="font-semibold text-[#176b5b]">
+//                   {createdProductName}
+//                 </span>{" "}
+//                 is in inventory and the website catalog.
+//               </p>
+//             </div>
+//             <div className="flex flex-col gap-2 p-4 sm:flex-row sm:justify-end sm:p-5">
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setSuccessOpen(false);
+//                   resetForm();
+//                 }}
+//                 className="min-h-[44px] rounded-lg border border-[#d9d7cf] px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+//               >
+//                 Add another
+//               </button>
+//               <button
+//                 type="button"
+//                 onClick={() => router.push("/furniture/products")}
+//                 className="min-h-[44px] rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#125548]"
+//               >
+//                 View products
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+
+// "use client";
+
+// import { useState, useRef, useEffect, useMemo } from "react";
+// import { useRouter } from "next/navigation";
+// import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+// import { storage } from "@/core/config/firebaseClient";
+// import { createProduct } from "@/modules/furniture/services/productService";
+// import {
+//   getAllCategories,
+//   type FurnitureCategory,
+// } from "@/modules/furniture/services/categoryService";
+// import {
+//   getAllSubCategories,
+//   type FurnitureSubCategory,
+// } from "@/modules/furniture/services/subCategoryService";
+// import {
+//   getAllMaterials,
+//   type FurnitureMaterial,
+// } from "@/modules/furniture/services/materialService";
+// import {
+//   getAllFinishes,
+//   type FurnitureFinish,
+// } from "@/modules/furniture/services/finishService";
+// import {
+//   FURNITURE_COLOR_OPTIONS,
+//   FURNITURE_SIZE_OPTIONS,
+// } from "@/lib/productOptions";
+
+// const units = ["Nos", "Set", "Sq.Ft", "Meter", "Piece"];
+
+// const suppliers = [
+//   "Akrish Furniture Suppliers",
+//   "Local Supplier",
+//   "ABC Furniture Supplier",
+//   "Direct Manufacturer",
+// ];
+
+// const MAX_IMAGES = 8;
+
+// export default function NewProductPage() {
+//   const router = useRouter();
+//   const fileInputRef = useRef<HTMLInputElement>(null);
+
+//   const [categories, setCategories] = useState<FurnitureCategory[]>([]);
+//   const [subCategories, setSubCategories] = useState<FurnitureSubCategory[]>(
+//     []
+//   );
+//   const [materials, setMaterials] = useState<FurnitureMaterial[]>([]);
+//   const [finishes, setFinishes] = useState<FurnitureFinish[]>([]);
+//   const [optionsLoading, setOptionsLoading] = useState(true);
+
+//   const [form, setForm] = useState({
+//     productName: "",
+//     productCode: "",
+//     category: "",
+//     subcategory: "",
+//     material: "",
+//     finish: "",
+//     color: "",
+//     dimensions: "",
+//     description: "",
+//     sellingPrice: "",
+//     costPrice: "",
+//     stock: "",
+//     unit: "Nos",
+//     reorderLevel: "",
+//     leadTime: "",
+//     warranty: "",
+//     supplier: "",
+//     warehouseLocation: "Main Warehouse",
+//     status: "In Stock",
+//   });
+
+//   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+//   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+
+//   const [imageFiles, setImageFiles] = useState<File[]>([]);
+//   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+//   const [imageUrlInput, setImageUrlInput] = useState("");
+//   const [uploadingImage, setUploadingImage] = useState(false);
+//   const [errors, setErrors] = useState<Record<string, string>>({});
+//   const [saving, setSaving] = useState(false);
+//   const [successOpen, setSuccessOpen] = useState(false);
+//   const [createdProductName, setCreatedProductName] = useState("");
+//   const [saveError, setSaveError] = useState("");
+
+//   useEffect(() => {
+//     let cancelled = false;
+
+//     async function loadOptions() {
+//       setOptionsLoading(true);
+//       try {
+//         const [cats, subs, mats, fins] = await Promise.all([
+//           getAllCategories(),
+//           getAllSubCategories(),
+//           getAllMaterials(),
+//           getAllFinishes(),
+//         ]);
+//         if (cancelled) return;
+
+//         setCategories(cats.filter((c) => (c.status || "Active") === "Active"));
+//         setSubCategories(
+//           subs.filter((s) => (s.status || "Active") === "Active")
+//         );
+//         setMaterials(mats.filter((m) => (m.status || "Active") === "Active"));
+//         setFinishes(fins.filter((f) => (f.status || "Active") === "Active"));
+//       } catch (err) {
+//         console.error("Failed to load product options:", err);
+//       } finally {
+//         if (!cancelled) setOptionsLoading(false);
+//       }
+//     }
+
+//     loadOptions();
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, []);
+
+//   const filteredSubCategories = useMemo(() => {
+//     if (!form.category) return [];
+//     const parent = categories.find((c) => c.name === form.category);
+//     if (!parent) {
+//       return subCategories.filter((s) => s.categoryName === form.category);
+//     }
+//     return subCategories.filter((s) => s.categoryId === parent.id);
+//   }, [form.category, categories, subCategories]);
+
+//   const updateField = (field: string, value: string) => {
+//     setForm((prev) => {
+//       const next = { ...prev, [field]: value };
+//       if (field === "category") next.subcategory = "";
+//       return next;
+//     });
+//     if (errors[field]) {
+//       setErrors((prev) => ({ ...prev, [field]: "" }));
+//     }
+//   };
+
+//   const toggleColor = (hex: string) => {
+//     setSelectedColors((prev) =>
+//       prev.includes(hex) ? prev.filter((c) => c !== hex) : [...prev, hex]
+//     );
+//   };
+
+//   const toggleSize = (size: string) => {
+//     setSelectedSizes((prev) =>
+//       prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
+//     );
+//   };
+
+//   const calculateProfit = () => {
+//     const selling = Number(form.sellingPrice) || 0;
+//     const cost = Number(form.costPrice) || 0;
+//     return selling - cost;
+//   };
+
+//   const calculateMargin = () => {
+//     const selling = Number(form.sellingPrice) || 0;
+//     const cost = Number(form.costPrice) || 0;
+//     if (!selling) return 0;
+//     return ((selling - cost) / selling) * 100;
+//   };
+
+//   const validateForm = () => {
+//     const newErrors: Record<string, string> = {};
+//     if (!form.productName.trim())
+//       newErrors.productName = "Product name is required";
+//     if (!form.productCode.trim())
+//       newErrors.productCode = "Product code is required";
+//     if (!form.category) newErrors.category = "Please select a category";
+//     if (!form.material) newErrors.material = "Please select material";
+//     if (!form.sellingPrice)
+//       newErrors.sellingPrice = "Selling price is required";
+//     if (!form.costPrice) newErrors.costPrice = "Cost price is required";
+//     if (!form.stock) newErrors.stock = "Opening stock is required";
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
+
+//   const rebuildPreviews = (files: File[]) => {
+//     Promise.all(
+//       files.map(
+//         (f) =>
+//           new Promise<string>((resolve) => {
+//             const reader = new FileReader();
+//             reader.onload = () => resolve(reader.result as string);
+//             reader.readAsDataURL(f);
+//           })
+//       )
+//     ).then(setImagePreviews);
+//   };
+
+//   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     const picked = Array.from(e.target.files || []);
+//     if (!picked.length) return;
+
+//     const valid: File[] = [];
+//     for (const file of picked) {
+//       if (!file.type.startsWith("image/")) {
+//         setSaveError("Only image files are allowed (JPG, PNG, WebP).");
+//         continue;
+//       }
+//       if (file.size > 5 * 1024 * 1024) {
+//         setSaveError("Each image must be under 5 MB.");
+//         continue;
+//       }
+//       valid.push(file);
+//     }
+
+//     if (!valid.length) {
+//       if (fileInputRef.current) fileInputRef.current.value = "";
+//       return;
+//     }
+
+//     setSaveError("");
+//     setImageFiles((prev) => {
+//       const next = [...prev, ...valid].slice(0, MAX_IMAGES);
+//       rebuildPreviews(next);
+//       return next;
+//     });
+
+//     if (fileInputRef.current) fileInputRef.current.value = "";
+//   };
+
+//   const removeImageAt = (index: number) => {
+//     setImageFiles((prev) => {
+//       const next = prev.filter((_, i) => i !== index);
+//       rebuildPreviews(next);
+//       return next;
+//     });
+//   };
+
+//   const uploadImages = async (): Promise<string[]> => {
+//     const urls: string[] = [];
+
+//     imageUrlInput
+//       .split("\n")
+//       .map((s) => s.trim())
+//       .filter(Boolean)
+//       .forEach((u) => urls.push(u));
+
+//     if (!imageFiles.length) {
+//       return Array.from(new Set(urls)).slice(0, MAX_IMAGES);
+//     }
+
+//     setUploadingImage(true);
+//     try {
+//       for (const file of imageFiles) {
+//         const timestamp = Date.now();
+//         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
+//         const storageRef = ref(
+//           storage,
+//           `furniture/products/${timestamp}_${Math.random()
+//             .toString(36)
+//             .slice(2, 8)}_${safeName}`
+//         );
+//         await uploadBytes(storageRef, file);
+//         urls.push(await getDownloadURL(storageRef));
+//       }
+//       return Array.from(new Set(urls)).slice(0, MAX_IMAGES);
+//     } catch (err) {
+//       console.error("Image upload failed:", err);
+//       setSaveError("Failed to upload one or more images. Please try again.");
+//       return [];
+//     } finally {
+//       setUploadingImage(false);
+//     }
+//   };
+
+//   const resetForm = () => {
+//     setForm({
+//       productName: "",
+//       productCode: "",
+//       category: "",
+//       subcategory: "",
+//       material: "",
+//       finish: "",
+//       color: "",
+//       dimensions: "",
+//       description: "",
+//       sellingPrice: "",
+//       costPrice: "",
+//       stock: "",
+//       unit: "Nos",
+//       reorderLevel: "",
+//       leadTime: "",
+//       warranty: "",
+//       supplier: "",
+//       warehouseLocation: "Main Warehouse",
+//       status: "In Stock",
+//     });
+//     setSelectedColors([]);
+//     setSelectedSizes([]);
+//     setImageFiles([]);
+//     setImagePreviews([]);
+//     setImageUrlInput("");
+//     setErrors({});
+//     setSaveError("");
+//     if (fileInputRef.current) fileInputRef.current.value = "";
+//   };
+
+//   const handleSave = async () => {
+//     setSaveError("");
+
+//     if (!validateForm()) {
+//       window.scrollTo({ top: 0, behavior: "smooth" });
+//       return;
+//     }
+
+//     setSaving(true);
+
+//     try {
+//       const images = await uploadImages();
+
+//       if (imageFiles.length > 0 && images.length === 0) {
+//         setSaving(false);
+//         return;
+//       }
+
+//       const primary = images[0] || "";
+
+//       await createProduct({
+//         name: form.productName.trim(),
+//         sku: form.productCode.trim().toUpperCase(),
+//         code: form.productCode.trim().toUpperCase(),
+//         category: form.category,
+//         subcategory: form.subcategory || "",
+//         material: form.material,
+//         finish: form.finish || "",
+//         color: form.color || selectedColors[0] || "",
+//         colors: selectedColors,
+//         sizes: selectedSizes,
+//         dimensions: form.dimensions || "",
+//         description: form.description || "",
+//         sellingPrice: Number(form.sellingPrice),
+//         price: Number(form.sellingPrice),
+//         costPrice: Number(form.costPrice),
+//         stock: Number(form.stock),
+//         unit: form.unit,
+//         reorderLevel: Number(form.reorderLevel || 0),
+//         minStock: Number(form.reorderLevel || 0),
+//         leadTime: form.leadTime || "",
+//         warranty: form.warranty || "",
+//         supplier: form.supplier || "",
+//         location: form.warehouseLocation || "Main Warehouse",
+//         warehouseLocation: form.warehouseLocation || "Main Warehouse",
+//         images,
+//         imageUrl: primary,
+//         image: primary,
+//         status: form.status as
+//           | "In Stock"
+//           | "Low Stock"
+//           | "Out of Stock"
+//           | "Inactive",
+//       });
+
+//       setCreatedProductName(form.productName.trim());
+//       setSuccessOpen(true);
+//     } catch (err) {
+//       console.error("Create product failed:", err);
+//       setSaveError("Failed to create product. Please try again.");
+//     } finally {
+//       setSaving(false);
+//     }
+//   };
+
+//   const handleCancel = () => router.push("/furniture/products");
+
+//   const fieldClass = (hasError?: boolean) =>
+//     `h-11 w-full rounded-lg border px-3.5 text-sm outline-none transition focus:border-[#176b5b] focus:ring-2 focus:ring-[#176b5b]/10 ${
+//       hasError ? "border-red-400" : "border-[#d9d7cf]"
+//     }`;
+
+//   return (
+//     <div className="min-h-screen bg-[#f7f7f4] text-[#252525]">
+//       <div className="border-b border-[#e4e2da] bg-white">
+//         <div className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-5 lg:px-8">
+//           <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
+//             <div className="min-w-0">
+//               <div className="mb-1 flex items-center gap-2 text-xs text-gray-500 sm:mb-2 sm:text-sm">
+//                 <button
+//                   type="button"
+//                   onClick={() => router.back()}
+//                   className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#e4e2da] bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 active:scale-95"
+//                   aria-label="Go back"
+//                   title="Go back"
+//                 >
+//                   <svg
+//                     xmlns="http://www.w3.org/2000/svg"
+//                     viewBox="0 0 20 20"
+//                     fill="currentColor"
+//                     className="h-4 w-4"
+//                   >
+//                     <path
+//                       fillRule="evenodd"
+//                       d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+//                       clipRule="evenodd"
+//                     />
+//                   </svg>
+//                 </button>
+//                 <button
+//                   type="button"
+//                   onClick={() => router.push("/furniture/products")}
+//                   className="font-semibold text-[#9a5b18] hover:underline"
+//                 >
+//                   Products
+//                 </button>
+//                 <span>/</span>
+//                 <span className="text-gray-700">New Product</span>
+//               </div>
+//               <h1 className="text-xl font-bold text-[#222] sm:text-2xl">
+//                 Add New Product
+//               </h1>
+//               <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+//                 Create a new furniture product in your inventory.
+//               </p>
+//             </div>
+
+//             <div className="flex gap-2 sm:gap-3">
+//               <button
+//                 type="button"
+//                 onClick={handleCancel}
+//                 className="min-h-[44px] flex-1 rounded-lg border border-[#d9d7cf] bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:flex-none sm:px-5"
+//               >
+//                 Cancel
+//               </button>
+//               <button
+//                 type="button"
+//                 onClick={handleSave}
+//                 disabled={saving || uploadingImage}
+//                 className="min-h-[44px] flex-1 rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#125548] disabled:opacity-60 sm:flex-none sm:px-5"
+//               >
+//                 {uploadingImage
+//                   ? "Uploading…"
+//                   : saving
+//                     ? "Saving…"
+//                     : "Save Product"}
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+
+//       <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+//         {saveError && (
+//           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+//             {saveError}
+//           </div>
+//         )}
+
+//         <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-[1fr_320px]">
+//           <div className="space-y-4 sm:space-y-6">
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">
+//                   Basic Information
+//                 </h2>
+//                 <p className="mt-0.5 text-xs text-gray-500">
+//                   Product name, code, category and description.
+//                 </p>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:gap-5 sm:p-5 md:grid-cols-2">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Product Name <span className="text-red-500">*</span>
+//                   </label>
+//                   <input
+//                     value={form.productName}
+//                     onChange={(e) => updateField("productName", e.target.value)}
+//                     placeholder="e.g. Modern L-Shape Sofa"
+//                     className={fieldClass(!!errors.productName)}
+//                   />
+//                   {errors.productName && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.productName}
+//                     </p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Product Code <span className="text-red-500">*</span>
+//                   </label>
+//                   <input
+//                     value={form.productCode}
+//                     onChange={(e) =>
+//                       updateField("productCode", e.target.value.toUpperCase())
+//                     }
+//                     placeholder="e.g. SOFA-001"
+//                     className={`${fieldClass(!!errors.productCode)} uppercase`}
+//                   />
+//                   {errors.productCode && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.productCode}
+//                     </p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Category <span className="text-red-500">*</span>
+//                   </label>
+//                   <select
+//                     value={form.category}
+//                     onChange={(e) => updateField("category", e.target.value)}
+//                     disabled={optionsLoading}
+//                     className={`${fieldClass(!!errors.category)} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {optionsLoading ? "Loading…" : "Select category"}
+//                     </option>
+//                     {categories.map((c) => (
+//                       <option key={c.id} value={c.name}>
+//                         {c.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                   {errors.category && (
+//                     <p className="mt-1 text-xs text-red-500">{errors.category}</p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Subcategory
+//                   </label>
+//                   <select
+//                     value={form.subcategory}
+//                     onChange={(e) => updateField("subcategory", e.target.value)}
+//                     disabled={!form.category || optionsLoading}
+//                     className={`${fieldClass()} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {!form.category
+//                         ? "Select category first"
+//                         : filteredSubCategories.length === 0
+//                           ? "No sub categories"
+//                           : "Select subcategory"}
+//                     </option>
+//                     {filteredSubCategories.map((s) => (
+//                       <option key={s.id} value={s.name}>
+//                         {s.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Material <span className="text-red-500">*</span>
+//                   </label>
+//                   <select
+//                     value={form.material}
+//                     onChange={(e) => updateField("material", e.target.value)}
+//                     disabled={optionsLoading}
+//                     className={`${fieldClass(!!errors.material)} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {optionsLoading ? "Loading…" : "Select material"}
+//                     </option>
+//                     {materials.map((m) => (
+//                       <option key={m.id} value={m.name}>
+//                         {m.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                   {errors.material && (
+//                     <p className="mt-1 text-xs text-red-500">{errors.material}</p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Finish
+//                   </label>
+//                   <select
+//                     value={form.finish}
+//                     onChange={(e) => updateField("finish", e.target.value)}
+//                     disabled={optionsLoading}
+//                     className={`${fieldClass()} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {optionsLoading ? "Loading…" : "Select finish"}
+//                     </option>
+//                     {finishes.map((f) => (
+//                       <option key={f.id} value={f.name}>
+//                         {f.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Primary colour label
+//                   </label>
+//                   <input
+//                     value={form.color}
+//                     onChange={(e) => updateField("color", e.target.value)}
+//                     placeholder="e.g. Light Grey (optional text)"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Dimensions
+//                   </label>
+//                   <input
+//                     value={form.dimensions}
+//                     onChange={(e) => updateField("dimensions", e.target.value)}
+//                     placeholder="e.g. 280 × 180 × 85 cm"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+
+//                 {/* Colours from shared palette */}
+//                 <div className="md:col-span-2">
+//                   <label className="mb-2 block text-sm font-medium text-gray-700">
+//                     Available colours
+//                     <span className="ml-1 font-normal text-gray-400">
+//                       (common palette — select all that apply)
+//                     </span>
+//                   </label>
+//                   <div className="flex flex-wrap gap-2">
+//                     {FURNITURE_COLOR_OPTIONS.map((c) => {
+//                       const on = selectedColors.includes(c.hex);
+//                       return (
+//                         <button
+//                           key={c.hex}
+//                           type="button"
+//                           onClick={() => toggleColor(c.hex)}
+//                           title={c.name}
+//                           className={`flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
+//                             on
+//                               ? "border-[#176b5b] bg-[#eef7f4] text-[#176b5b]"
+//                               : "border-[#d9d7cf] bg-white text-gray-600"
+//                           }`}
+//                         >
+//                           <span
+//                             className="h-5 w-5 rounded-full border border-black/10 shadow-sm"
+//                             style={{ backgroundColor: c.hex }}
+//                           />
+//                           {c.name}
+//                         </button>
+//                       );
+//                     })}
+//                   </div>
+//                 </div>
+
+//                 {/* Sizes / seaters */}
+//                 <div className="md:col-span-2">
+//                   <label className="mb-2 block text-sm font-medium text-gray-700">
+//                     Sizes / seaters
+//                     <span className="ml-1 font-normal text-gray-400">
+//                       (optional — sofas, beds, etc.)
+//                     </span>
+//                   </label>
+//                   <div className="flex flex-wrap gap-2">
+//                     {FURNITURE_SIZE_OPTIONS.map((s) => {
+//                       const on = selectedSizes.includes(s);
+//                       return (
+//                         <button
+//                           key={s}
+//                           type="button"
+//                           onClick={() => toggleSize(s)}
+//                           className={`rounded-full border px-3.5 py-2 text-xs font-semibold transition ${
+//                             on
+//                               ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+//                               : "border-[#d9d7cf] bg-white text-gray-700 hover:border-gray-400"
+//                           }`}
+//                         >
+//                           {s}
+//                         </button>
+//                       );
+//                     })}
+//                   </div>
+//                 </div>
+
+//                 <div className="md:col-span-2">
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Description
+//                   </label>
+//                   <textarea
+//                     rows={4}
+//                     value={form.description}
+//                     onChange={(e) => updateField("description", e.target.value)}
+//                     placeholder="Enter product description..."
+//                     className="w-full resize-none rounded-lg border border-[#d9d7cf] px-3.5 py-2.5 text-sm outline-none focus:border-[#176b5b] focus:ring-2 focus:ring-[#176b5b]/10"
+//                   />
+//                 </div>
+//               </div>
+//             </section>
+
+//             {/* Pricing */}
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">Pricing</h2>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-5 sm:p-5">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Selling Price <span className="text-red-500">*</span>
+//                   </label>
+//                   <div className="relative">
+//                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+//                       ₹
+//                     </span>
+//                     <input
+//                       type="number"
+//                       min="0"
+//                       value={form.sellingPrice}
+//                       onChange={(e) =>
+//                         updateField("sellingPrice", e.target.value)
+//                       }
+//                       className={`${fieldClass(!!errors.sellingPrice)} pl-8`}
+//                     />
+//                   </div>
+//                   {errors.sellingPrice && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.sellingPrice}
+//                     </p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Cost Price <span className="text-red-500">*</span>
+//                   </label>
+//                   <div className="relative">
+//                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+//                       ₹
+//                     </span>
+//                     <input
+//                       type="number"
+//                       min="0"
+//                       value={form.costPrice}
+//                       onChange={(e) => updateField("costPrice", e.target.value)}
+//                       className={`${fieldClass(!!errors.costPrice)} pl-8`}
+//                     />
+//                   </div>
+//                   {errors.costPrice && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.costPrice}
+//                     </p>
+//                   )}
+//                 </div>
+//               </div>
+//               <div className="grid grid-cols-2 gap-3 border-t border-[#e4e2da] bg-[#fafaf8] p-4 sm:gap-4 sm:p-5">
+//                 <div className="rounded-lg border border-[#e4e2da] bg-white p-3 sm:p-4">
+//                   <p className="text-xs text-gray-500">Est. Profit</p>
+//                   <p className="mt-1 text-lg font-bold text-[#176b5b] sm:text-xl">
+//                     ₹{calculateProfit().toLocaleString("en-IN")}
+//                   </p>
+//                 </div>
+//                 <div className="rounded-lg border border-[#e4e2da] bg-white p-3 sm:p-4">
+//                   <p className="text-xs text-gray-500">Est. Margin</p>
+//                   <p className="mt-1 text-lg font-bold text-[#176b5b] sm:text-xl">
+//                     {calculateMargin().toFixed(1)}%
+//                   </p>
+//                 </div>
+//               </div>
+//             </section>
+
+//             {/* Inventory */}
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">Inventory</h2>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-5 sm:p-5 md:grid-cols-3">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Opening Stock <span className="text-red-500">*</span>
+//                   </label>
+//                   <input
+//                     type="number"
+//                     min="0"
+//                     value={form.stock}
+//                     onChange={(e) => updateField("stock", e.target.value)}
+//                     className={fieldClass(!!errors.stock)}
+//                   />
+//                   {errors.stock && (
+//                     <p className="mt-1 text-xs text-red-500">{errors.stock}</p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Unit
+//                   </label>
+//                   <select
+//                     value={form.unit}
+//                     onChange={(e) => updateField("unit", e.target.value)}
+//                     className={`${fieldClass()} bg-white`}
+//                   >
+//                     {units.map((u) => (
+//                       <option key={u} value={u}>
+//                         {u}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Reorder Level
+//                   </label>
+//                   <input
+//                     type="number"
+//                     min="0"
+//                     value={form.reorderLevel}
+//                     onChange={(e) =>
+//                       updateField("reorderLevel", e.target.value)
+//                     }
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Warehouse
+//                   </label>
+//                   <input
+//                     value={form.warehouseLocation}
+//                     onChange={(e) =>
+//                       updateField("warehouseLocation", e.target.value)
+//                     }
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Status
+//                   </label>
+//                   <select
+//                     value={form.status}
+//                     onChange={(e) => updateField("status", e.target.value)}
+//                     className={`${fieldClass()} bg-white`}
+//                   >
+//                     <option value="In Stock">In Stock</option>
+//                     <option value="Low Stock">Low Stock</option>
+//                     <option value="Out of Stock">Out of Stock</option>
+//                     <option value="Inactive">Inactive</option>
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Lead Time
+//                   </label>
+//                   <input
+//                     value={form.leadTime}
+//                     onChange={(e) => updateField("leadTime", e.target.value)}
+//                     placeholder="e.g. 7–10 Days"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//               </div>
+//             </section>
+
+//             {/* Supplier */}
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">
+//                   Supplier & Warranty
+//                 </h2>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-5 sm:p-5">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Supplier
+//                   </label>
+//                   <select
+//                     value={form.supplier}
+//                     onChange={(e) => updateField("supplier", e.target.value)}
+//                     className={`${fieldClass()} bg-white`}
+//                   >
+//                     <option value="">Select supplier</option>
+//                     {suppliers.map((s) => (
+//                       <option key={s} value={s}>
+//                         {s}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Warranty
+//                   </label>
+//                   <input
+//                     value={form.warranty}
+//                     onChange={(e) => updateField("warranty", e.target.value)}
+//                     placeholder="e.g. 2 Years"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//               </div>
+//             </section>
+//           </div>
+
+//           {/* Sidebar images + preview — same as your previous version */}
+//           <div className="space-y-4 sm:space-y-6">
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">
+//                   Product images
+//                 </h2>
+//                 <p className="mt-0.5 text-xs text-gray-500">
+//                   Up to {MAX_IMAGES} views. First image is the cover.
+//                 </p>
+//               </div>
+//               <div className="p-4 sm:p-5">
+//                 {imagePreviews.length > 0 ? (
+//                   <div className="mb-3 grid grid-cols-3 gap-2">
+//                     {imagePreviews.map((src, i) => (
+//                       <div
+//                         key={`${i}-${src.slice(0, 24)}`}
+//                         className="relative aspect-square overflow-hidden rounded-lg border border-[#e4e2da] bg-[#fafaf8]"
+//                       >
+//                         {/* eslint-disable-next-line @next/next/no-img-element */}
+//                         <img
+//                           src={src}
+//                           alt={`Preview ${i + 1}`}
+//                           className="h-full w-full object-cover"
+//                         />
+//                         {i === 0 && (
+//                           <span className="absolute left-1 top-1 rounded bg-[#176b5b] px-1.5 py-0.5 text-[9px] font-bold text-white">
+//                             Cover
+//                           </span>
+//                         )}
+//                         <button
+//                           type="button"
+//                           onClick={() => removeImageAt(i)}
+//                           className="absolute right-1 top-1 rounded bg-black/60 px-1.5 text-[10px] text-white"
+//                         >
+//                           ✕
+//                         </button>
+//                       </div>
+//                     ))}
+//                   </div>
+//                 ) : (
+//                   <div className="mb-3 flex aspect-[4/3] items-center justify-center rounded-xl border border-dashed border-[#cfcdbf] bg-[#fafaf8]">
+//                     <div className="px-4 text-center">
+//                       <p className="text-sm font-medium text-gray-700">
+//                         No images yet
+//                       </p>
+//                     </div>
+//                   </div>
+//                 )}
+
+//                 <input
+//                   ref={fileInputRef}
+//                   type="file"
+//                   accept="image/*"
+//                   multiple
+//                   onChange={handleFileChange}
+//                   className="hidden"
+//                   id="product-images-upload"
+//                 />
+//                 <label
+//                   htmlFor="product-images-upload"
+//                   className="flex min-h-[44px] w-full cursor-pointer items-center justify-center rounded-lg border border-[#176b5b] bg-[#eef7f4] px-4 text-sm font-semibold text-[#176b5b]"
+//                 >
+//                   {imageFiles.length ? "Add more images" : "Upload images"}
+//                 </label>
+
+//                 <div className="relative my-4">
+//                   <div className="absolute inset-0 flex items-center">
+//                     <div className="w-full border-t border-[#e4e2da]" />
+//                   </div>
+//                   <div className="relative flex justify-center text-xs">
+//                     <span className="bg-white px-2 text-gray-400">
+//                       OR paste URLs (one per line)
+//                     </span>
+//                   </div>
+//                 </div>
+//                 <textarea
+//                   rows={3}
+//                   value={imageUrlInput}
+//                   onChange={(e) => setImageUrlInput(e.target.value)}
+//                   placeholder={"https://.../front.jpg\nhttps://.../side.jpg"}
+//                   className="w-full rounded-lg border border-[#d9d7cf] px-3 py-2 text-sm outline-none focus:border-[#176b5b]"
+//                 />
+//               </div>
+//             </section>
+
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">Preview</h2>
+//               </div>
+//               <div className="p-4 sm:p-5">
+//                 <h3 className="text-base font-bold text-[#222] sm:text-lg">
+//                   {form.productName || "Product Name"}
+//                 </h3>
+//                 <p className="mt-1 text-sm text-gray-500">
+//                   {form.category || "Category"}
+//                   {form.subcategory ? ` · ${form.subcategory}` : ""}
+//                 </p>
+//                 {selectedColors.length > 0 && (
+//                   <div className="mt-3 flex flex-wrap gap-1.5">
+//                     {selectedColors.map((hex) => (
+//                       <span
+//                         key={hex}
+//                         className="h-5 w-5 rounded-full border border-black/10"
+//                         style={{ backgroundColor: hex }}
+//                       />
+//                     ))}
+//                   </div>
+//                 )}
+//                 {selectedSizes.length > 0 && (
+//                   <p className="mt-2 text-xs text-gray-500">
+//                     {selectedSizes.join(" · ")}
+//                   </p>
+//                 )}
+//                 <div className="mt-4 rounded-lg bg-[#f7f7f4] p-3 sm:p-4">
+//                   <p className="text-xs text-gray-500">Selling Price</p>
+//                   <p className="mt-1 text-xl font-bold text-[#176b5b] sm:text-2xl">
+//                     ₹{Number(form.sellingPrice || 0).toLocaleString("en-IN")}
+//                   </p>
+//                 </div>
+//               </div>
+//             </section>
+//           </div>
+//         </div>
+
+//         <div className="mt-4 flex flex-col-reverse gap-2 rounded-xl border border-[#e4e2da] bg-white p-3 sm:mt-6 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:p-4">
+//           <button
+//             type="button"
+//             onClick={handleCancel}
+//             className="min-h-[44px] rounded-lg border border-[#d9d7cf] px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+//           >
+//             Cancel
+//           </button>
+//           <button
+//             type="button"
+//             onClick={handleSave}
+//             disabled={saving || uploadingImage}
+//             className="min-h-[44px] rounded-lg bg-[#176b5b] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#125548] disabled:opacity-60"
+//           >
+//             {uploadingImage
+//               ? "Uploading images..."
+//               : saving
+//                 ? "Saving..."
+//                 : "Create Product"}
+//           </button>
+//         </div>
+//       </main>
+
+//       {successOpen && (
+//         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+//           <button
+//             type="button"
+//             className="absolute inset-0 bg-black/40"
+//             onClick={() => setSuccessOpen(false)}
+//             aria-label="Close"
+//           />
+//           <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+//             <div className="bg-[#eef7f4] px-5 pb-5 pt-7 text-center sm:px-6 sm:pb-6 sm:pt-8">
+//               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#176b5b] text-2xl text-white">
+//                 ✓
+//               </div>
+//               <h2 className="mt-3 text-lg font-bold text-[#222]">
+//                 Product created
+//               </h2>
+//               <p className="mt-2 text-sm text-gray-600">
+//                 <span className="font-semibold text-[#176b5b]">
+//                   {createdProductName}
+//                 </span>{" "}
+//                 is in inventory and the catalog.
+//               </p>
+//             </div>
+//             <div className="flex flex-col gap-2 p-4 sm:flex-row sm:justify-end sm:p-5">
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setSuccessOpen(false);
+//                   resetForm();
+//                 }}
+//                 className="min-h-[44px] rounded-lg border border-[#d9d7cf] px-4 py-2.5 text-sm font-medium text-gray-700"
+//               >
+//                 Add another
+//               </button>
+//               <button
+//                 type="button"
+//                 onClick={() => router.push("/furniture/products")}
+//                 className="min-h-[44px] rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white"
+//               >
+//                 View products
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+
+// "use client";
+
+// import { useState, useRef, useEffect, useMemo } from "react";
+// import { useRouter } from "next/navigation";
+// import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+// import { storage } from "@/core/config/firebaseClient";
+// import { createProduct } from "@/modules/furniture/services/productService";
+// import {
+//   getAllCategories,
+//   type FurnitureCategory,
+// } from "@/modules/furniture/services/categoryService";
+// import {
+//   getAllSubCategories,
+//   type FurnitureSubCategory,
+// } from "@/modules/furniture/services/subCategoryService";
+// import {
+//   getAllMaterials,
+//   type FurnitureMaterial,
+// } from "@/modules/furniture/services/materialService";
+// import {
+//   getAllFinishes,
+//   type FurnitureFinish,
+// } from "@/modules/furniture/services/finishService";
+// import {
+//   FURNITURE_COLOR_OPTIONS,
+//   FURNITURE_SIZE_OPTIONS,
+// } from "@/lib/productOptions";
+
+// const units = ["Nos", "Set", "Sq.Ft", "Meter", "Piece"];
+
+// const suppliers = [
+//   "Akrish Furniture Suppliers",
+//   "Local Supplier",
+//   "ABC Furniture Supplier",
+//   "Direct Manufacturer",
+// ];
+
+// const MAX_IMAGES = 8;
+
+// /** Extract Google Drive file id from common share / open / uc URLs */
+// function extractGoogleDriveFileId(url: string): string | null {
+//   const patterns = [
+//     /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,
+//     /drive\.google\.com\/open\?[^#]*[?&]id=([a-zA-Z0-9_-]+)/,
+//     /drive\.google\.com\/uc\?[^#]*[?&]id=([a-zA-Z0-9_-]+)/,
+//     /docs\.google\.com\/uc\?[^#]*[?&]id=([a-zA-Z0-9_-]+)/,
+//     /drive\.google\.com\/thumbnail\?[^#]*[?&]id=([a-zA-Z0-9_-]+)/,
+//   ];
+
+//   for (const re of patterns) {
+//     const m = url.match(re);
+//     if (m?.[1]) return m[1];
+//   }
+//   return null;
+// }
+
+// /**
+//  * Accepts:
+//  * - Public image URLs (https://…/photo.jpg)
+//  * - Google Drive share links → direct view URL
+//  * Leaves already-normalized Drive uc links as-is.
+//  */
+// function normalizeImageUrl(raw: string): string {
+//   const url = raw.trim();
+//   if (!url) return "";
+
+//   // Already a direct Drive media URL
+//   if (
+//     /drive\.google\.com\/uc\?/.test(url) &&
+//     /[?&]id=/.test(url) &&
+//     /export=view|export=download/.test(url)
+//   ) {
+//     const id = extractGoogleDriveFileId(url);
+//     if (id) return `https://drive.google.com/uc?export=view&id=${id}`;
+//     return url;
+//   }
+
+//   const driveId = extractGoogleDriveFileId(url);
+//   if (driveId) {
+//     // Works for files shared as “Anyone with the link”
+//     return `https://drive.google.com/uc?export=view&id=${driveId}`;
+//   }
+
+//   // Plain public image URL
+//   return url;
+// }
+
+// function parseImageUrlLines(text: string): string[] {
+//   const seen = new Set<string>();
+//   const out: string[] = [];
+
+//   for (const line of text.split(/\r?\n/)) {
+//     const normalized = normalizeImageUrl(line);
+//     if (!normalized) continue;
+//     if (seen.has(normalized)) continue;
+//     seen.add(normalized);
+//     out.push(normalized);
+//   }
+
+//   return out;
+// }
+
+// export default function NewProductPage() {
+//   const router = useRouter();
+//   const fileInputRef = useRef<HTMLInputElement>(null);
+
+//   const [categories, setCategories] = useState<FurnitureCategory[]>([]);
+//   const [subCategories, setSubCategories] = useState<FurnitureSubCategory[]>(
+//     []
+//   );
+//   const [materials, setMaterials] = useState<FurnitureMaterial[]>([]);
+//   const [finishes, setFinishes] = useState<FurnitureFinish[]>([]);
+//   const [optionsLoading, setOptionsLoading] = useState(true);
+
+//   const [form, setForm] = useState({
+//     productName: "",
+//     productCode: "",
+//     category: "",
+//     subcategory: "",
+//     material: "",
+//     finish: "",
+//     color: "",
+//     dimensions: "",
+//     description: "",
+//     sellingPrice: "",
+//     costPrice: "",
+//     stock: "",
+//     unit: "Nos",
+//     reorderLevel: "",
+//     leadTime: "",
+//     warranty: "",
+//     supplier: "",
+//     warehouseLocation: "Main Warehouse",
+//     status: "In Stock",
+//   });
+
+//   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+//   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+
+//   const [imageFiles, setImageFiles] = useState<File[]>([]);
+//   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+//   const [imageUrlInput, setImageUrlInput] = useState("");
+//   const [uploadingImage, setUploadingImage] = useState(false);
+//   const [errors, setErrors] = useState<Record<string, string>>({});
+//   const [saving, setSaving] = useState(false);
+//   const [successOpen, setSuccessOpen] = useState(false);
+//   const [createdProductName, setCreatedProductName] = useState("");
+//   const [saveError, setSaveError] = useState("");
+
+//   const urlPreviews = useMemo(
+//     () => parseImageUrlLines(imageUrlInput).slice(0, MAX_IMAGES),
+//     [imageUrlInput]
+//   );
+
+//   useEffect(() => {
+//     let cancelled = false;
+
+//     async function loadOptions() {
+//       setOptionsLoading(true);
+//       try {
+//         const [cats, subs, mats, fins] = await Promise.all([
+//           getAllCategories(),
+//           getAllSubCategories(),
+//           getAllMaterials(),
+//           getAllFinishes(),
+//         ]);
+//         if (cancelled) return;
+
+//         setCategories(cats.filter((c) => (c.status || "Active") === "Active"));
+//         setSubCategories(
+//           subs.filter((s) => (s.status || "Active") === "Active")
+//         );
+//         setMaterials(mats.filter((m) => (m.status || "Active") === "Active"));
+//         setFinishes(fins.filter((f) => (f.status || "Active") === "Active"));
+//       } catch (err) {
+//         console.error("Failed to load product options:", err);
+//       } finally {
+//         if (!cancelled) setOptionsLoading(false);
+//       }
+//     }
+
+//     loadOptions();
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, []);
+
+//   const filteredSubCategories = useMemo(() => {
+//     if (!form.category) return [];
+//     const parent = categories.find((c) => c.name === form.category);
+//     if (!parent) {
+//       return subCategories.filter((s) => s.categoryName === form.category);
+//     }
+//     return subCategories.filter((s) => s.categoryId === parent.id);
+//   }, [form.category, categories, subCategories]);
+
+//   const updateField = (field: string, value: string) => {
+//     setForm((prev) => {
+//       const next = { ...prev, [field]: value };
+//       if (field === "category") next.subcategory = "";
+//       return next;
+//     });
+//     if (errors[field]) {
+//       setErrors((prev) => ({ ...prev, [field]: "" }));
+//     }
+//   };
+
+//   const toggleColor = (hex: string) => {
+//     setSelectedColors((prev) =>
+//       prev.includes(hex) ? prev.filter((c) => c !== hex) : [...prev, hex]
+//     );
+//   };
+
+//   const toggleSize = (size: string) => {
+//     setSelectedSizes((prev) =>
+//       prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
+//     );
+//   };
+
+//   const calculateProfit = () => {
+//     const selling = Number(form.sellingPrice) || 0;
+//     const cost = Number(form.costPrice) || 0;
+//     return selling - cost;
+//   };
+
+//   const calculateMargin = () => {
+//     const selling = Number(form.sellingPrice) || 0;
+//     const cost = Number(form.costPrice) || 0;
+//     if (!selling) return 0;
+//     return ((selling - cost) / selling) * 100;
+//   };
+
+//   const validateForm = () => {
+//     const newErrors: Record<string, string> = {};
+//     if (!form.productName.trim())
+//       newErrors.productName = "Product name is required";
+//     if (!form.productCode.trim())
+//       newErrors.productCode = "Product code is required";
+//     if (!form.category) newErrors.category = "Please select a category";
+//     if (!form.material) newErrors.material = "Please select material";
+//     if (!form.sellingPrice)
+//       newErrors.sellingPrice = "Selling price is required";
+//     if (!form.costPrice) newErrors.costPrice = "Cost price is required";
+//     if (!form.stock) newErrors.stock = "Opening stock is required";
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
+
+//   const rebuildPreviews = (files: File[]) => {
+//     Promise.all(
+//       files.map(
+//         (f) =>
+//           new Promise<string>((resolve) => {
+//             const reader = new FileReader();
+//             reader.onload = () => resolve(reader.result as string);
+//             reader.readAsDataURL(f);
+//           })
+//       )
+//     ).then(setImagePreviews);
+//   };
+
+//   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     const picked = Array.from(e.target.files || []);
+//     if (!picked.length) return;
+
+//     const valid: File[] = [];
+//     for (const file of picked) {
+//       if (!file.type.startsWith("image/")) {
+//         setSaveError("Only image files are allowed (JPG, PNG, WebP).");
+//         continue;
+//       }
+//       if (file.size > 5 * 1024 * 1024) {
+//         setSaveError("Each image must be under 5 MB.");
+//         continue;
+//       }
+//       valid.push(file);
+//     }
+
+//     if (!valid.length) {
+//       if (fileInputRef.current) fileInputRef.current.value = "";
+//       return;
+//     }
+
+//     setSaveError("");
+//     setImageFiles((prev) => {
+//       const next = [...prev, ...valid].slice(0, MAX_IMAGES);
+//       rebuildPreviews(next);
+//       return next;
+//     });
+
+//     if (fileInputRef.current) fileInputRef.current.value = "";
+//   };
+
+//   const removeImageAt = (index: number) => {
+//     setImageFiles((prev) => {
+//       const next = prev.filter((_, i) => i !== index);
+//       rebuildPreviews(next);
+//       return next;
+//     });
+//   };
+
+//   const uploadImages = async (): Promise<string[]> => {
+//     // 1) Normalize pasted URLs (Drive share → direct view URL)
+//     const urls = parseImageUrlLines(imageUrlInput);
+
+//     if (!imageFiles.length) {
+//       return urls.slice(0, MAX_IMAGES);
+//     }
+
+//     setUploadingImage(true);
+//     try {
+//       for (const file of imageFiles) {
+//         const timestamp = Date.now();
+//         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
+//         const storageRef = ref(
+//           storage,
+//           `furniture/products/${timestamp}_${Math.random()
+//             .toString(36)
+//             .slice(2, 8)}_${safeName}`
+//         );
+//         await uploadBytes(storageRef, file);
+//         urls.push(await getDownloadURL(storageRef));
+//       }
+//       return Array.from(new Set(urls)).slice(0, MAX_IMAGES);
+//     } catch (err) {
+//       console.error("Image upload failed:", err);
+//       setSaveError("Failed to upload one or more images. Please try again.");
+//       return [];
+//     } finally {
+//       setUploadingImage(false);
+//     }
+//   };
+
+//   const resetForm = () => {
+//     setForm({
+//       productName: "",
+//       productCode: "",
+//       category: "",
+//       subcategory: "",
+//       material: "",
+//       finish: "",
+//       color: "",
+//       dimensions: "",
+//       description: "",
+//       sellingPrice: "",
+//       costPrice: "",
+//       stock: "",
+//       unit: "Nos",
+//       reorderLevel: "",
+//       leadTime: "",
+//       warranty: "",
+//       supplier: "",
+//       warehouseLocation: "Main Warehouse",
+//       status: "In Stock",
+//     });
+//     setSelectedColors([]);
+//     setSelectedSizes([]);
+//     setImageFiles([]);
+//     setImagePreviews([]);
+//     setImageUrlInput("");
+//     setErrors({});
+//     setSaveError("");
+//     if (fileInputRef.current) fileInputRef.current.value = "";
+//   };
+
+//   const handleSave = async () => {
+//     setSaveError("");
+
+//     if (!validateForm()) {
+//       window.scrollTo({ top: 0, behavior: "smooth" });
+//       return;
+//     }
+
+//     setSaving(true);
+
+//     try {
+//       const images = await uploadImages();
+
+//       if (imageFiles.length > 0 && images.length === 0) {
+//         setSaving(false);
+//         return;
+//       }
+
+//       const primary = images[0] || "";
+
+//       await createProduct({
+//         name: form.productName.trim(),
+//         sku: form.productCode.trim().toUpperCase(),
+//         code: form.productCode.trim().toUpperCase(),
+//         category: form.category,
+//         subcategory: form.subcategory || "",
+//         material: form.material,
+//         finish: form.finish || "",
+//         color: form.color || selectedColors[0] || "",
+//         colors: selectedColors,
+//         sizes: selectedSizes,
+//         dimensions: form.dimensions || "",
+//         description: form.description || "",
+//         sellingPrice: Number(form.sellingPrice),
+//         price: Number(form.sellingPrice),
+//         costPrice: Number(form.costPrice),
+//         stock: Number(form.stock),
+//         unit: form.unit,
+//         reorderLevel: Number(form.reorderLevel || 0),
+//         minStock: Number(form.reorderLevel || 0),
+//         leadTime: form.leadTime || "",
+//         warranty: form.warranty || "",
+//         supplier: form.supplier || "",
+//         location: form.warehouseLocation || "Main Warehouse",
+//         warehouseLocation: form.warehouseLocation || "Main Warehouse",
+//         images,
+//         imageUrl: primary,
+//         image: primary,
+//         status: form.status as
+//           | "In Stock"
+//           | "Low Stock"
+//           | "Out of Stock"
+//           | "Inactive",
+//       });
+
+//       setCreatedProductName(form.productName.trim());
+//       setSuccessOpen(true);
+//     } catch (err) {
+//       console.error("Create product failed:", err);
+//       setSaveError("Failed to create product. Please try again.");
+//     } finally {
+//       setSaving(false);
+//     }
+//   };
+
+//   const handleCancel = () => router.push("/furniture/products");
+
+//   const fieldClass = (hasError?: boolean) =>
+//     `h-11 w-full rounded-lg border px-3.5 text-sm outline-none transition focus:border-[#176b5b] focus:ring-2 focus:ring-[#176b5b]/10 ${
+//       hasError ? "border-red-400" : "border-[#d9d7cf]"
+//     }`;
+
+//   const displayPreviews =
+//     imagePreviews.length > 0 ? imagePreviews : urlPreviews;
+
+//   return (
+//     <div className="min-h-screen bg-[#f7f7f4] text-[#252525]">
+//       <div className="border-b border-[#e4e2da] bg-white">
+//         <div className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-5 lg:px-8">
+//           <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
+//             <div className="min-w-0">
+//               <div className="mb-1 flex items-center gap-2 text-xs text-gray-500 sm:mb-2 sm:text-sm">
+//                 <button
+//                   type="button"
+//                   onClick={() => router.back()}
+//                   className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#e4e2da] bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 active:scale-95"
+//                   aria-label="Go back"
+//                   title="Go back"
+//                 >
+//                   <svg
+//                     xmlns="http://www.w3.org/2000/svg"
+//                     viewBox="0 0 20 20"
+//                     fill="currentColor"
+//                     className="h-4 w-4"
+//                   >
+//                     <path
+//                       fillRule="evenodd"
+//                       d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+//                       clipRule="evenodd"
+//                     />
+//                   </svg>
+//                 </button>
+//                 <button
+//                   type="button"
+//                   onClick={() => router.push("/furniture/products")}
+//                   className="font-semibold text-[#9a5b18] hover:underline"
+//                 >
+//                   Products
+//                 </button>
+//                 <span>/</span>
+//                 <span className="text-gray-700">New Product</span>
+//               </div>
+//               <h1 className="text-xl font-bold text-[#222] sm:text-2xl">
+//                 Add New Product
+//               </h1>
+//               <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+//                 Create a new furniture product in your inventory.
+//               </p>
+//             </div>
+
+//             <div className="flex gap-2 sm:gap-3">
+//               <button
+//                 type="button"
+//                 onClick={handleCancel}
+//                 className="min-h-[44px] flex-1 rounded-lg border border-[#d9d7cf] bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:flex-none sm:px-5"
+//               >
+//                 Cancel
+//               </button>
+//               <button
+//                 type="button"
+//                 onClick={handleSave}
+//                 disabled={saving || uploadingImage}
+//                 className="min-h-[44px] flex-1 rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#125548] disabled:opacity-60 sm:flex-none sm:px-5"
+//               >
+//                 {uploadingImage
+//                   ? "Uploading…"
+//                   : saving
+//                     ? "Saving…"
+//                     : "Save Product"}
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+
+//       <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+//         {saveError && (
+//           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+//             {saveError}
+//           </div>
+//         )}
+
+//         <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-[1fr_320px]">
+//           <div className="space-y-4 sm:space-y-6">
+//             {/* … Basic Information, Pricing, Inventory, Supplier sections unchanged … */}
+//             {/* Keep your existing sections for those — only image sidebar logic changed below */}
+
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">
+//                   Basic Information
+//                 </h2>
+//                 <p className="mt-0.5 text-xs text-gray-500">
+//                   Product name, code, category and description.
+//                 </p>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:gap-5 sm:p-5 md:grid-cols-2">
+//                 {/* Same fields as your original form — productName through description */}
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Product Name <span className="text-red-500">*</span>
+//                   </label>
+//                   <input
+//                     value={form.productName}
+//                     onChange={(e) => updateField("productName", e.target.value)}
+//                     placeholder="e.g. Modern L-Shape Sofa"
+//                     className={fieldClass(!!errors.productName)}
+//                   />
+//                   {errors.productName && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.productName}
+//                     </p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Product Code <span className="text-red-500">*</span>
+//                   </label>
+//                   <input
+//                     value={form.productCode}
+//                     onChange={(e) =>
+//                       updateField("productCode", e.target.value.toUpperCase())
+//                     }
+//                     placeholder="e.g. SOFA-001"
+//                     className={`${fieldClass(!!errors.productCode)} uppercase`}
+//                   />
+//                   {errors.productCode && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.productCode}
+//                     </p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Category <span className="text-red-500">*</span>
+//                   </label>
+//                   <select
+//                     value={form.category}
+//                     onChange={(e) => updateField("category", e.target.value)}
+//                     disabled={optionsLoading}
+//                     className={`${fieldClass(!!errors.category)} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {optionsLoading ? "Loading…" : "Select category"}
+//                     </option>
+//                     {categories.map((c) => (
+//                       <option key={c.id} value={c.name}>
+//                         {c.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                   {errors.category && (
+//                     <p className="mt-1 text-xs text-red-500">{errors.category}</p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Subcategory
+//                   </label>
+//                   <select
+//                     value={form.subcategory}
+//                     onChange={(e) => updateField("subcategory", e.target.value)}
+//                     disabled={!form.category || optionsLoading}
+//                     className={`${fieldClass()} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {!form.category
+//                         ? "Select category first"
+//                         : filteredSubCategories.length === 0
+//                           ? "No sub categories"
+//                           : "Select subcategory"}
+//                     </option>
+//                     {filteredSubCategories.map((s) => (
+//                       <option key={s.id} value={s.name}>
+//                         {s.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Material <span className="text-red-500">*</span>
+//                   </label>
+//                   <select
+//                     value={form.material}
+//                     onChange={(e) => updateField("material", e.target.value)}
+//                     disabled={optionsLoading}
+//                     className={`${fieldClass(!!errors.material)} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {optionsLoading ? "Loading…" : "Select material"}
+//                     </option>
+//                     {materials.map((m) => (
+//                       <option key={m.id} value={m.name}>
+//                         {m.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                   {errors.material && (
+//                     <p className="mt-1 text-xs text-red-500">{errors.material}</p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Finish
+//                   </label>
+//                   <select
+//                     value={form.finish}
+//                     onChange={(e) => updateField("finish", e.target.value)}
+//                     disabled={optionsLoading}
+//                     className={`${fieldClass()} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {optionsLoading ? "Loading…" : "Select finish"}
+//                     </option>
+//                     {finishes.map((f) => (
+//                       <option key={f.id} value={f.name}>
+//                         {f.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Primary colour label
+//                   </label>
+//                   <input
+//                     value={form.color}
+//                     onChange={(e) => updateField("color", e.target.value)}
+//                     placeholder="e.g. Light Grey (optional text)"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Dimensions
+//                   </label>
+//                   <input
+//                     value={form.dimensions}
+//                     onChange={(e) => updateField("dimensions", e.target.value)}
+//                     placeholder="e.g. 280 × 180 × 85 cm"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div className="md:col-span-2">
+//                   <label className="mb-2 block text-sm font-medium text-gray-700">
+//                     Available colours
+//                   </label>
+//                   <div className="flex flex-wrap gap-2">
+//                     {FURNITURE_COLOR_OPTIONS.map((c) => {
+//                       const on = selectedColors.includes(c.hex);
+//                       return (
+//                         <button
+//                           key={c.hex}
+//                           type="button"
+//                           onClick={() => toggleColor(c.hex)}
+//                           title={c.name}
+//                           className={`flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
+//                             on
+//                               ? "border-[#176b5b] bg-[#eef7f4] text-[#176b5b]"
+//                               : "border-[#d9d7cf] bg-white text-gray-600"
+//                           }`}
+//                         >
+//                           <span
+//                             className="h-5 w-5 rounded-full border border-black/10 shadow-sm"
+//                             style={{ backgroundColor: c.hex }}
+//                           />
+//                           {c.name}
+//                         </button>
+//                       );
+//                     })}
+//                   </div>
+//                 </div>
+//                 <div className="md:col-span-2">
+//                   <label className="mb-2 block text-sm font-medium text-gray-700">
+//                     Sizes / seaters
+//                   </label>
+//                   <div className="flex flex-wrap gap-2">
+//                     {FURNITURE_SIZE_OPTIONS.map((s) => {
+//                       const on = selectedSizes.includes(s);
+//                       return (
+//                         <button
+//                           key={s}
+//                           type="button"
+//                           onClick={() => toggleSize(s)}
+//                           className={`rounded-full border px-3.5 py-2 text-xs font-semibold transition ${
+//                             on
+//                               ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+//                               : "border-[#d9d7cf] bg-white text-gray-700 hover:border-gray-400"
+//                           }`}
+//                         >
+//                           {s}
+//                         </button>
+//                       );
+//                     })}
+//                   </div>
+//                 </div>
+//                 <div className="md:col-span-2">
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Description
+//                   </label>
+//                   <textarea
+//                     rows={4}
+//                     value={form.description}
+//                     onChange={(e) => updateField("description", e.target.value)}
+//                     placeholder="Enter product description..."
+//                     className="w-full resize-none rounded-lg border border-[#d9d7cf] px-3.5 py-2.5 text-sm outline-none focus:border-[#176b5b] focus:ring-2 focus:ring-[#176b5b]/10"
+//                   />
+//                 </div>
+//               </div>
+//             </section>
+
+//             {/* Pricing / Inventory / Supplier — same as your file */}
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">Pricing</h2>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-5 sm:p-5">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Selling Price <span className="text-red-500">*</span>
+//                   </label>
+//                   <div className="relative">
+//                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+//                       ₹
+//                     </span>
+//                     <input
+//                       type="number"
+//                       min="0"
+//                       value={form.sellingPrice}
+//                       onChange={(e) =>
+//                         updateField("sellingPrice", e.target.value)
+//                       }
+//                       className={`${fieldClass(!!errors.sellingPrice)} pl-8`}
+//                     />
+//                   </div>
+//                   {errors.sellingPrice && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.sellingPrice}
+//                     </p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Cost Price <span className="text-red-500">*</span>
+//                   </label>
+//                   <div className="relative">
+//                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+//                       ₹
+//                     </span>
+//                     <input
+//                       type="number"
+//                       min="0"
+//                       value={form.costPrice}
+//                       onChange={(e) => updateField("costPrice", e.target.value)}
+//                       className={`${fieldClass(!!errors.costPrice)} pl-8`}
+//                     />
+//                   </div>
+//                   {errors.costPrice && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.costPrice}
+//                     </p>
+//                   )}
+//                 </div>
+//               </div>
+//               <div className="grid grid-cols-2 gap-3 border-t border-[#e4e2da] bg-[#fafaf8] p-4 sm:gap-4 sm:p-5">
+//                 <div className="rounded-lg border border-[#e4e2da] bg-white p-3 sm:p-4">
+//                   <p className="text-xs text-gray-500">Est. Profit</p>
+//                   <p className="mt-1 text-lg font-bold text-[#176b5b] sm:text-xl">
+//                     ₹{calculateProfit().toLocaleString("en-IN")}
+//                   </p>
+//                 </div>
+//                 <div className="rounded-lg border border-[#e4e2da] bg-white p-3 sm:p-4">
+//                   <p className="text-xs text-gray-500">Est. Margin</p>
+//                   <p className="mt-1 text-lg font-bold text-[#176b5b] sm:text-xl">
+//                     {calculateMargin().toFixed(1)}%
+//                   </p>
+//                 </div>
+//               </div>
+//             </section>
+
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">Inventory</h2>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-5 sm:p-5 md:grid-cols-3">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Opening Stock <span className="text-red-500">*</span>
+//                   </label>
+//                   <input
+//                     type="number"
+//                     min="0"
+//                     value={form.stock}
+//                     onChange={(e) => updateField("stock", e.target.value)}
+//                     className={fieldClass(!!errors.stock)}
+//                   />
+//                   {errors.stock && (
+//                     <p className="mt-1 text-xs text-red-500">{errors.stock}</p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Unit
+//                   </label>
+//                   <select
+//                     value={form.unit}
+//                     onChange={(e) => updateField("unit", e.target.value)}
+//                     className={`${fieldClass()} bg-white`}
+//                   >
+//                     {units.map((u) => (
+//                       <option key={u} value={u}>
+//                         {u}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Reorder Level
+//                   </label>
+//                   <input
+//                     type="number"
+//                     min="0"
+//                     value={form.reorderLevel}
+//                     onChange={(e) =>
+//                       updateField("reorderLevel", e.target.value)
+//                     }
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Warehouse
+//                   </label>
+//                   <input
+//                     value={form.warehouseLocation}
+//                     onChange={(e) =>
+//                       updateField("warehouseLocation", e.target.value)
+//                     }
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Status
+//                   </label>
+//                   <select
+//                     value={form.status}
+//                     onChange={(e) => updateField("status", e.target.value)}
+//                     className={`${fieldClass()} bg-white`}
+//                   >
+//                     <option value="In Stock">In Stock</option>
+//                     <option value="Low Stock">Low Stock</option>
+//                     <option value="Out of Stock">Out of Stock</option>
+//                     <option value="Inactive">Inactive</option>
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Lead Time
+//                   </label>
+//                   <input
+//                     value={form.leadTime}
+//                     onChange={(e) => updateField("leadTime", e.target.value)}
+//                     placeholder="e.g. 7–10 Days"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//               </div>
+//             </section>
+
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">
+//                   Supplier & Warranty
+//                 </h2>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-5 sm:p-5">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Supplier
+//                   </label>
+//                   <select
+//                     value={form.supplier}
+//                     onChange={(e) => updateField("supplier", e.target.value)}
+//                     className={`${fieldClass()} bg-white`}
+//                   >
+//                     <option value="">Select supplier</option>
+//                     {suppliers.map((s) => (
+//                       <option key={s} value={s}>
+//                         {s}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Warranty
+//                   </label>
+//                   <input
+//                     value={form.warranty}
+//                     onChange={(e) => updateField("warranty", e.target.value)}
+//                     placeholder="e.g. 2 Years"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//               </div>
+//             </section>
+//           </div>
+
+//           {/* Sidebar images */}
+//           <div className="space-y-4 sm:space-y-6">
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">
+//                   Product images
+//                 </h2>
+//                 <p className="mt-0.5 text-xs text-gray-500">
+//                   Up to {MAX_IMAGES} views. First image is the cover. Supports
+//                   public image URLs and Google Drive share links.
+//                 </p>
+//               </div>
+//               <div className="p-4 sm:p-5">
+//                 {displayPreviews.length > 0 ? (
+//                   <div className="mb-3 grid grid-cols-3 gap-2">
+//                     {displayPreviews.map((src, i) => (
+//                       <div
+//                         key={`${i}-${src.slice(0, 40)}`}
+//                         className="relative aspect-square overflow-hidden rounded-lg border border-[#e4e2da] bg-[#fafaf8]"
+//                       >
+//                         {/* eslint-disable-next-line @next/next/no-img-element */}
+//                         <img
+//                           src={src}
+//                           alt={`Preview ${i + 1}`}
+//                           className="h-full w-full object-cover"
+//                           referrerPolicy="no-referrer"
+//                           onError={(e) => {
+//                             (e.target as HTMLImageElement).style.opacity =
+//                               "0.35";
+//                           }}
+//                         />
+//                         {i === 0 && (
+//                           <span className="absolute left-1 top-1 rounded bg-[#176b5b] px-1.5 py-0.5 text-[9px] font-bold text-white">
+//                             Cover
+//                           </span>
+//                         )}
+//                         {imagePreviews.length > 0 && (
+//                           <button
+//                             type="button"
+//                             onClick={() => removeImageAt(i)}
+//                             className="absolute right-1 top-1 rounded bg-black/60 px-1.5 text-[10px] text-white"
+//                           >
+//                             ✕
+//                           </button>
+//                         )}
+//                       </div>
+//                     ))}
+//                   </div>
+//                 ) : (
+//                   <div className="mb-3 flex aspect-[4/3] items-center justify-center rounded-xl border border-dashed border-[#cfcdbf] bg-[#fafaf8]">
+//                     <div className="px-4 text-center">
+//                       <p className="text-sm font-medium text-gray-700">
+//                         No images yet
+//                       </p>
+//                     </div>
+//                   </div>
+//                 )}
+
+//                 <input
+//                   ref={fileInputRef}
+//                   type="file"
+//                   accept="image/*"
+//                   multiple
+//                   onChange={handleFileChange}
+//                   className="hidden"
+//                   id="product-images-upload"
+//                 />
+//                 <label
+//                   htmlFor="product-images-upload"
+//                   className="flex min-h-[44px] w-full cursor-pointer items-center justify-center rounded-lg border border-[#176b5b] bg-[#eef7f4] px-4 text-sm font-semibold text-[#176b5b]"
+//                 >
+//                   {imageFiles.length ? "Add more images" : "Upload images"}
+//                 </label>
+
+//                 <div className="relative my-4">
+//                   <div className="absolute inset-0 flex items-center">
+//                     <div className="w-full border-t border-[#e4e2da]" />
+//                   </div>
+//                   <div className="relative flex justify-center text-xs">
+//                     <span className="bg-white px-2 text-gray-400">
+//                       OR paste URLs (one per line)
+//                     </span>
+//                   </div>
+//                 </div>
+//                 <textarea
+//                   rows={4}
+//                   value={imageUrlInput}
+//                   onChange={(e) => setImageUrlInput(e.target.value)}
+//                   placeholder={
+//                     "https://example.com/photo.jpg\nhttps://drive.google.com/file/d/FILE_ID/view?usp=sharing"
+//                   }
+//                   className="w-full rounded-lg border border-[#d9d7cf] px-3 py-2 text-sm outline-none focus:border-[#176b5b]"
+//                 />
+//                 <p className="mt-2 text-[11px] leading-4 text-gray-400">
+//                   Drive links must be shared as{" "}
+//                   <span className="font-medium text-gray-600">
+//                     Anyone with the link
+//                   </span>
+//                   . They are converted to direct image URLs automatically.
+//                 </p>
+//               </div>
+//             </section>
+
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">Preview</h2>
+//               </div>
+//               <div className="p-4 sm:p-5">
+//                 <h3 className="text-base font-bold text-[#222] sm:text-lg">
+//                   {form.productName || "Product Name"}
+//                 </h3>
+//                 <p className="mt-1 text-sm text-gray-500">
+//                   {form.category || "Category"}
+//                   {form.subcategory ? ` · ${form.subcategory}` : ""}
+//                 </p>
+//                 {selectedColors.length > 0 && (
+//                   <div className="mt-3 flex flex-wrap gap-1.5">
+//                     {selectedColors.map((hex) => (
+//                       <span
+//                         key={hex}
+//                         className="h-5 w-5 rounded-full border border-black/10"
+//                         style={{ backgroundColor: hex }}
+//                       />
+//                     ))}
+//                   </div>
+//                 )}
+//                 {selectedSizes.length > 0 && (
+//                   <p className="mt-2 text-xs text-gray-500">
+//                     {selectedSizes.join(" · ")}
+//                   </p>
+//                 )}
+//                 <div className="mt-4 rounded-lg bg-[#f7f7f4] p-3 sm:p-4">
+//                   <p className="text-xs text-gray-500">Selling Price</p>
+//                   <p className="mt-1 text-xl font-bold text-[#176b5b] sm:text-2xl">
+//                     ₹{Number(form.sellingPrice || 0).toLocaleString("en-IN")}
+//                   </p>
+//                 </div>
+//               </div>
+//             </section>
+//           </div>
+//         </div>
+
+//         <div className="mt-4 flex flex-col-reverse gap-2 rounded-xl border border-[#e4e2da] bg-white p-3 sm:mt-6 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:p-4">
+//           <button
+//             type="button"
+//             onClick={handleCancel}
+//             className="min-h-[44px] rounded-lg border border-[#d9d7cf] px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+//           >
+//             Cancel
+//           </button>
+//           <button
+//             type="button"
+//             onClick={handleSave}
+//             disabled={saving || uploadingImage}
+//             className="min-h-[44px] rounded-lg bg-[#176b5b] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#125548] disabled:opacity-60"
+//           >
+//             {uploadingImage
+//               ? "Uploading images..."
+//               : saving
+//                 ? "Saving..."
+//                 : "Create Product"}
+//           </button>
+//         </div>
+//       </main>
+
+//       {successOpen && (
+//         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+//           <button
+//             type="button"
+//             className="absolute inset-0 bg-black/40"
+//             onClick={() => setSuccessOpen(false)}
+//             aria-label="Close"
+//           />
+//           <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+//             <div className="bg-[#eef7f4] px-5 pb-5 pt-7 text-center sm:px-6 sm:pb-6 sm:pt-8">
+//               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#176b5b] text-2xl text-white">
+//                 ✓
+//               </div>
+//               <h2 className="mt-3 text-lg font-bold text-[#222]">
+//                 Product created
+//               </h2>
+//               <p className="mt-2 text-sm text-gray-600">
+//                 <span className="font-semibold text-[#176b5b]">
+//                   {createdProductName}
+//                 </span>{" "}
+//                 is in inventory and the catalog.
+//               </p>
+//             </div>
+//             <div className="flex flex-col gap-2 p-4 sm:flex-row sm:justify-end sm:p-5">
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setSuccessOpen(false);
+//                   resetForm();
+//                 }}
+//                 className="min-h-[44px] rounded-lg border border-[#d9d7cf] px-4 py-2.5 text-sm font-medium text-gray-700"
+//               >
+//                 Add another
+//               </button>
+//               <button
+//                 type="button"
+//                 onClick={() => router.push("/furniture/products")}
+//                 className="min-h-[44px] rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white"
+//               >
+//                 View products
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+
+
+// "use client";
+
+// import { useState, useRef, useEffect, useMemo } from "react";
+// import { useRouter } from "next/navigation";
+// import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+// import { storage } from "@/core/config/firebaseClient";
+// import { createProduct } from "@/modules/furniture/services/productService";
+// import {
+//   getAllCategories,
+//   type FurnitureCategory,
+// } from "@/modules/furniture/services/categoryService";
+// import {
+//   getAllSubCategories,
+//   type FurnitureSubCategory,
+// } from "@/modules/furniture/services/subCategoryService";
+// import {
+//   getAllMaterials,
+//   type FurnitureMaterial,
+// } from "@/modules/furniture/services/materialService";
+// import {
+//   getAllFinishes,
+//   type FurnitureFinish,
+// } from "@/modules/furniture/services/finishService";
+// import {
+//   FURNITURE_COLOR_OPTIONS,
+//   FURNITURE_SIZE_OPTIONS,
+// } from "@/lib/productOptions";
+// import {
+//   normalizeImageUrl,
+//   parseImageUrlLines,
+// } from "@/lib/imageUrl";
+// import {
+//   // createProduct,
+//   isProductCodeTaken,
+//   normalizeProductCode,
+//   DuplicateProductCodeError,
+// } from "@/modules/furniture/services/productService";
+
+// const units = ["Nos", "Set", "Sq.Ft", "Meter", "Piece"];
+
+// const suppliers = [
+//   "Akrish Furniture Suppliers",
+//   "Local Supplier",
+//   "ABC Furniture Supplier",
+//   "Direct Manufacturer",
+// ];
+
+// const MAX_IMAGES = 8;
+
+// export default function NewProductPage() {
+//   const router = useRouter();
+//   const fileInputRef = useRef<HTMLInputElement>(null);
+
+//   const [categories, setCategories] = useState<FurnitureCategory[]>([]);
+//   const [subCategories, setSubCategories] = useState<FurnitureSubCategory[]>(
+//     []
+//   );
+//   const [materials, setMaterials] = useState<FurnitureMaterial[]>([]);
+//   const [finishes, setFinishes] = useState<FurnitureFinish[]>([]);
+//   const [optionsLoading, setOptionsLoading] = useState(true);
+
+//   const [form, setForm] = useState({
+//     productName: "",
+//     productCode: "",
+//     category: "",
+//     subcategory: "",
+//     material: "",
+//     finish: "",
+//     color: "",
+//     dimensions: "",
+//     description: "",
+//     sellingPrice: "",
+//     costPrice: "",
+//     stock: "",
+//     unit: "Nos",
+//     reorderLevel: "",
+//     leadTime: "",
+//     warranty: "",
+//     supplier: "",
+//     warehouseLocation: "Main Warehouse",
+//     status: "In Stock",
+//   });
+
+//   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+//   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+
+//   const [imageFiles, setImageFiles] = useState<File[]>([]);
+//   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+//   const [imageUrlInput, setImageUrlInput] = useState("");
+//   const [uploadingImage, setUploadingImage] = useState(false);
+//   const [errors, setErrors] = useState<Record<string, string>>({});
+//   const [saving, setSaving] = useState(false);
+//   const [successOpen, setSuccessOpen] = useState(false);
+//   const [createdProductName, setCreatedProductName] = useState("");
+//   const [saveError, setSaveError] = useState("");
+
+//   const urlPreviews = useMemo(
+//     () => parseImageUrlLines(imageUrlInput).slice(0, MAX_IMAGES),
+//     [imageUrlInput]
+//   );
+
+//   useEffect(() => {
+//     let cancelled = false;
+
+//     async function loadOptions() {
+//       setOptionsLoading(true);
+//       try {
+//         const [cats, subs, mats, fins] = await Promise.all([
+//           getAllCategories(),
+//           getAllSubCategories(),
+//           getAllMaterials(),
+//           getAllFinishes(),
+//         ]);
+//         if (cancelled) return;
+
+//         setCategories(cats.filter((c) => (c.status || "Active") === "Active"));
+//         setSubCategories(
+//           subs.filter((s) => (s.status || "Active") === "Active")
+//         );
+//         setMaterials(mats.filter((m) => (m.status || "Active") === "Active"));
+//         setFinishes(fins.filter((f) => (f.status || "Active") === "Active"));
+//       } catch (err) {
+//         console.error("Failed to load product options:", err);
+//       } finally {
+//         if (!cancelled) setOptionsLoading(false);
+//       }
+//     }
+
+//     loadOptions();
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, []);
+
+//   const filteredSubCategories = useMemo(() => {
+//     if (!form.category) return [];
+//     const parent = categories.find((c) => c.name === form.category);
+//     if (!parent) {
+//       return subCategories.filter((s) => s.categoryName === form.category);
+//     }
+//     return subCategories.filter((s) => s.categoryId === parent.id);
+//   }, [form.category, categories, subCategories]);
+
+//   const updateField = (field: string, value: string) => {
+//     setForm((prev) => {
+//       const next = { ...prev, [field]: value };
+//       if (field === "category") next.subcategory = "";
+//       return next;
+//     });
+//     if (errors[field]) {
+//       setErrors((prev) => ({ ...prev, [field]: "" }));
+//     }
+//   };
+
+//   const toggleColor = (hex: string) => {
+//     setSelectedColors((prev) =>
+//       prev.includes(hex) ? prev.filter((c) => c !== hex) : [...prev, hex]
+//     );
+//   };
+
+//   const toggleSize = (size: string) => {
+//     setSelectedSizes((prev) =>
+//       prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
+//     );
+//   };
+
+//   const calculateProfit = () => {
+//     const selling = Number(form.sellingPrice) || 0;
+//     const cost = Number(form.costPrice) || 0;
+//     return selling - cost;
+//   };
+
+//   const calculateMargin = () => {
+//     const selling = Number(form.sellingPrice) || 0;
+//     const cost = Number(form.costPrice) || 0;
+//     if (!selling) return 0;
+//     return ((selling - cost) / selling) * 100;
+//   };
+
+//   const validateForm = () => {
+//     const newErrors: Record<string, string> = {};
+//     if (!form.productName.trim())
+//       newErrors.productName = "Product name is required";
+//     if (!form.productCode.trim())
+//       newErrors.productCode = "Product code is required";
+//     if (!form.category) newErrors.category = "Please select a category";
+//     if (!form.material) newErrors.material = "Please select material";
+//     if (!form.sellingPrice)
+//       newErrors.sellingPrice = "Selling price is required";
+//     if (!form.costPrice) newErrors.costPrice = "Cost price is required";
+//     if (!form.stock) newErrors.stock = "Opening stock is required";
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
+
+//   const rebuildPreviews = (files: File[]) => {
+//     Promise.all(
+//       files.map(
+//         (f) =>
+//           new Promise<string>((resolve) => {
+//             const reader = new FileReader();
+//             reader.onload = () => resolve(reader.result as string);
+//             reader.readAsDataURL(f);
+//           })
+//       )
+//     ).then(setImagePreviews);
+//   };
+
+//   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     const picked = Array.from(e.target.files || []);
+//     if (!picked.length) return;
+
+//     const valid: File[] = [];
+//     for (const file of picked) {
+//       if (!file.type.startsWith("image/")) {
+//         setSaveError("Only image files are allowed (JPG, PNG, WebP).");
+//         continue;
+//       }
+//       if (file.size > 5 * 1024 * 1024) {
+//         setSaveError("Each image must be under 5 MB.");
+//         continue;
+//       }
+//       valid.push(file);
+//     }
+
+//     if (!valid.length) {
+//       if (fileInputRef.current) fileInputRef.current.value = "";
+//       return;
+//     }
+
+//     setSaveError("");
+//     setImageFiles((prev) => {
+//       const next = [...prev, ...valid].slice(0, MAX_IMAGES);
+//       rebuildPreviews(next);
+//       return next;
+//     });
+
+//     if (fileInputRef.current) fileInputRef.current.value = "";
+//   };
+
+//   const removeImageAt = (index: number) => {
+//     setImageFiles((prev) => {
+//       const next = prev.filter((_, i) => i !== index);
+//       rebuildPreviews(next);
+//       return next;
+//     });
+//   };
+
+//   const uploadImages = async (): Promise<string[]> => {
+//     // Drive share links → lh3.googleusercontent.com/d/ID=w2000
+//     const urls = parseImageUrlLines(imageUrlInput);
+
+//     if (!imageFiles.length) {
+//       return urls.slice(0, MAX_IMAGES);
+//     }
+
+//     setUploadingImage(true);
+//     try {
+//       for (const file of imageFiles) {
+//         const timestamp = Date.now();
+//         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
+//         const storageRef = ref(
+//           storage,
+//           `furniture/products/${timestamp}_${Math.random()
+//             .toString(36)
+//             .slice(2, 8)}_${safeName}`
+//         );
+//         await uploadBytes(storageRef, file);
+//         urls.push(await getDownloadURL(storageRef));
+//       }
+//       return Array.from(
+//         new Set(urls.map((u) => normalizeImageUrl(u) || u))
+//       ).slice(0, MAX_IMAGES);
+//     } catch (err) {
+//       console.error("Image upload failed:", err);
+//       setSaveError("Failed to upload one or more images. Please try again.");
+//       return [];
+//     } finally {
+//       setUploadingImage(false);
+//     }
+//   };
+
+//   const resetForm = () => {
+//     setForm({
+//       productName: "",
+//       productCode: "",
+//       category: "",
+//       subcategory: "",
+//       material: "",
+//       finish: "",
+//       color: "",
+//       dimensions: "",
+//       description: "",
+//       sellingPrice: "",
+//       costPrice: "",
+//       stock: "",
+//       unit: "Nos",
+//       reorderLevel: "",
+//       leadTime: "",
+//       warranty: "",
+//       supplier: "",
+//       warehouseLocation: "Main Warehouse",
+//       status: "In Stock",
+//     });
+//     setSelectedColors([]);
+//     setSelectedSizes([]);
+//     setImageFiles([]);
+//     setImagePreviews([]);
+//     setImageUrlInput("");
+//     setErrors({});
+//     setSaveError("");
+//     if (fileInputRef.current) fileInputRef.current.value = "";
+//   };
+
+//   // const handleSave = async () => {
+//   //   setSaveError("");
+
+//   //   if (!validateForm()) {
+//   //     window.scrollTo({ top: 0, behavior: "smooth" });
+//   //     return;
+//   //   }
+
+//   //   setSaving(true);
+
+//   //   try {
+//   //     const images = await uploadImages();
+
+//   //     if (imageFiles.length > 0 && images.length === 0) {
+//   //       setSaving(false);
+//   //       return;
+//   //     }
+
+//   //     const primary = images[0] || "";
+
+//   //     await createProduct({
+//   //       name: form.productName.trim(),
+//   //       sku: form.productCode.trim().toUpperCase(),
+//   //       code: form.productCode.trim().toUpperCase(),
+//   //       category: form.category,
+//   //       subcategory: form.subcategory || "",
+//   //       material: form.material,
+//   //       finish: form.finish || "",
+//   //       color: form.color || selectedColors[0] || "",
+//   //       colors: selectedColors,
+//   //       sizes: selectedSizes,
+//   //       dimensions: form.dimensions || "",
+//   //       description: form.description || "",
+//   //       sellingPrice: Number(form.sellingPrice),
+//   //       price: Number(form.sellingPrice),
+//   //       costPrice: Number(form.costPrice),
+//   //       stock: Number(form.stock),
+//   //       unit: form.unit,
+//   //       reorderLevel: Number(form.reorderLevel || 0),
+//   //       minStock: Number(form.reorderLevel || 0),
+//   //       leadTime: form.leadTime || "",
+//   //       warranty: form.warranty || "",
+//   //       supplier: form.supplier || "",
+//   //       location: form.warehouseLocation || "Main Warehouse",
+//   //       warehouseLocation: form.warehouseLocation || "Main Warehouse",
+//   //       images,
+//   //       imageUrl: primary,
+//   //       image: primary,
+//   //       status: form.status as
+//   //         | "In Stock"
+//   //         | "Low Stock"
+//   //         | "Out of Stock"
+//   //         | "Inactive",
+//   //     });
+
+//   //     setCreatedProductName(form.productName.trim());
+//   //     setSuccessOpen(true);
+//   //   } catch (err) {
+//   //     console.error("Create product failed:", err);
+//   //     setSaveError("Failed to create product. Please try again.");
+//   //   } finally {
+//   //     setSaving(false);
+//   //   }
+//   // };
+
+//     const handleSave = async () => {
+//     setSaveError("");
+
+//     if (!validateForm()) {
+//       window.scrollTo({ top: 0, behavior: "smooth" });
+//       return;
+//     }
+
+//     const code = normalizeProductCode(form.productCode);
+//     setSaving(true);
+
+//     try {
+//       if (await isProductCodeTaken(code)) {
+//         setErrors((prev) => ({
+//           ...prev,
+//           productCode:
+//             "This product code already exists. Enter a new unique code.",
+//         }));
+//         setSaveError(
+//           `Product code "${code}" is already used. Please enter a different code.`
+//         );
+//         window.scrollTo({ top: 0, behavior: "smooth" });
+//         return;
+//       }
+
+//       const images = await uploadImages();
+
+//       if (imageFiles.length > 0 && images.length === 0) {
+//         return;
+//       }
+
+//       const primary = images[0] || "";
+
+//       await createProduct({
+//         name: form.productName.trim(),
+//         sku: code,
+//         code,
+//         category: form.category,
+//         subcategory: form.subcategory || "",
+//         material: form.material,
+//         finish: form.finish || "",
+//         color: form.color || selectedColors[0] || "",
+//         colors: selectedColors,
+//         sizes: selectedSizes,
+//         dimensions: form.dimensions || "",
+//         description: form.description || "",
+//         sellingPrice: Number(form.sellingPrice),
+//         price: Number(form.sellingPrice),
+//         costPrice: Number(form.costPrice),
+//         stock: Number(form.stock),
+//         unit: form.unit,
+//         reorderLevel: Number(form.reorderLevel || 0),
+//         minStock: Number(form.reorderLevel || 0),
+//         leadTime: form.leadTime || "",
+//         warranty: form.warranty || "",
+//         supplier: form.supplier || "",
+//         location: form.warehouseLocation || "Main Warehouse",
+//         warehouseLocation: form.warehouseLocation || "Main Warehouse",
+//         images,
+//         imageUrl: primary,
+//         image: primary,
+//         status: form.status as
+//           | "In Stock"
+//           | "Low Stock"
+//           | "Out of Stock"
+//           | "Inactive",
+//       });
+
+//       setCreatedProductName(form.productName.trim());
+//       setSuccessOpen(true);
+//     } catch (err) {
+//       console.error("Create product failed:", err);
+//       if (err instanceof DuplicateProductCodeError) {
+//         setErrors((prev) => ({
+//           ...prev,
+//           productCode:
+//             "This product code already exists. Enter a new unique code.",
+//         }));
+//         setSaveError(err.message);
+//       } else {
+//         setSaveError("Failed to create product. Please try again.");
+//       }
+//     } finally {
+//       setSaving(false);
+//     }
+//   };
+
+//   const handleCancel = () => router.push("/furniture/products");
+
+//   const fieldClass = (hasError?: boolean) =>
+//     `h-11 w-full rounded-lg border px-3.5 text-sm outline-none transition focus:border-[#176b5b] focus:ring-2 focus:ring-[#176b5b]/10 ${
+//       hasError ? "border-red-400" : "border-[#d9d7cf]"
+//     }`;
+
+//   const displayPreviews =
+//     imagePreviews.length > 0 ? imagePreviews : urlPreviews;
+
+//   return (
+//     <div className="min-h-screen bg-[#f7f7f4] text-[#252525]">
+//       <div className="border-b border-[#e4e2da] bg-white">
+//         <div className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-5 lg:px-8">
+//           <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
+//             <div className="min-w-0">
+//               <div className="mb-1 flex items-center gap-2 text-xs text-gray-500 sm:mb-2 sm:text-sm">
+//                 <button
+//                   type="button"
+//                   onClick={() => router.back()}
+//                   className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#e4e2da] bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 active:scale-95"
+//                   aria-label="Go back"
+//                   title="Go back"
+//                 >
+//                   <svg
+//                     xmlns="http://www.w3.org/2000/svg"
+//                     viewBox="0 0 20 20"
+//                     fill="currentColor"
+//                     className="h-4 w-4"
+//                   >
+//                     <path
+//                       fillRule="evenodd"
+//                       d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+//                       clipRule="evenodd"
+//                     />
+//                   </svg>
+//                 </button>
+//                 <button
+//                   type="button"
+//                   onClick={() => router.push("/furniture/products")}
+//                   className="font-semibold text-[#9a5b18] hover:underline"
+//                 >
+//                   Products
+//                 </button>
+//                 <span>/</span>
+//                 <span className="text-gray-700">New Product</span>
+//               </div>
+//               <h1 className="text-xl font-bold text-[#222] sm:text-2xl">
+//                 Add New Product
+//               </h1>
+//               <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+//                 Create a new furniture product in your inventory.
+//               </p>
+//             </div>
+
+//             <div className="flex gap-2 sm:gap-3">
+//               <button
+//                 type="button"
+//                 onClick={handleCancel}
+//                 className="min-h-[44px] flex-1 rounded-lg border border-[#d9d7cf] bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:flex-none sm:px-5"
+//               >
+//                 Cancel
+//               </button>
+//               <button
+//                 type="button"
+//                 onClick={handleSave}
+//                 disabled={saving || uploadingImage}
+//                 className="min-h-[44px] flex-1 rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#125548] disabled:opacity-60 sm:flex-none sm:px-5"
+//               >
+//                 {uploadingImage
+//                   ? "Uploading…"
+//                   : saving
+//                     ? "Saving…"
+//                     : "Save Product"}
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+
+//       <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+//         {saveError && (
+//           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+//             {saveError}
+//           </div>
+//         )}
+
+//         <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-[1fr_320px]">
+//           <div className="space-y-4 sm:space-y-6">
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">
+//                   Basic Information
+//                 </h2>
+//                 <p className="mt-0.5 text-xs text-gray-500">
+//                   Product name, code, category and description.
+//                 </p>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:gap-5 sm:p-5 md:grid-cols-2">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Product Name <span className="text-red-500">*</span>
+//                   </label>
+//                   <input
+//                     value={form.productName}
+//                     onChange={(e) => updateField("productName", e.target.value)}
+//                     placeholder="e.g. Modern L-Shape Sofa"
+//                     className={fieldClass(!!errors.productName)}
+//                   />
+//                   {errors.productName && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.productName}
+//                     </p>
+//                   )}
+//                 </div>
+//                 {/* <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Product Code <span className="text-red-500">*</span>
+//                   </label>
+//                   <input
+//                     value={form.productCode}
+//                     onChange={(e) =>
+//                       updateField("productCode", e.target.value.toUpperCase())
+//                     }
+//                     placeholder="e.g. SOFA-001"
+//                     className={`${fieldClass(!!errors.productCode)} uppercase`}
+//                   />
+//                   {errors.productCode && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.productCode}
+//                     </p>
+//                   )}
+//                 </div> */}
+
+//                                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Product Code <span className="text-red-500">*</span>
+//                   </label>
+//                   <input
+//                     value={form.productCode}
+//                     onChange={(e) =>
+//                       updateField("productCode", e.target.value.toUpperCase())
+//                     }
+//                     onBlur={async () => {
+//                       const code = normalizeProductCode(form.productCode);
+//                       if (!code) return;
+//                       try {
+//                         if (await isProductCodeTaken(code)) {
+//                           setErrors((prev) => ({
+//                             ...prev,
+//                             productCode:
+//                               "This product code already exists. Enter a new unique code.",
+//                           }));
+//                         }
+//                       } catch {
+//                         /* ignore network errors on blur */
+//                       }
+//                     }}
+//                     placeholder="e.g. SOFA-001"
+//                     className={`${fieldClass(!!errors.productCode)} uppercase`}
+//                   />
+//                   {errors.productCode && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.productCode}
+//                     </p>
+//                   )}
+//                 </div>
+
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Category <span className="text-red-500">*</span>
+//                   </label>
+//                   <select
+//                     value={form.category}
+//                     onChange={(e) => updateField("category", e.target.value)}
+//                     disabled={optionsLoading}
+//                     className={`${fieldClass(!!errors.category)} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {optionsLoading ? "Loading…" : "Select category"}
+//                     </option>
+//                     {categories.map((c) => (
+//                       <option key={c.id} value={c.name}>
+//                         {c.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                   {errors.category && (
+//                     <p className="mt-1 text-xs text-red-500">{errors.category}</p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Subcategory
+//                   </label>
+//                   <select
+//                     value={form.subcategory}
+//                     onChange={(e) => updateField("subcategory", e.target.value)}
+//                     disabled={!form.category || optionsLoading}
+//                     className={`${fieldClass()} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {!form.category
+//                         ? "Select category first"
+//                         : filteredSubCategories.length === 0
+//                           ? "No sub categories"
+//                           : "Select subcategory"}
+//                     </option>
+//                     {filteredSubCategories.map((s) => (
+//                       <option key={s.id} value={s.name}>
+//                         {s.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Material <span className="text-red-500">*</span>
+//                   </label>
+//                   <select
+//                     value={form.material}
+//                     onChange={(e) => updateField("material", e.target.value)}
+//                     disabled={optionsLoading}
+//                     className={`${fieldClass(!!errors.material)} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {optionsLoading ? "Loading…" : "Select material"}
+//                     </option>
+//                     {materials.map((m) => (
+//                       <option key={m.id} value={m.name}>
+//                         {m.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                   {errors.material && (
+//                     <p className="mt-1 text-xs text-red-500">{errors.material}</p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Finish
+//                   </label>
+//                   <select
+//                     value={form.finish}
+//                     onChange={(e) => updateField("finish", e.target.value)}
+//                     disabled={optionsLoading}
+//                     className={`${fieldClass()} bg-white disabled:opacity-60`}
+//                   >
+//                     <option value="">
+//                       {optionsLoading ? "Loading…" : "Select finish"}
+//                     </option>
+//                     {finishes.map((f) => (
+//                       <option key={f.id} value={f.name}>
+//                         {f.name}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Primary colour label
+//                   </label>
+//                   <input
+//                     value={form.color}
+//                     onChange={(e) => updateField("color", e.target.value)}
+//                     placeholder="e.g. Light Grey (optional text)"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Dimensions
+//                   </label>
+//                   <input
+//                     value={form.dimensions}
+//                     onChange={(e) => updateField("dimensions", e.target.value)}
+//                     placeholder="e.g. 280 × 180 × 85 cm"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div className="md:col-span-2">
+//                   <label className="mb-2 block text-sm font-medium text-gray-700">
+//                     Available colours
+//                   </label>
+//                   <div className="flex flex-wrap gap-2">
+//                     {FURNITURE_COLOR_OPTIONS.map((c) => {
+//                       const on = selectedColors.includes(c.hex);
+//                       return (
+//                         <button
+//                           key={c.hex}
+//                           type="button"
+//                           onClick={() => toggleColor(c.hex)}
+//                           title={c.name}
+//                           className={`flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
+//                             on
+//                               ? "border-[#176b5b] bg-[#eef7f4] text-[#176b5b]"
+//                               : "border-[#d9d7cf] bg-white text-gray-600"
+//                           }`}
+//                         >
+//                           <span
+//                             className="h-5 w-5 rounded-full border border-black/10 shadow-sm"
+//                             style={{ backgroundColor: c.hex }}
+//                           />
+//                           {c.name}
+//                         </button>
+//                       );
+//                     })}
+//                   </div>
+//                 </div>
+//                 <div className="md:col-span-2">
+//                   <label className="mb-2 block text-sm font-medium text-gray-700">
+//                     Sizes / seaters
+//                   </label>
+//                   <div className="flex flex-wrap gap-2">
+//                     {FURNITURE_SIZE_OPTIONS.map((s) => {
+//                       const on = selectedSizes.includes(s);
+//                       return (
+//                         <button
+//                           key={s}
+//                           type="button"
+//                           onClick={() => toggleSize(s)}
+//                           className={`rounded-full border px-3.5 py-2 text-xs font-semibold transition ${
+//                             on
+//                               ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+//                               : "border-[#d9d7cf] bg-white text-gray-700 hover:border-gray-400"
+//                           }`}
+//                         >
+//                           {s}
+//                         </button>
+//                       );
+//                     })}
+//                   </div>
+//                 </div>
+//                 <div className="md:col-span-2">
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Description
+//                   </label>
+//                   <textarea
+//                     rows={4}
+//                     value={form.description}
+//                     onChange={(e) => updateField("description", e.target.value)}
+//                     placeholder="Enter product description..."
+//                     className="w-full resize-none rounded-lg border border-[#d9d7cf] px-3.5 py-2.5 text-sm outline-none focus:border-[#176b5b] focus:ring-2 focus:ring-[#176b5b]/10"
+//                   />
+//                 </div>
+//               </div>
+//             </section>
+
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">Pricing</h2>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-5 sm:p-5">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Selling Price <span className="text-red-500">*</span>
+//                   </label>
+//                   <div className="relative">
+//                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+//                       ₹
+//                     </span>
+//                     <input
+//                       type="number"
+//                       min="0"
+//                       value={form.sellingPrice}
+//                       onChange={(e) =>
+//                         updateField("sellingPrice", e.target.value)
+//                       }
+//                       className={`${fieldClass(!!errors.sellingPrice)} pl-8`}
+//                     />
+//                   </div>
+//                   {errors.sellingPrice && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.sellingPrice}
+//                     </p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Cost Price <span className="text-red-500">*</span>
+//                   </label>
+//                   <div className="relative">
+//                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+//                       ₹
+//                     </span>
+//                     <input
+//                       type="number"
+//                       min="0"
+//                       value={form.costPrice}
+//                       onChange={(e) => updateField("costPrice", e.target.value)}
+//                       className={`${fieldClass(!!errors.costPrice)} pl-8`}
+//                     />
+//                   </div>
+//                   {errors.costPrice && (
+//                     <p className="mt-1 text-xs text-red-500">
+//                       {errors.costPrice}
+//                     </p>
+//                   )}
+//                 </div>
+//               </div>
+//               <div className="grid grid-cols-2 gap-3 border-t border-[#e4e2da] bg-[#fafaf8] p-4 sm:gap-4 sm:p-5">
+//                 <div className="rounded-lg border border-[#e4e2da] bg-white p-3 sm:p-4">
+//                   <p className="text-xs text-gray-500">Est. Profit</p>
+//                   <p className="mt-1 text-lg font-bold text-[#176b5b] sm:text-xl">
+//                     ₹{calculateProfit().toLocaleString("en-IN")}
+//                   </p>
+//                 </div>
+//                 <div className="rounded-lg border border-[#e4e2da] bg-white p-3 sm:p-4">
+//                   <p className="text-xs text-gray-500">Est. Margin</p>
+//                   <p className="mt-1 text-lg font-bold text-[#176b5b] sm:text-xl">
+//                     {calculateMargin().toFixed(1)}%
+//                   </p>
+//                 </div>
+//               </div>
+//             </section>
+
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">Inventory</h2>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-5 sm:p-5 md:grid-cols-3">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Opening Stock <span className="text-red-500">*</span>
+//                   </label>
+//                   <input
+//                     type="number"
+//                     min="0"
+//                     value={form.stock}
+//                     onChange={(e) => updateField("stock", e.target.value)}
+//                     className={fieldClass(!!errors.stock)}
+//                   />
+//                   {errors.stock && (
+//                     <p className="mt-1 text-xs text-red-500">{errors.stock}</p>
+//                   )}
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Unit
+//                   </label>
+//                   <select
+//                     value={form.unit}
+//                     onChange={(e) => updateField("unit", e.target.value)}
+//                     className={`${fieldClass()} bg-white`}
+//                   >
+//                     {units.map((u) => (
+//                       <option key={u} value={u}>
+//                         {u}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Reorder Level
+//                   </label>
+//                   <input
+//                     type="number"
+//                     min="0"
+//                     value={form.reorderLevel}
+//                     onChange={(e) =>
+//                       updateField("reorderLevel", e.target.value)
+//                     }
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Warehouse
+//                   </label>
+//                   <input
+//                     value={form.warehouseLocation}
+//                     onChange={(e) =>
+//                       updateField("warehouseLocation", e.target.value)
+//                     }
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Status
+//                   </label>
+//                   <select
+//                     value={form.status}
+//                     onChange={(e) => updateField("status", e.target.value)}
+//                     className={`${fieldClass()} bg-white`}
+//                   >
+//                     <option value="In Stock">In Stock</option>
+//                     <option value="Low Stock">Low Stock</option>
+//                     <option value="Out of Stock">Out of Stock</option>
+//                     <option value="Inactive">Inactive</option>
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Lead Time
+//                   </label>
+//                   <input
+//                     value={form.leadTime}
+//                     onChange={(e) => updateField("leadTime", e.target.value)}
+//                     placeholder="e.g. 7–10 Days"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//               </div>
+//             </section>
+
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">
+//                   Supplier & Warranty
+//                 </h2>
+//               </div>
+//               <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-5 sm:p-5">
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Supplier
+//                   </label>
+//                   <select
+//                     value={form.supplier}
+//                     onChange={(e) => updateField("supplier", e.target.value)}
+//                     className={`${fieldClass()} bg-white`}
+//                   >
+//                     <option value="">Select supplier</option>
+//                     {suppliers.map((s) => (
+//                       <option key={s} value={s}>
+//                         {s}
+//                       </option>
+//                     ))}
+//                   </select>
+//                 </div>
+//                 <div>
+//                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                     Warranty
+//                   </label>
+//                   <input
+//                     value={form.warranty}
+//                     onChange={(e) => updateField("warranty", e.target.value)}
+//                     placeholder="e.g. 2 Years"
+//                     className={fieldClass()}
+//                   />
+//                 </div>
+//               </div>
+//             </section>
+//           </div>
+
+//           <div className="space-y-4 sm:space-y-6">
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">
+//                   Product images
+//                 </h2>
+//                 <p className="mt-0.5 text-xs text-gray-500">
+//                   Up to {MAX_IMAGES} views. First image is the cover. Supports
+//                   public image URLs and Google Drive share links.
+//                 </p>
+//               </div>
+//               <div className="p-4 sm:p-5">
+//                 {displayPreviews.length > 0 ? (
+//                   <div className="mb-3 grid grid-cols-3 gap-2">
+//                     {displayPreviews.map((src, i) => (
+//                       <div
+//                         key={`${i}-${src.slice(0, 40)}`}
+//                         className="relative aspect-square overflow-hidden rounded-lg border border-[#e4e2da] bg-[#fafaf8]"
+//                       >
+//                         {/* eslint-disable-next-line @next/next/no-img-element */}
+//                         <img
+//                           src={src}
+//                           alt={`Preview ${i + 1}`}
+//                           className="h-full w-full object-cover"
+//                           referrerPolicy="no-referrer"
+//                           onError={(e) => {
+//                             (e.target as HTMLImageElement).style.opacity =
+//                               "0.35";
+//                           }}
+//                         />
+//                         {i === 0 && (
+//                           <span className="absolute left-1 top-1 rounded bg-[#176b5b] px-1.5 py-0.5 text-[9px] font-bold text-white">
+//                             Cover
+//                           </span>
+//                         )}
+//                         {imagePreviews.length > 0 && (
+//                           <button
+//                             type="button"
+//                             onClick={() => removeImageAt(i)}
+//                             className="absolute right-1 top-1 rounded bg-black/60 px-1.5 text-[10px] text-white"
+//                           >
+//                             ✕
+//                           </button>
+//                         )}
+//                       </div>
+//                     ))}
+//                   </div>
+//                 ) : (
+//                   <div className="mb-3 flex aspect-[4/3] items-center justify-center rounded-xl border border-dashed border-[#cfcdbf] bg-[#fafaf8]">
+//                     <div className="px-4 text-center">
+//                       <p className="text-sm font-medium text-gray-700">
+//                         No images yet
+//                       </p>
+//                     </div>
+//                   </div>
+//                 )}
+
+//                 <input
+//                   ref={fileInputRef}
+//                   type="file"
+//                   accept="image/*"
+//                   multiple
+//                   onChange={handleFileChange}
+//                   className="hidden"
+//                   id="product-images-upload"
+//                 />
+//                 <label
+//                   htmlFor="product-images-upload"
+//                   className="flex min-h-[44px] w-full cursor-pointer items-center justify-center rounded-lg border border-[#176b5b] bg-[#eef7f4] px-4 text-sm font-semibold text-[#176b5b]"
+//                 >
+//                   {imageFiles.length ? "Add more images" : "Upload images"}
+//                 </label>
+
+//                 <div className="relative my-4">
+//                   <div className="absolute inset-0 flex items-center">
+//                     <div className="w-full border-t border-[#e4e2da]" />
+//                   </div>
+//                   <div className="relative flex justify-center text-xs">
+//                     <span className="bg-white px-2 text-gray-400">
+//                       OR paste URLs (one per line)
+//                     </span>
+//                   </div>
+//                 </div>
+//                 <textarea
+//                   rows={4}
+//                   value={imageUrlInput}
+//                   onChange={(e) => setImageUrlInput(e.target.value)}
+//                   placeholder={
+//                     "https://example.com/photo.jpg\nhttps://drive.google.com/file/d/FILE_ID/view?usp=sharing"
+//                   }
+//                   className="w-full rounded-lg border border-[#d9d7cf] px-3 py-2 text-sm outline-none focus:border-[#176b5b]"
+//                 />
+//                 <p className="mt-2 text-[11px] leading-4 text-gray-400">
+//                   Drive links must be shared as{" "}
+//                   <span className="font-medium text-gray-600">
+//                     Anyone with the link
+//                   </span>
+//                   . Converted to embeddable image URLs automatically.
+//                 </p>
+//               </div>
+//             </section>
+
+//             <section className="rounded-xl border border-[#e4e2da] bg-white">
+//               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//                 <h2 className="text-base font-bold text-[#222]">Preview</h2>
+//               </div>
+//               <div className="p-4 sm:p-5">
+//                 <h3 className="text-base font-bold text-[#222] sm:text-lg">
+//                   {form.productName || "Product Name"}
+//                 </h3>
+//                 <p className="mt-1 text-sm text-gray-500">
+//                   {form.category || "Category"}
+//                   {form.subcategory ? ` · ${form.subcategory}` : ""}
+//                 </p>
+//                 {selectedColors.length > 0 && (
+//                   <div className="mt-3 flex flex-wrap gap-1.5">
+//                     {selectedColors.map((hex) => (
+//                       <span
+//                         key={hex}
+//                         className="h-5 w-5 rounded-full border border-black/10"
+//                         style={{ backgroundColor: hex }}
+//                       />
+//                     ))}
+//                   </div>
+//                 )}
+//                 {selectedSizes.length > 0 && (
+//                   <p className="mt-2 text-xs text-gray-500">
+//                     {selectedSizes.join(" · ")}
+//                   </p>
+//                 )}
+//                 <div className="mt-4 rounded-lg bg-[#f7f7f4] p-3 sm:p-4">
+//                   <p className="text-xs text-gray-500">Selling Price</p>
+//                   <p className="mt-1 text-xl font-bold text-[#176b5b] sm:text-2xl">
+//                     ₹{Number(form.sellingPrice || 0).toLocaleString("en-IN")}
+//                   </p>
+//                 </div>
+//               </div>
+//             </section>
+//           </div>
+//         </div>
+
+//         <div className="mt-4 flex flex-col-reverse gap-2 rounded-xl border border-[#e4e2da] bg-white p-3 sm:mt-6 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:p-4">
+//           <button
+//             type="button"
+//             onClick={handleCancel}
+//             className="min-h-[44px] rounded-lg border border-[#d9d7cf] px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+//           >
+//             Cancel
+//           </button>
+//           <button
+//             type="button"
+//             onClick={handleSave}
+//             disabled={saving || uploadingImage}
+//             className="min-h-[44px] rounded-lg bg-[#176b5b] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#125548] disabled:opacity-60"
+//           >
+//             {uploadingImage
+//               ? "Uploading images..."
+//               : saving
+//                 ? "Saving..."
+//                 : "Create Product"}
+//           </button>
+//         </div>
+//       </main>
+
+//       {successOpen && (
+//         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+//           <button
+//             type="button"
+//             className="absolute inset-0 bg-black/40"
+//             onClick={() => setSuccessOpen(false)}
+//             aria-label="Close"
+//           />
+//           <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+//             <div className="bg-[#eef7f4] px-5 pb-5 pt-7 text-center sm:px-6 sm:pb-6 sm:pt-8">
+//               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#176b5b] text-2xl text-white">
+//                 ✓
+//               </div>
+//               <h2 className="mt-3 text-lg font-bold text-[#222]">
+//                 Product created
+//               </h2>
+//               <p className="mt-2 text-sm text-gray-600">
+//                 <span className="font-semibold text-[#176b5b]">
+//                   {createdProductName}
+//                 </span>{" "}
+//                 is in inventory and the catalog.
+//               </p>
+//             </div>
+//             <div className="flex flex-col gap-2 p-4 sm:flex-row sm:justify-end sm:p-5">
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setSuccessOpen(false);
+//                   resetForm();
+//                 }}
+//                 className="min-h-[44px] rounded-lg border border-[#d9d7cf] px-4 py-2.5 text-sm font-medium text-gray-700"
+//               >
+//                 Add another
+//               </button>
+//               <button
+//                 type="button"
+//                 onClick={() => router.push("/furniture/products")}
+//                 className="min-h-[44px] rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white"
+//               >
+//                 View products
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+
+
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/core/config/firebaseClient";
-import { createProduct } from "@/modules/furniture/services/productService";
+import {
+  createProduct,
+  isProductCodeTaken,
+  normalizeProductCode,
+  DuplicateProductCodeError,
+} from "@/modules/furniture/services/productService";
 import {
   getAllCategories,
   type FurnitureCategory,
@@ -4761,6 +9300,11 @@ import {
   getAllFinishes,
   type FurnitureFinish,
 } from "@/modules/furniture/services/finishService";
+import {
+  FURNITURE_COLOR_OPTIONS,
+  FURNITURE_SIZE_OPTIONS,
+} from "@/lib/productOptions";
+import { normalizeImageUrl, parseImageUrlLines } from "@/lib/imageUrl";
 
 const units = ["Nos", "Set", "Sq.Ft", "Meter", "Piece"];
 
@@ -4807,11 +9351,11 @@ export default function NewProductPage() {
     status: "In Stock",
   });
 
-  /** Local files pending upload */
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+
   const [imageFiles, setImageFiles] = useState<File[]>([]);
-  /** Preview data URLs aligned with imageFiles */
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  /** Optional: paste one URL per line */
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -4819,6 +9363,11 @@ export default function NewProductPage() {
   const [successOpen, setSuccessOpen] = useState(false);
   const [createdProductName, setCreatedProductName] = useState("");
   const [saveError, setSaveError] = useState("");
+
+  const urlPreviews = useMemo(
+    () => parseImageUrlLines(imageUrlInput).slice(0, MAX_IMAGES),
+    [imageUrlInput]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -4871,6 +9420,18 @@ export default function NewProductPage() {
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
+  };
+
+  const toggleColor = (hex: string) => {
+    setSelectedColors((prev) =>
+      prev.includes(hex) ? prev.filter((c) => c !== hex) : [...prev, hex]
+    );
+  };
+
+  const toggleSize = (size: string) => {
+    setSelectedSizes((prev) =>
+      prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
+    );
   };
 
   const calculateProfit = () => {
@@ -4956,16 +9517,10 @@ export default function NewProductPage() {
   };
 
   const uploadImages = async (): Promise<string[]> => {
-    const urls: string[] = [];
-
-    imageUrlInput
-      .split("\n")
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .forEach((u) => urls.push(u));
+    const urls = parseImageUrlLines(imageUrlInput);
 
     if (!imageFiles.length) {
-      return Array.from(new Set(urls)).slice(0, MAX_IMAGES);
+      return urls.slice(0, MAX_IMAGES);
     }
 
     setUploadingImage(true);
@@ -4982,7 +9537,9 @@ export default function NewProductPage() {
         await uploadBytes(storageRef, file);
         urls.push(await getDownloadURL(storageRef));
       }
-      return Array.from(new Set(urls)).slice(0, MAX_IMAGES);
+      return Array.from(
+        new Set(urls.map((u) => normalizeImageUrl(u) || u))
+      ).slice(0, MAX_IMAGES);
     } catch (err) {
       console.error("Image upload failed:", err);
       setSaveError("Failed to upload one or more images. Please try again.");
@@ -5014,6 +9571,8 @@ export default function NewProductPage() {
       warehouseLocation: "Main Warehouse",
       status: "In Stock",
     });
+    setSelectedColors([]);
+    setSelectedSizes([]);
     setImageFiles([]);
     setImagePreviews([]);
     setImageUrlInput("");
@@ -5030,13 +9589,26 @@ export default function NewProductPage() {
       return;
     }
 
+    const code = normalizeProductCode(form.productCode);
     setSaving(true);
 
     try {
+      if (await isProductCodeTaken(code)) {
+        setErrors((prev) => ({
+          ...prev,
+          productCode:
+            "This product code already exists. Enter a new unique code.",
+        }));
+        setSaveError(
+          `Product code "${code}" is already used. Please enter a different code.`
+        );
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
       const images = await uploadImages();
 
       if (imageFiles.length > 0 && images.length === 0) {
-        setSaving(false);
         return;
       }
 
@@ -5044,13 +9616,15 @@ export default function NewProductPage() {
 
       await createProduct({
         name: form.productName.trim(),
-        sku: form.productCode.trim().toUpperCase(),
-        code: form.productCode.trim().toUpperCase(),
+        sku: code,
+        code,
         category: form.category,
         subcategory: form.subcategory || "",
         material: form.material,
         finish: form.finish || "",
-        color: form.color || "",
+        color: form.color || selectedColors[0] || "",
+        colors: selectedColors,
+        sizes: selectedSizes,
         dimensions: form.dimensions || "",
         description: form.description || "",
         sellingPrice: Number(form.sellingPrice),
@@ -5079,7 +9653,16 @@ export default function NewProductPage() {
       setSuccessOpen(true);
     } catch (err) {
       console.error("Create product failed:", err);
-      setSaveError("Failed to create product. Please try again.");
+      if (err instanceof DuplicateProductCodeError) {
+        setErrors((prev) => ({
+          ...prev,
+          productCode:
+            "This product code already exists. Enter a new unique code.",
+        }));
+        setSaveError(err.message);
+      } else {
+        setSaveError("Failed to create product. Please try again.");
+      }
     } finally {
       setSaving(false);
     }
@@ -5092,31 +9675,14 @@ export default function NewProductPage() {
       hasError ? "border-red-400" : "border-[#d9d7cf]"
     }`;
 
+  const displayPreviews =
+    imagePreviews.length > 0 ? imagePreviews : urlPreviews;
+
   return (
     <div className="min-h-screen bg-[#f7f7f4] text-[#252525]">
       <div className="border-b border-[#e4e2da] bg-white">
         <div className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-5 lg:px-8">
           <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
-            {/* <div className="min-w-0">
-              <div className="mb-1 flex items-center gap-2 text-xs text-gray-500 sm:mb-2 sm:text-sm">
-                <button
-                  type="button"
-                  onClick={() => router.push("/furniture/products")}
-                  className="hover:text-[#176b5b]"
-                >
-                  Products
-                </button>
-                <span>/</span>
-                <span className="text-gray-700">New Product</span>
-              </div>
-              <h1 className="text-xl font-bold text-[#222] sm:text-2xl">
-                Add New Product
-              </h1>
-              <p className="mt-1 text-xs text-gray-500 sm:text-sm">
-                Create a new furniture product in your inventory.
-              </p>
-            </div> */}
-
             <div className="min-w-0">
               <div className="mb-1 flex items-center gap-2 text-xs text-gray-500 sm:mb-2 sm:text-sm">
                 <button
@@ -5191,7 +9757,6 @@ export default function NewProductPage() {
 
         <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-[1fr_320px]">
           <div className="space-y-4 sm:space-y-6">
-            {/* Basic */}
             <section className="rounded-xl border border-[#e4e2da] bg-white">
               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
                 <h2 className="text-base font-bold text-[#222]">
@@ -5218,6 +9783,7 @@ export default function NewProductPage() {
                     </p>
                   )}
                 </div>
+
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
                     Product Code <span className="text-red-500">*</span>
@@ -5227,6 +9793,21 @@ export default function NewProductPage() {
                     onChange={(e) =>
                       updateField("productCode", e.target.value.toUpperCase())
                     }
+                    onBlur={async () => {
+                      const code = normalizeProductCode(form.productCode);
+                      if (!code) return;
+                      try {
+                        if (await isProductCodeTaken(code)) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            productCode:
+                              "This product code already exists. Enter a new unique code.",
+                          }));
+                        }
+                      } catch {
+                        /* ignore network errors on blur */
+                      }
+                    }}
                     placeholder="e.g. SOFA-001"
                     className={`${fieldClass(!!errors.productCode)} uppercase`}
                   />
@@ -5236,6 +9817,7 @@ export default function NewProductPage() {
                     </p>
                   )}
                 </div>
+
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
                     Category <span className="text-red-500">*</span>
@@ -5328,12 +9910,12 @@ export default function NewProductPage() {
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Color
+                    Primary colour label
                   </label>
                   <input
                     value={form.color}
                     onChange={(e) => updateField("color", e.target.value)}
-                    placeholder="e.g. Light Grey"
+                    placeholder="e.g. Light Grey (optional text)"
                     className={fieldClass()}
                   />
                 </div>
@@ -5347,6 +9929,59 @@ export default function NewProductPage() {
                     placeholder="e.g. 280 × 180 × 85 cm"
                     className={fieldClass()}
                   />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Available colours
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {FURNITURE_COLOR_OPTIONS.map((c) => {
+                      const on = selectedColors.includes(c.hex);
+                      return (
+                        <button
+                          key={c.hex}
+                          type="button"
+                          onClick={() => toggleColor(c.hex)}
+                          title={c.name}
+                          className={`flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
+                            on
+                              ? "border-[#176b5b] bg-[#eef7f4] text-[#176b5b]"
+                              : "border-[#d9d7cf] bg-white text-gray-600"
+                          }`}
+                        >
+                          <span
+                            className="h-5 w-5 rounded-full border border-black/10 shadow-sm"
+                            style={{ backgroundColor: c.hex }}
+                          />
+                          {c.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Sizes / seaters
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {FURNITURE_SIZE_OPTIONS.map((s) => {
+                      const on = selectedSizes.includes(s);
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => toggleSize(s)}
+                          className={`rounded-full border px-3.5 py-2 text-xs font-semibold transition ${
+                            on
+                              ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+                              : "border-[#d9d7cf] bg-white text-gray-700 hover:border-gray-400"
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="md:col-span-2">
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -5363,7 +9998,6 @@ export default function NewProductPage() {
               </div>
             </section>
 
-            {/* Pricing */}
             <section className="rounded-xl border border-[#e4e2da] bg-white">
               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
                 <h2 className="text-base font-bold text-[#222]">Pricing</h2>
@@ -5432,7 +10066,6 @@ export default function NewProductPage() {
               </div>
             </section>
 
-            {/* Inventory */}
             <section className="rounded-xl border border-[#e4e2da] bg-white">
               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
                 <h2 className="text-base font-bold text-[#222]">Inventory</h2>
@@ -5524,7 +10157,6 @@ export default function NewProductPage() {
               </div>
             </section>
 
-            {/* Supplier */}
             <section className="rounded-xl border border-[#e4e2da] bg-white">
               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
                 <h2 className="text-base font-bold text-[#222]">
@@ -5564,7 +10196,6 @@ export default function NewProductPage() {
             </section>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-4 sm:space-y-6">
             <section className="rounded-xl border border-[#e4e2da] bg-white">
               <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
@@ -5572,16 +10203,16 @@ export default function NewProductPage() {
                   Product images
                 </h2>
                 <p className="mt-0.5 text-xs text-gray-500">
-                  Up to {MAX_IMAGES} views (front, side, detail…). First image
-                  is the cover.
+                  Up to {MAX_IMAGES} views. First image is the cover. Supports
+                  public image URLs and Google Drive share links.
                 </p>
               </div>
               <div className="p-4 sm:p-5">
-                {imagePreviews.length > 0 ? (
+                {displayPreviews.length > 0 ? (
                   <div className="mb-3 grid grid-cols-3 gap-2">
-                    {imagePreviews.map((src, i) => (
+                    {displayPreviews.map((src, i) => (
                       <div
-                        key={`${i}-${src.slice(0, 24)}`}
+                        key={`${i}-${src.slice(0, 40)}`}
                         className="relative aspect-square overflow-hidden rounded-lg border border-[#e4e2da] bg-[#fafaf8]"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -5589,19 +10220,26 @@ export default function NewProductPage() {
                           src={src}
                           alt={`Preview ${i + 1}`}
                           className="h-full w-full object-cover"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.opacity =
+                              "0.35";
+                          }}
                         />
                         {i === 0 && (
                           <span className="absolute left-1 top-1 rounded bg-[#176b5b] px-1.5 py-0.5 text-[9px] font-bold text-white">
                             Cover
                           </span>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => removeImageAt(i)}
-                          className="absolute right-1 top-1 rounded bg-black/60 px-1.5 text-[10px] text-white"
-                        >
-                          ✕
-                        </button>
+                        {imagePreviews.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => removeImageAt(i)}
+                            className="absolute right-1 top-1 rounded bg-black/60 px-1.5 text-[10px] text-white"
+                          >
+                            ✕
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -5610,9 +10248,6 @@ export default function NewProductPage() {
                     <div className="px-4 text-center">
                       <p className="text-sm font-medium text-gray-700">
                         No images yet
-                      </p>
-                      <p className="mt-1 text-xs text-gray-400">
-                        Upload multiple views
                       </p>
                     </div>
                   </div>
@@ -5633,10 +10268,6 @@ export default function NewProductPage() {
                 >
                   {imageFiles.length ? "Add more images" : "Upload images"}
                 </label>
-                <p className="mt-1.5 text-center text-[11px] text-gray-400">
-                  JPG, PNG, WebP · Max 5 MB each · {imageFiles.length}/
-                  {MAX_IMAGES}
-                </p>
 
                 <div className="relative my-4">
                   <div className="absolute inset-0 flex items-center">
@@ -5649,14 +10280,21 @@ export default function NewProductPage() {
                   </div>
                 </div>
                 <textarea
-                  rows={3}
+                  rows={4}
                   value={imageUrlInput}
                   onChange={(e) => setImageUrlInput(e.target.value)}
                   placeholder={
-                    "https://.../front.jpg\nhttps://.../side.jpg\nhttps://.../detail.jpg"
+                    "https://example.com/photo.jpg\nhttps://drive.google.com/file/d/FILE_ID/view?usp=sharing"
                   }
                   className="w-full rounded-lg border border-[#d9d7cf] px-3 py-2 text-sm outline-none focus:border-[#176b5b]"
                 />
+                <p className="mt-2 text-[11px] leading-4 text-gray-400">
+                  Drive links must be shared as{" "}
+                  <span className="font-medium text-gray-600">
+                    Anyone with the link
+                  </span>
+                  . Converted to embeddable image URLs automatically.
+                </p>
               </div>
             </section>
 
@@ -5665,14 +10303,6 @@ export default function NewProductPage() {
                 <h2 className="text-base font-bold text-[#222]">Preview</h2>
               </div>
               <div className="p-4 sm:p-5">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <span className="rounded-full bg-[#eaf5f1] px-2.5 py-1 text-xs font-semibold text-[#176b5b]">
-                    {form.status}
-                  </span>
-                  <span className="truncate text-xs text-gray-400">
-                    {form.productCode || "CODE"}
-                  </span>
-                </div>
                 <h3 className="text-base font-bold text-[#222] sm:text-lg">
                   {form.productName || "Product Name"}
                 </h3>
@@ -5680,30 +10310,22 @@ export default function NewProductPage() {
                   {form.category || "Category"}
                   {form.subcategory ? ` · ${form.subcategory}` : ""}
                 </p>
-                <div className="my-3 border-t border-[#e4e2da] sm:my-4" />
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between gap-3">
-                    <span className="text-gray-500">Material</span>
-                    <span className="text-right font-medium">
-                      {form.material || "—"}
-                    </span>
+                {selectedColors.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {selectedColors.map((hex) => (
+                      <span
+                        key={hex}
+                        className="h-5 w-5 rounded-full border border-black/10"
+                        style={{ backgroundColor: hex }}
+                      />
+                    ))}
                   </div>
-                  <div className="flex justify-between gap-3">
-                    <span className="text-gray-500">Stock</span>
-                    <span className="font-medium">
-                      {form.stock || "0"} {form.unit}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span className="text-gray-500">Images</span>
-                    <span className="font-medium">
-                      {imageFiles.length ||
-                        imageUrlInput.split("\n").filter((l) => l.trim())
-                          .length ||
-                        0}
-                    </span>
-                  </div>
-                </div>
+                )}
+                {selectedSizes.length > 0 && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    {selectedSizes.join(" · ")}
+                  </p>
+                )}
                 <div className="mt-4 rounded-lg bg-[#f7f7f4] p-3 sm:p-4">
                   <p className="text-xs text-gray-500">Selling Price</p>
                   <p className="mt-1 text-xl font-bold text-[#176b5b] sm:text-2xl">
@@ -5739,34 +10361,26 @@ export default function NewProductPage() {
       </main>
 
       {successOpen && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="product-created-title"
-        >
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <button
             type="button"
-            aria-label="Close success message"
             className="absolute inset-0 bg-black/40"
             onClick={() => setSuccessOpen(false)}
+            aria-label="Close"
           />
           <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="bg-[#eef7f4] px-5 pb-5 pt-7 text-center sm:px-6 sm:pb-6 sm:pt-8">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#176b5b] text-2xl text-white sm:h-16 sm:w-16 sm:text-3xl">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#176b5b] text-2xl text-white">
                 ✓
               </div>
-              <h2
-                id="product-created-title"
-                className="mt-3 text-lg font-bold text-[#222] sm:mt-4 sm:text-xl"
-              >
+              <h2 className="mt-3 text-lg font-bold text-[#222]">
                 Product created
               </h2>
               <p className="mt-2 text-sm text-gray-600">
                 <span className="font-semibold text-[#176b5b]">
                   {createdProductName}
                 </span>{" "}
-                is in inventory and the website catalog.
+                is in inventory and the catalog.
               </p>
             </div>
             <div className="flex flex-col gap-2 p-4 sm:flex-row sm:justify-end sm:p-5">
@@ -5776,14 +10390,14 @@ export default function NewProductPage() {
                   setSuccessOpen(false);
                   resetForm();
                 }}
-                className="min-h-[44px] rounded-lg border border-[#d9d7cf] px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                className="min-h-[44px] rounded-lg border border-[#d9d7cf] px-4 py-2.5 text-sm font-medium text-gray-700"
               >
                 Add another
               </button>
               <button
                 type="button"
                 onClick={() => router.push("/furniture/products")}
-                className="min-h-[44px] rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#125548]"
+                className="min-h-[44px] rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white"
               >
                 View products
               </button>
