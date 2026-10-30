@@ -16394,6 +16394,1111 @@
 // }
 
 
+// "use client";
+
+// import Link from "next/link";
+// import { useParams, useRouter } from "next/navigation";
+// import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+// import {
+//   ChevronLeft,
+//   ChevronRight,
+//   GitCompare,
+//   Heart,
+//   Loader2,
+//   Minus,
+//   Plus,
+//   ShoppingBag,
+//   Star,
+// } from "lucide-react";
+// import {
+//   collection,
+//   doc,
+//   getDoc,
+//   getDocs,
+//   limit,
+//   query,
+//   where,
+// } from "firebase/firestore";
+// import { onAuthStateChanged } from "firebase/auth";
+// import { auth, db } from "@/lib/firebase";
+// import {
+//   addToCart as addToFirebaseCart,
+//   getCart,
+//   getProductAgeDays,
+//   canApplyAgeingDiscount,
+//   getEffectiveSellingPrice,
+// } from "@/services/cartService";
+// import {
+//   getWishlist,
+//   addToWishlist,
+//   removeFromWishlist,
+// } from "@/services/wishlistService";
+// import {
+//   addToCompare,
+//   isInCompare,
+//   removeFromCompare,
+// } from "@/services/compareService";
+// import ProductReviews from "@/components/product/ProductReviews";
+// import { colorNameFromHex } from "@/lib/productOptions";
+
+// interface Product {
+//   id: string;
+//   name: string;
+//   category: string;
+//   subcategory: string;
+//   description: string;
+//   listPrice: number;
+//   discountPercent: number;
+//   effectivePrice: number;
+//   hasDiscount: boolean;
+//   ageDays: number;
+//   material: string;
+//   dimensions: string;
+//   finish?: string;
+//   color?: string;
+//   colors: string[];
+//   sizes: string[];
+//   warranty?: string;
+//   stock: number;
+//   image?: string;
+//   images: string[];
+//   leadTime?: string;
+//   leadTimeDays?: number;
+//   rating?: number;
+//   reviewCount?: number;
+//   featured?: boolean;
+//   active?: boolean;
+// }
+
+// interface RelatedProduct {
+//   id: string;
+//   name: string;
+//   category: string;
+//   price: number;
+//   listPrice: number;
+//   hasDiscount: boolean;
+//   image?: string;
+//   rating?: number;
+// }
+
+// function formatCurrency(value: number) {
+//   return new Intl.NumberFormat("en-IN", {
+//     style: "currency",
+//     currency: "INR",
+//     maximumFractionDigits: 0,
+//   }).format(value);
+// }
+
+// function parseLeadTimeDays(value: unknown, fallback = 7): number {
+//   if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+//     return Math.min(365, Math.floor(value));
+//   }
+//   if (typeof value === "string") {
+//     const m = value.match(/(\d+)/);
+//     if (m) {
+//       const n = Number(m[1]);
+//       if (Number.isFinite(n) && n > 0) return Math.min(365, Math.floor(n));
+//     }
+//   }
+//   return fallback;
+// }
+
+// function StarRow({ rating, size = 14 }: { rating: number; size?: number }) {
+//   const full = Math.round(rating);
+//   return (
+//     <div className="flex items-center gap-0.5">
+//       {Array.from({ length: 5 }).map((_, i) => (
+//         <Star
+//           key={i}
+//           size={size}
+//           className={
+//             i < full ? "fill-amber-400 text-amber-400" : "text-[#e5dfd4]"
+//           }
+//           strokeWidth={1.5}
+//         />
+//       ))}
+//     </div>
+//   );
+// }
+
+// export default function ProductDetailPage() {
+//   const params = useParams();
+//   const router = useRouter();
+//   const productId = (params?.id as string) || "";
+
+//   const [product, setProduct] = useState<Product | null>(null);
+//   const [related, setRelated] = useState<RelatedProduct[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState("");
+
+//   const [authUid, setAuthUid] = useState<string | null>(null);
+//   const [authReady, setAuthReady] = useState(false);
+
+//   const [qty, setQty] = useState(1);
+//   const [cartQty, setCartQty] = useState(0);
+//   const [inWishlist, setInWishlist] = useState(false);
+//   const [inCompare, setInCompare] = useState(false);
+//   const [busyCart, setBusyCart] = useState(false);
+//   const [busyWish, setBusyWish] = useState(false);
+//   const [busyCompare, setBusyCompare] = useState(false);
+//   const [compareError, setCompareError] = useState("");
+
+//   const [selectedColor, setSelectedColor] = useState("");
+//   const [selectedSize, setSelectedSize] = useState("");
+
+//   const [activeImage, setActiveImage] = useState(0);
+//   const [zoomOn, setZoomOn] = useState(false);
+//   const [lensPos, setLensPos] = useState({ x: 50, y: 50 });
+//   const mainImageRef = useRef<HTMLDivElement>(null);
+
+//   useEffect(() => {
+//     const unsub = onAuthStateChanged(auth, (user) => {
+//       setAuthUid(user?.uid ?? null);
+//       setAuthReady(true);
+//     });
+//     return () => unsub();
+//   }, []);
+
+//   useEffect(() => {
+//     if (!productId) {
+//       setLoading(false);
+//       setError("Product not found.");
+//       return;
+//     }
+
+//     let cancelled = false;
+
+//     async function load() {
+//       setLoading(true);
+//       setError("");
+//       try {
+//         const snap = await getDoc(doc(db, "furniture_products", productId));
+//         if (cancelled) return;
+
+//         if (!snap.exists()) {
+//           setProduct(null);
+//           setError("This product is no longer available.");
+//           setLoading(false);
+//           return;
+//         }
+
+//         const data = snap.data() || {};
+//         const status = String(data.status || "In Stock");
+//         const active = data.active !== false && status !== "Inactive";
+
+//         if (!active) {
+//           setProduct(null);
+//           setError("This product is no longer available.");
+//           setLoading(false);
+//           return;
+//         }
+
+//         const listPrice = Number(
+//           data.sellingPrice ?? data.price ?? data.listPrice ?? 0
+//         );
+//         const discountPercent = Number(data.discountPercent || 0);
+//         const ageDays = getProductAgeDays(data);
+//         const ageEligible = canApplyAgeingDiscount(data);
+//         const effectivePrice = getEffectiveSellingPrice(
+//           listPrice,
+//           discountPercent,
+//           ageEligible
+//         );
+//         const hasDiscount =
+//           ageEligible && discountPercent > 0 && effectivePrice < listPrice;
+
+//         const imgList: string[] = [];
+//         if (Array.isArray(data.images)) {
+//           data.images.forEach((u: unknown) => {
+//             const s = String(u || "").trim();
+//             if (s) imgList.push(s);
+//           });
+//         }
+//         const primary =
+//           String(data.imageUrl || data.image || "").trim() || imgList[0] || "";
+//         if (primary && !imgList.includes(primary)) imgList.unshift(primary);
+
+//         const colors: string[] = Array.isArray(data.colors)
+//           ? (data.colors as unknown[]).map(String).filter(Boolean)
+//           : data.color
+//             ? [String(data.color)]
+//             : [];
+
+//         const sizes: string[] = Array.isArray(data.sizes)
+//           ? (data.sizes as unknown[]).map(String).filter(Boolean)
+//           : [];
+
+//         const mapped: Product = {
+//           id: snap.id,
+//           name: String(data.name || "Untitled"),
+//           category: String(data.category || ""),
+//           subcategory: String(data.subcategory || data.subCategory || ""),
+//           description: String(data.description || ""),
+//           listPrice,
+//           discountPercent,
+//           effectivePrice,
+//           hasDiscount,
+//           ageDays,
+//           material: String(data.material || "—"),
+//           dimensions: String(data.dimensions || "—"),
+//           finish: data.finish ? String(data.finish) : undefined,
+//           color: data.color ? String(data.color) : undefined,
+//           colors,
+//           sizes,
+//           warranty: data.warranty ? String(data.warranty) : undefined,
+//           stock: Math.max(0, Number(data.stock || 0)),
+//           image: primary || undefined,
+//           images: imgList.length ? imgList : primary ? [primary] : [],
+//           leadTime: data.leadTime ? String(data.leadTime) : undefined,
+//           leadTimeDays: parseLeadTimeDays(data.leadTimeDays ?? data.leadTime),
+//           rating:
+//             typeof data.rating === "number" && data.rating > 0
+//               ? data.rating
+//               : undefined,
+//           reviewCount:
+//             typeof data.reviewCount === "number"
+//               ? data.reviewCount
+//               : undefined,
+//           featured: Boolean(data.featured),
+//           active: true,
+//         };
+
+//         setProduct(mapped);
+//         setSelectedColor(colors[0] || "");
+//         setSelectedSize(sizes[0] || "");
+//         setActiveImage(0);
+//         setQty(1);
+//         setInCompare(isInCompare(mapped.id));
+//       } catch (err) {
+//         console.error("Product load failed:", err);
+//         if (!cancelled) {
+//           setError("Could not load this product. Please try again.");
+//           setProduct(null);
+//         }
+//       } finally {
+//         if (!cancelled) setLoading(false);
+//       }
+//     }
+
+//     void load();
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, [productId]);
+
+//   useEffect(() => {
+//     if (!authReady || !product) return;
+
+//     let cancelled = false;
+
+//     async function syncUserState() {
+//       if (!cancelled) {
+//         setInCompare(isInCompare(product!.id));
+//       }
+
+//       if (!authUid) {
+//         if (!cancelled) {
+//           setCartQty(0);
+//           setInWishlist(false);
+//         }
+//         return;
+//       }
+
+//       try {
+//         const [cart, wish] = await Promise.all([
+//           getCart(authUid),
+//           getWishlist(authUid),
+//         ]);
+//         if (cancelled) return;
+
+//         const line = (cart?.items || []).find(
+//           (i) => i.productId === product!.id
+//         );
+//         setCartQty(line ? Math.max(0, Number(line.quantity || 0)) : 0);
+
+//         const wishItems = Array.isArray(wish)
+//           ? wish
+//           : (wish as { items?: { productId?: string; id?: string }[] })
+//               ?.items || [];
+//         setInWishlist(
+//           wishItems.some(
+//             (w) => w.productId === product!.id || w.id === product!.id
+//           )
+//         );
+//       } catch (err) {
+//         console.error("User state sync failed:", err);
+//       }
+//     }
+
+//     void syncUserState();
+
+//     const onCart = () => void syncUserState();
+//     const onWish = () => void syncUserState();
+//     const onCompare = () => {
+//       if (product) setInCompare(isInCompare(product.id));
+//     };
+
+//     window.addEventListener("cartUpdated", onCart);
+//     window.addEventListener("wishlistUpdated", onWish);
+//     window.addEventListener("compareUpdated", onCompare);
+
+//     return () => {
+//       cancelled = true;
+//       window.removeEventListener("cartUpdated", onCart);
+//       window.removeEventListener("wishlistUpdated", onWish);
+//       window.removeEventListener("compareUpdated", onCompare);
+//     };
+//   }, [authUid, authReady, product]);
+
+//   useEffect(() => {
+//     if (!product) return;
+//     let cancelled = false;
+
+//     async function loadRelated() {
+//       try {
+//         const q = query(
+//           collection(db, "furniture_products"),
+//           where("category", "==", product!.category),
+//           limit(8)
+//         );
+//         const snap = await getDocs(q);
+//         if (cancelled) return;
+
+//         const rows: RelatedProduct[] = [];
+//         snap.docs.forEach((d) => {
+//           if (d.id === product!.id) return;
+//           const data = d.data() || {};
+//           const status = String(data.status || "In Stock");
+//           const active = data.active !== false && status !== "Inactive";
+//           if (!active) return;
+
+//           const listPrice = Number(
+//             data.sellingPrice ?? data.price ?? data.listPrice ?? 0
+//           );
+//           const discountPercent = Number(data.discountPercent || 0);
+//           const ageEligible = canApplyAgeingDiscount(data);
+//           const price = getEffectiveSellingPrice(
+//             listPrice,
+//             discountPercent,
+//             ageEligible
+//           );
+
+//           rows.push({
+//             id: d.id,
+//             name: String(data.name || "Untitled"),
+//             category: String(data.category || ""),
+//             price,
+//             listPrice,
+//             hasDiscount:
+//               ageEligible && discountPercent > 0 && price < listPrice,
+//             image:
+//               String(data.imageUrl || data.image || "").trim() ||
+//               (Array.isArray(data.images) && data.images[0]
+//                 ? String(data.images[0])
+//                 : undefined),
+//             rating:
+//               typeof data.rating === "number" && data.rating > 0
+//                 ? data.rating
+//                 : undefined,
+//           });
+//         });
+
+//         setRelated(rows.slice(0, 4));
+//       } catch (err) {
+//         console.error("Related products failed:", err);
+//       }
+//     }
+
+//     void loadRelated();
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, [product]);
+
+//   const images = useMemo(() => {
+//     if (!product) return [];
+//     return product.images.length
+//       ? product.images
+//       : product.image
+//         ? [product.image]
+//         : [];
+//   }, [product]);
+
+//   const outOfStock = !product || product.stock <= 0;
+//   const maxQty = product ? Math.max(1, product.stock) : 1;
+//   const atMax = cartQty >= maxQty;
+
+//   const variantLabel = useMemo(() => {
+//     const parts: string[] = [];
+//     if (selectedColor) {
+//       parts.push(
+//         selectedColor.startsWith("#")
+//           ? colorNameFromHex(selectedColor)
+//           : selectedColor
+//       );
+//     }
+//     if (selectedSize) parts.push(selectedSize);
+//     return parts.join(" · ");
+//   }, [selectedColor, selectedSize]);
+
+//   const requireAuth = () => {
+//     if (!authUid) {
+//       router.push(`/sign-in?redirect=/products/${productId}`);
+//       return false;
+//     }
+//     return true;
+//   };
+
+//   const handleAddToCart = async () => {
+//     if (!product || outOfStock || busyCart) return;
+//     if (!requireAuth()) return;
+
+//     const remaining = Math.max(0, product.stock - cartQty);
+//     if (remaining <= 0) return;
+
+//     const toAdd = Math.min(qty, remaining);
+//     if (toAdd <= 0) return;
+
+//     setBusyCart(true);
+//     try {
+//       const variant = variantLabel || undefined;
+
+//       const updated = await addToFirebaseCart(authUid!, {
+//         productId: product.id,
+//         name: product.name,
+//         price: product.effectivePrice,
+//         listPrice: product.listPrice,
+//         discountPercent: product.hasDiscount
+//           ? product.discountPercent
+//           : undefined,
+//         quantity: toAdd,
+//         image: product.image || product.images[0] || "",
+//         category: product.category,
+//         leadTimeDays: product.leadTimeDays,
+//         variant,
+//       });
+
+//       const line = (updated?.items || []).find(
+//         (i) => i.productId === product.id
+//       );
+//       setCartQty(
+//         line ? Math.max(0, Number(line.quantity || 0)) : cartQty + toAdd
+//       );
+//       window.dispatchEvent(new Event("cartUpdated"));
+//     } catch (err) {
+//       console.error("Add to cart failed:", err);
+//     } finally {
+//       setBusyCart(false);
+//     }
+//   };
+
+//   const handleWishlist = async (e?: MouseEvent) => {
+//     e?.preventDefault();
+//     e?.stopPropagation();
+//     if (!product || busyWish) return;
+//     if (!requireAuth()) return;
+
+//     setBusyWish(true);
+//     try {
+//       if (inWishlist) {
+//         await removeFromWishlist(authUid!, product.id);
+//         setInWishlist(false);
+//       } else {
+//         await addToWishlist(authUid!, {
+//           productId: product.id,
+//           name: product.name,
+//           price: product.effectivePrice,
+//           image: product.image || product.images[0] || "",
+//           category: product.category,
+//         });
+//         setInWishlist(true);
+//       }
+//       window.dispatchEvent(new Event("wishlistUpdated"));
+//     } catch (err) {
+//       console.error("Wishlist toggle failed:", err);
+//     } finally {
+//       setBusyWish(false);
+//     }
+//   };
+
+//   const handleCompare = (e?: MouseEvent) => {
+//     e?.preventDefault();
+//     e?.stopPropagation();
+//     if (!product || busyCompare) return;
+
+//     setCompareError("");
+//     setBusyCompare(true);
+//     try {
+//       if (isInCompare(product.id)) {
+//         removeFromCompare(product.id);
+//         setInCompare(false);
+//       } else {
+//         const err = addToCompare({
+//           id: product.id,
+//           name: product.name,
+//           category: product.category,
+//           subcategory: product.subcategory || product.category,
+//           price: product.effectivePrice,
+//           listPrice: product.listPrice,
+//           hasDiscount: product.hasDiscount,
+//           discountPercent: product.discountPercent,
+//           image: product.image || product.images[0] || "",
+//           material: product.material,
+//           finish: product.finish,
+//           color: product.color || selectedColor,
+//           dimensions: product.dimensions,
+//           stock: product.stock,
+//           warranty: product.warranty,
+//           leadTime: product.leadTime,
+//           leadTimeDays: product.leadTimeDays,
+//           rating: product.rating,
+//           reviewCount: product.reviewCount,
+//         });
+//         if (err) {
+//           setCompareError(err);
+//         } else {
+//           setInCompare(true);
+//         }
+//       }
+//     } finally {
+//       setBusyCompare(false);
+//     }
+//   };
+
+//   const onMainImageMove = (e: MouseEvent<HTMLDivElement>) => {
+//     if (!mainImageRef.current) return;
+//     const rect = mainImageRef.current.getBoundingClientRect();
+//     const x = ((e.clientX - rect.left) / rect.width) * 100;
+//     const y = ((e.clientY - rect.top) / rect.height) * 100;
+//     setLensPos({
+//       x: Math.min(100, Math.max(0, x)),
+//       y: Math.min(100, Math.max(0, y)),
+//     });
+//   };
+
+//   if (loading) {
+//     return (
+//       <main className="flex min-h-[60vh] items-center justify-center bg-[#faf8f4]">
+//         <Loader2 className="h-8 w-8 animate-spin text-[#b8956c]" />
+//       </main>
+//     );
+//   }
+
+//   if (error || !product) {
+//     return (
+//       <main className="min-h-[60vh] bg-[#faf8f4]">
+//         <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
+//           <ShoppingBag size={36} className="mx-auto text-[#d4cdc2]" />
+//           <h1 className="mt-4 text-xl font-bold text-[#1a1a1a]">
+//             Product unavailable
+//           </h1>
+//           <p className="mt-2 text-sm text-[#6b6560]">
+//             {error || "We could not find this product."}
+//           </p>
+//           <Link
+//             href="/products"
+//             className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-5 py-2.5 text-sm font-semibold text-white"
+//           >
+//             Browse products
+//           </Link>
+//         </div>
+//       </main>
+//     );
+//   }
+
+//   const currentImage = images[activeImage] || product.image || "";
+
+//   return (
+//     <main className="min-h-screen bg-[#faf8f4]">
+//       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+//         <nav className="mb-5 flex flex-wrap items-center gap-1.5 text-xs text-[#8a847c] sm:mb-7 sm:text-sm">
+//           <Link href="/" className="hover:text-[#1a1a1a]">
+//             Home
+//           </Link>
+//           <span>/</span>
+//           <Link href="/products" className="hover:text-[#1a1a1a]">
+//             Products
+//           </Link>
+//           {product.category ? (
+//             <>
+//               <span>/</span>
+//               <Link
+//                 href={`/products?category=${encodeURIComponent(product.category)}`}
+//                 className="hover:text-[#1a1a1a]"
+//               >
+//                 {product.category}
+//               </Link>
+//             </>
+//           ) : null}
+//           <span>/</span>
+//           <span className="line-clamp-1 font-medium text-[#1a1a1a]">
+//             {product.name}
+//           </span>
+//         </nav>
+
+//         <section className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
+//           {/* Gallery */}
+//           <div>
+//             <div
+//               ref={mainImageRef}
+//               className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-[#e8e2d8] bg-white sm:aspect-square"
+//               onMouseEnter={() => setZoomOn(true)}
+//               onMouseLeave={() => setZoomOn(false)}
+//               onMouseMove={onMainImageMove}
+//             >
+//               {currentImage ? (
+//                 // eslint-disable-next-line @next/next/no-img-element
+//                 <img
+//                   src={currentImage}
+//                   alt={product.name}
+//                   className="h-full w-full object-cover"
+//                   style={
+//                     zoomOn
+//                       ? {
+//                           transformOrigin: `${lensPos.x}% ${lensPos.y}%`,
+//                           transform: "scale(1.85)",
+//                         }
+//                       : undefined
+//                   }
+//                 />
+//               ) : (
+//                 <div className="flex h-full items-center justify-center text-[#d4cdc2]">
+//                   <ShoppingBag size={40} />
+//                 </div>
+//               )}
+
+//               {product.hasDiscount && (
+//                 <span className="absolute left-3 top-3 z-10 rounded-full bg-[#1a1a1a] px-2.5 py-1 text-[11px] font-semibold text-white">
+//                   {Math.round(product.discountPercent)}% off
+//                 </span>
+//               )}
+
+//               {/* Wishlist + Compare — top right, vertical */}
+//               <div className="absolute right-3 top-3 z-10 flex flex-col gap-2">
+//                 <button
+//                   type="button"
+//                   disabled={busyWish}
+//                   onClick={(e) => void handleWishlist(e)}
+//                   className={`flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-sm transition hover:scale-105 ${
+//                     inWishlist
+//                       ? "text-[#c45c4a]"
+//                       : "text-[#6b6560] hover:text-[#c45c4a]"
+//                   }`}
+//                   title={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
+//                   aria-label="Wishlist"
+//                 >
+//                   {busyWish ? (
+//                     <Loader2 size={15} className="animate-spin" />
+//                   ) : (
+//                     <Heart
+//                       size={15}
+//                       className={inWishlist ? "fill-current" : ""}
+//                       strokeWidth={1.75}
+//                     />
+//                   )}
+//                 </button>
+
+//                 <button
+//                   type="button"
+//                   disabled={busyCompare}
+//                   onClick={(e) => handleCompare(e)}
+//                   className={`flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-sm transition hover:scale-105 ${
+//                     inCompare
+//                       ? "text-[#b8956c] ring-2 ring-[#b8956c]/40"
+//                       : "text-[#6b6560] hover:text-[#1a1a1a]"
+//                   }`}
+//                   title={inCompare ? "Remove from compare" : "Add to compare"}
+//                   aria-label="Compare"
+//                 >
+//                   {busyCompare ? (
+//                     <Loader2 size={15} className="animate-spin" />
+//                   ) : (
+//                     <GitCompare size={15} strokeWidth={1.75} />
+//                   )}
+//                 </button>
+//               </div>
+//             </div>
+
+//             {images.length > 1 && (
+//               <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+//                 {images.map((src, i) => (
+//                   <button
+//                     key={`${src}-${i}`}
+//                     type="button"
+//                     onClick={() => setActiveImage(i)}
+//                     className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 sm:h-20 sm:w-20 ${
+//                       i === activeImage
+//                         ? "border-[#1a1a1a]"
+//                         : "border-transparent opacity-80"
+//                     }`}
+//                   >
+//                     {/* eslint-disable-next-line @next/next/no-img-element */}
+//                     <img
+//                       src={src}
+//                       alt=""
+//                       className="h-full w-full object-cover"
+//                     />
+//                   </button>
+//                 ))}
+//               </div>
+//             )}
+
+//             {images.length > 1 && (
+//               <div className="mt-2 flex justify-center gap-2 sm:hidden">
+//                 <button
+//                   type="button"
+//                   onClick={() =>
+//                     setActiveImage((i) =>
+//                       i === 0 ? images.length - 1 : i - 1
+//                     )
+//                   }
+//                   className="flex h-9 w-9 items-center justify-center rounded-full border border-[#e8e2d8] bg-white"
+//                   aria-label="Previous image"
+//                 >
+//                   <ChevronLeft size={16} />
+//                 </button>
+//                 <button
+//                   type="button"
+//                   onClick={() =>
+//                     setActiveImage((i) => (i + 1) % images.length)
+//                   }
+//                   className="flex h-9 w-9 items-center justify-center rounded-full border border-[#e8e2d8] bg-white"
+//                   aria-label="Next image"
+//                 >
+//                   <ChevronRight size={16} />
+//                 </button>
+//               </div>
+//             )}
+//           </div>
+
+//           {/* Buy box */}
+//           <div>
+//             <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#b8956c]">
+//               {product.category}
+//               {product.subcategory ? ` · ${product.subcategory}` : ""}
+//             </p>
+
+//             <h1 className="mt-2 font-display text-2xl font-semibold leading-tight text-[#1a1a1a] sm:text-3xl">
+//               {product.name}
+//             </h1>
+
+//             {typeof product.rating === "number" && product.rating > 0 && (
+//               <div className="mt-3 flex items-center gap-2">
+//                 <StarRow rating={product.rating} size={15} />
+//                 <span className="text-sm text-[#6b6560]">
+//                   {product.rating.toFixed(1)}
+//                   {product.reviewCount
+//                     ? ` · ${product.reviewCount} reviews`
+//                     : ""}
+//                 </span>
+//               </div>
+//             )}
+
+//             <div className="mt-4 flex flex-wrap items-baseline gap-2.5">
+//               <p className="text-2xl font-semibold text-[#1a1a1a] sm:text-3xl">
+//                 {formatCurrency(product.effectivePrice)}
+//               </p>
+//               {product.hasDiscount && (
+//                 <>
+//                   <p className="text-base text-[#8a847c] line-through">
+//                     {formatCurrency(product.listPrice)}
+//                   </p>
+//                   <span className="rounded-full bg-[#f0ebe3] px-2 py-0.5 text-xs font-semibold text-[#8b7355]">
+//                     Save {Math.round(product.discountPercent)}%
+//                   </span>
+//                 </>
+//               )}
+//             </div>
+
+//             {product.description ? (
+//               <p className="mt-4 text-sm leading-6 text-[#5c564e]">
+//                 {product.description}
+//               </p>
+//             ) : null}
+
+//             <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-2.5 border-y border-[#e8e2d8] py-4 text-sm">
+//               <div>
+//                 <dt className="text-xs text-[#8a847c]">Material</dt>
+//                 <dd className="mt-0.5 font-medium text-[#1a1a1a]">
+//                   {product.material || "—"}
+//                 </dd>
+//               </div>
+//               <div>
+//                 <dt className="text-xs text-[#8a847c]">Dimensions</dt>
+//                 <dd className="mt-0.5 font-medium text-[#1a1a1a]">
+//                   {product.dimensions || "—"}
+//                 </dd>
+//               </div>
+//               {product.finish ? (
+//                 <div>
+//                   <dt className="text-xs text-[#8a847c]">Finish</dt>
+//                   <dd className="mt-0.5 font-medium text-[#1a1a1a]">
+//                     {product.finish}
+//                   </dd>
+//                 </div>
+//               ) : null}
+//               {product.warranty ? (
+//                 <div>
+//                   <dt className="text-xs text-[#8a847c]">Warranty</dt>
+//                   <dd className="mt-0.5 font-medium text-[#1a1a1a]">
+//                     {product.warranty}
+//                   </dd>
+//                 </div>
+//               ) : null}
+//             </dl>
+
+//             <p
+//               className={`mt-4 text-sm font-medium ${
+//                 outOfStock
+//                   ? "text-red-600"
+//                   : product.stock <= 3
+//                     ? "text-amber-700"
+//                     : "text-[#176b5b]"
+//               }`}
+//             >
+//               {outOfStock
+//                 ? "Out of stock"
+//                 : product.stock <= 3
+//                   ? `Only ${product.stock} left`
+//                   : "In stock"}
+//             </p>
+
+//             {product.colors.length > 0 && (
+//               <div className="mt-5">
+//                 <p className="text-xs font-medium uppercase tracking-[0.08em] text-[#8a847c]">
+//                   Colour
+//                   {selectedColor ? (
+//                     <span className="ml-2 normal-case tracking-normal text-[#5c564e]">
+//                       ·{" "}
+//                       {selectedColor.startsWith("#")
+//                         ? colorNameFromHex(selectedColor)
+//                         : selectedColor}
+//                     </span>
+//                   ) : null}
+//                 </p>
+//                 <div className="mt-2.5 flex flex-wrap gap-2">
+//                   {product.colors.map((c) => {
+//                     const active = selectedColor === c;
+//                     const isHex = c.startsWith("#");
+//                     return (
+//                       <button
+//                         key={c}
+//                         type="button"
+//                         onClick={() => setSelectedColor(c)}
+//                         title={isHex ? colorNameFromHex(c) : c}
+//                         className={`h-9 w-9 rounded-full border-2 transition ${
+//                           active
+//                             ? "border-[#1a1a1a] ring-2 ring-[#1a1a1a]/20"
+//                             : "border-[#e8e2d8] hover:border-[#c4b8a8]"
+//                         }`}
+//                         style={{
+//                           backgroundColor: isHex ? c : "#e8e2d8",
+//                         }}
+//                         aria-label={`Colour ${isHex ? colorNameFromHex(c) : c}`}
+//                         aria-pressed={active}
+//                       />
+//                     );
+//                   })}
+//                 </div>
+//               </div>
+//             )}
+
+//             {product.sizes.length > 0 && (
+//               <div className="mt-5">
+//                 <p className="text-xs font-medium uppercase tracking-[0.08em] text-[#8a847c]">
+//                   Size
+//                   {selectedSize ? (
+//                     <span className="ml-2 normal-case tracking-normal text-[#5c564e]">
+//                       · {selectedSize}
+//                     </span>
+//                   ) : null}
+//                 </p>
+//                 <div className="mt-2.5 flex flex-wrap gap-2">
+//                   {product.sizes.map((s) => {
+//                     const active = selectedSize === s;
+//                     return (
+//                       <button
+//                         key={s}
+//                         type="button"
+//                         onClick={() => setSelectedSize(s)}
+//                         className={`rounded-full border px-3.5 py-2 text-xs font-semibold transition ${
+//                           active
+//                             ? "border-[#1a1a1a] bg-[#1a1a1a] text-white"
+//                             : "border-[#e8e2d8] bg-white text-[#5c564e] hover:border-[#c4b8a8]"
+//                         }`}
+//                         aria-pressed={active}
+//                       >
+//                         {s}
+//                       </button>
+//                     );
+//                   })}
+//                 </div>
+//               </div>
+//             )}
+
+//             {/* Qty + Add to cart only */}
+//             <div className="mt-6 flex flex-wrap items-center gap-2.5">
+//               <div className="inline-flex h-11 items-center rounded-full border border-[#e8e2d8] bg-white">
+//                 <button
+//                   type="button"
+//                   disabled={qty <= 1 || outOfStock}
+//                   onClick={() => setQty((q) => Math.max(1, q - 1))}
+//                   className="flex h-11 w-10 items-center justify-center text-[#1a1a1a] disabled:opacity-30"
+//                   aria-label="Decrease quantity"
+//                 >
+//                   <Minus size={15} />
+//                 </button>
+//                 <span className="min-w-[2rem] text-center text-sm font-semibold text-[#1a1a1a]">
+//                   {qty}
+//                 </span>
+//                 <button
+//                   type="button"
+//                   disabled={qty >= maxQty || outOfStock}
+//                   onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
+//                   className="flex h-11 w-10 items-center justify-center text-[#1a1a1a] disabled:opacity-30"
+//                   aria-label="Increase quantity"
+//                 >
+//                   <Plus size={15} />
+//                 </button>
+//               </div>
+
+//               <button
+//                 type="button"
+//                 disabled={outOfStock || busyCart || atMax}
+//                 onClick={() => void handleAddToCart()}
+//                 className={`inline-flex h-11 min-w-[9.5rem] flex-1 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition sm:flex-none ${
+//                   outOfStock || atMax
+//                     ? "cursor-not-allowed bg-[#e8e2d8] text-[#8a847c]"
+//                     : "bg-[#1a1a1a] text-white hover:bg-[#2c2a26]"
+//                 }`}
+//               >
+//                 {busyCart ? (
+//                   <Loader2 size={16} className="animate-spin" />
+//                 ) : outOfStock ? (
+//                   "Sold out"
+//                 ) : atMax ? (
+//                   "Max in cart"
+//                 ) : cartQty > 0 ? (
+//                   <>
+//                     <ShoppingBag size={16} />
+//                     Add more
+//                   </>
+//                 ) : (
+//                   <>
+//                     <ShoppingBag size={16} />
+//                     Add to cart
+//                   </>
+//                 )}
+//               </button>
+//             </div>
+
+//             {compareError ? (
+//               <p className="mt-2 text-xs font-medium text-[#c45c4a]">
+//                 {compareError}
+//               </p>
+//             ) : null}
+
+//             {cartQty > 0 && (
+//               <p className="mt-2 text-xs text-[#176b5b]">
+//                 {cartQty} in your cart
+//                 {variantLabel ? ` · ${variantLabel}` : ""}
+//                 {" · "}
+//                 <Link href="/cart" className="font-semibold underline">
+//                   View cart
+//                 </Link>
+//               </p>
+//             )}
+
+//             {inCompare && (
+//               <p className="mt-1.5 text-xs text-[#6b6560]">
+//                 In compare ·{" "}
+//                 <Link
+//                   href="/compare"
+//                   className="font-semibold text-[#1a1a1a] underline"
+//                 >
+//                   View comparison
+//                 </Link>
+//               </p>
+//             )}
+//           </div>
+//         </section>
+
+//         <div className="mt-12 border-t border-[#e8e2d8] pt-10 sm:mt-14 sm:pt-12">
+//           <ProductReviews
+//             productId={product.id}
+//             productName={product.name}
+//           />
+//         </div>
+
+//         {related.length > 0 && (
+//           <section className="mt-12 border-t border-[#e8e2d8] pt-10 sm:mt-14 sm:pt-12">
+//             <div className="flex items-end justify-between gap-4">
+//               <h2 className="font-display text-xl font-semibold text-[#1a1a1a] sm:text-2xl">
+//                 You may also like
+//               </h2>
+//               <Link
+//                 href={`/products?category=${encodeURIComponent(product.category)}`}
+//                 className="text-sm font-semibold text-[#b8956c] hover:text-[#8b7355]"
+//               >
+//                 View all
+//               </Link>
+//             </div>
+//             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+//               {related.map((r) => (
+//                 <Link
+//                   key={r.id}
+//                   href={`/products/${r.id}`}
+//                   className="group overflow-hidden rounded-xl border border-[#e8e2d8] bg-white transition hover:border-[#c4b8a8]"
+//                 >
+//                   <div className="aspect-[4/5] overflow-hidden bg-[#f5f0e8]">
+//                     {r.image ? (
+//                       // eslint-disable-next-line @next/next/no-img-element
+//                       <img
+//                         src={r.image}
+//                         alt={r.name}
+//                         className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+//                       />
+//                     ) : (
+//                       <div className="flex h-full items-center justify-center text-[#d4cdc2]">
+//                         <ShoppingBag size={28} />
+//                       </div>
+//                     )}
+//                   </div>
+//                   <div className="p-3">
+//                     <p className="text-[10px] uppercase tracking-wide text-[#b8956c]">
+//                       {r.category}
+//                     </p>
+//                     <p className="mt-0.5 line-clamp-1 text-sm font-semibold text-[#1a1a1a]">
+//                       {r.name}
+//                     </p>
+//                     {typeof r.rating === "number" && r.rating > 0 && (
+//                       <div className="mt-1">
+//                         <StarRow rating={r.rating} size={11} />
+//                       </div>
+//                     )}
+//                     <div className="mt-1.5 flex items-baseline gap-1.5">
+//                       <p className="text-sm font-semibold text-[#1a1a1a]">
+//                         {formatCurrency(r.price)}
+//                       </p>
+//                       {r.hasDiscount && (
+//                         <p className="text-xs text-[#8a847c] line-through">
+//                           {formatCurrency(r.listPrice)}
+//                         </p>
+//                       )}
+//                     </div>
+//                   </div>
+//                 </Link>
+//               ))}
+//             </div>
+//           </section>
+//         )}
+//       </div>
+//     </main>
+//   );
+// }
+
+
+
 "use client";
 
 import Link from "next/link";
@@ -16481,6 +17586,9 @@ interface RelatedProduct {
   rating?: number;
 }
 
+/** Flipkart-style zoom factor for the side panel */
+const ZOOM = 2.4;
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -16548,7 +17656,10 @@ export default function ProductDetailPage() {
 
   const [activeImage, setActiveImage] = useState(0);
   const [zoomOn, setZoomOn] = useState(false);
-  const [lensPos, setLensPos] = useState({ x: 50, y: 50 });
+  /** Cursor position as % of image box (0–100) */
+  const [lensPct, setLensPct] = useState({ x: 50, y: 50 });
+  /** Lens box size in px (half of viewport under cursor) */
+  const [boxSize, setBoxSize] = useState({ w: 0, h: 0 });
   const mainImageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -16966,15 +18077,45 @@ export default function ProductDetailPage() {
   };
 
   const onMainImageMove = (e: MouseEvent<HTMLDivElement>) => {
-    if (!mainImageRef.current) return;
-    const rect = mainImageRef.current.getBoundingClientRect();
+    const el = mainImageRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setLensPos({
+    setLensPct({
       x: Math.min(100, Math.max(0, x)),
       y: Math.min(100, Math.max(0, y)),
     });
+    // Lens ≈ 1/ZOOM of the image so the panel fills 100%
+    setBoxSize({
+      w: rect.width / ZOOM,
+      h: rect.height / ZOOM,
+    });
   };
+
+  /** Lens top-left in px, clamped so it stays inside the image */
+  const lensStyle = useMemo(() => {
+    const el = mainImageRef.current;
+    if (!el || boxSize.w <= 0) return { left: 0, top: 0 };
+    const rect = el.getBoundingClientRect();
+    let left = (lensPct.x / 100) * rect.width - boxSize.w / 2;
+    let top = (lensPct.y / 100) * rect.height - boxSize.h / 2;
+    left = Math.max(0, Math.min(left, rect.width - boxSize.w));
+    top = Math.max(0, Math.min(top, rect.height - boxSize.h));
+    return { left, top };
+  }, [lensPct, boxSize]);
+
+  /** Background position for the zoom panel */
+  const zoomBgPos = useMemo(() => {
+    const el = mainImageRef.current;
+    if (!el || boxSize.w <= 0) return "50% 50%";
+    const rect = el.getBoundingClientRect();
+    const x =
+      ((lensStyle.left + boxSize.w / 2) / rect.width) * 100;
+    const y =
+      ((lensStyle.top + boxSize.h / 2) / rect.height) * 100;
+    return `${x}% ${y}%`;
+  }, [lensStyle, boxSize]);
 
   if (loading) {
     return (
@@ -17037,12 +18178,16 @@ export default function ProductDetailPage() {
         </nav>
 
         <section className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
-          {/* Gallery */}
-          <div>
+          {/* Gallery + Flipkart zoom */}
+          <div className="relative">
             <div
               ref={mainImageRef}
-              className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-[#e8e2d8] bg-white sm:aspect-square"
-              onMouseEnter={() => setZoomOn(true)}
+              className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-[#e8e2d8] bg-white sm:aspect-square lg:cursor-crosshair"
+              onMouseEnter={() => {
+                if (window.matchMedia("(min-width: 1024px)").matches) {
+                  setZoomOn(true);
+                }
+              }}
               onMouseLeave={() => setZoomOn(false)}
               onMouseMove={onMainImageMove}
             >
@@ -17051,15 +18196,8 @@ export default function ProductDetailPage() {
                 <img
                   src={currentImage}
                   alt={product.name}
-                  className="h-full w-full object-cover"
-                  style={
-                    zoomOn
-                      ? {
-                          transformOrigin: `${lensPos.x}% ${lensPos.y}%`,
-                          transform: "scale(1.85)",
-                        }
-                      : undefined
-                  }
+                  className="h-full w-full object-cover select-none"
+                  draggable={false}
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-[#d4cdc2]">
@@ -17067,13 +18205,26 @@ export default function ProductDetailPage() {
                 </div>
               )}
 
+              {/* Lens rectangle (desktop only) */}
+              {zoomOn && currentImage && boxSize.w > 0 ? (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute z-[5] hidden border border-white/80 bg-white/25 shadow-sm backdrop-blur-[1px] lg:block"
+                  style={{
+                    width: boxSize.w,
+                    height: boxSize.h,
+                    left: lensStyle.left,
+                    top: lensStyle.top,
+                  }}
+                />
+              ) : null}
+
               {product.hasDiscount && (
                 <span className="absolute left-3 top-3 z-10 rounded-full bg-[#1a1a1a] px-2.5 py-1 text-[11px] font-semibold text-white">
                   {Math.round(product.discountPercent)}% off
                 </span>
               )}
 
-              {/* Wishlist + Compare — top right, vertical */}
               <div className="absolute right-3 top-3 z-10 flex flex-col gap-2">
                 <button
                   type="button"
@@ -17084,7 +18235,9 @@ export default function ProductDetailPage() {
                       ? "text-[#c45c4a]"
                       : "text-[#6b6560] hover:text-[#c45c4a]"
                   }`}
-                  title={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
+                  title={
+                    inWishlist ? "Remove from wishlist" : "Add to wishlist"
+                  }
                   aria-label="Wishlist"
                 >
                   {busyWish ? (
@@ -17119,13 +18272,33 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
+            {/* Separate zoom window — desktop only, beside gallery */}
+            {zoomOn && currentImage ? (
+              <div
+                className="pointer-events-none absolute left-[calc(100%+1rem)] top-0 z-30 hidden h-[min(480px,70vh)] w-[min(400px,48vw)] overflow-hidden rounded-2xl border border-[#e8e2d8] bg-white shadow-[0_20px_60px_rgba(26,26,26,0.15)] lg:block"
+                aria-hidden
+              >
+                <div
+                  className="h-full w-full bg-no-repeat"
+                  style={{
+                    backgroundImage: `url(${currentImage})`,
+                    backgroundSize: `${ZOOM * 100}%`,
+                    backgroundPosition: zoomBgPos,
+                  }}
+                />
+              </div>
+            ) : null}
+
             {images.length > 1 && (
               <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
                 {images.map((src, i) => (
                   <button
                     key={`${src}-${i}`}
                     type="button"
-                    onClick={() => setActiveImage(i)}
+                    onClick={() => {
+                      setActiveImage(i);
+                      setZoomOn(false);
+                    }}
                     className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 sm:h-20 sm:w-20 ${
                       i === activeImage
                         ? "border-[#1a1a1a]"
@@ -17336,7 +18509,6 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Qty + Add to cart only */}
             <div className="mt-6 flex flex-wrap items-center gap-2.5">
               <div className="inline-flex h-11 items-center rounded-full border border-[#e8e2d8] bg-white">
                 <button
