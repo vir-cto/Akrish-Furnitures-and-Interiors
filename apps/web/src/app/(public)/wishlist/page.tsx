@@ -730,12 +730,312 @@
 //   );
 // }
 
+// "use client";
+
+// import Link from "next/link";
+// import { useEffect, useState } from "react";
+// import { useRouter } from "next/navigation";
+// import {
+//   Heart,
+//   ShoppingBag,
+//   Trash2,
+//   Loader2,
+// } from "lucide-react";
+// import { onAuthStateChanged } from "firebase/auth";
+// import { auth } from "@/lib/firebase";
+// import {
+//   getWishlist,
+//   removeFromWishlist,
+//   type WishlistItem,
+// } from "@/services/wishlistService";
+// import {
+//   addToCart,
+//   removeFromCart,
+//   getCart,
+// } from "@/services/cartService";
+
+// function formatCurrency(value: number) {
+//   return new Intl.NumberFormat("en-IN", {
+//     style: "currency",
+//     currency: "INR",
+//     maximumFractionDigits: 0,
+//   }).format(value);
+// }
+
+// export default function WishlistPage() {
+//   const router = useRouter();
+//   const [authUid, setAuthUid] = useState<string | null>(null);
+//   const [authReady, setAuthReady] = useState(false);
+//   const [items, setItems] = useState<WishlistItem[]>([]);
+//   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
+//   const [loading, setLoading] = useState(true);
+//   const [busyId, setBusyId] = useState<string | null>(null);
+
+//   useEffect(() => {
+//     const unsub = onAuthStateChanged(auth, (user) => {
+//       setAuthUid(user?.uid ?? null);
+//       setAuthReady(true);
+//     });
+//     return () => unsub();
+//   }, []);
+
+//   // Load wishlist
+//   useEffect(() => {
+//     if (!authReady) return;
+
+//     let cancelled = false;
+
+//     async function loadWishlist() {
+//       if (!authUid) {
+//         router.push("/sign-in?redirect=/wishlist");
+//         return;
+//       }
+
+//       setLoading(true);
+//       try {
+//         const list = await getWishlist(authUid);
+//         if (!cancelled) setItems(list?.items || []);
+//       } catch (err) {
+//         console.error(err);
+//         if (!cancelled) setItems([]);
+//       } finally {
+//         if (!cancelled) setLoading(false);
+//       }
+//     }
+
+//     loadWishlist();
+//     window.addEventListener("wishlistUpdated", loadWishlist);
+//     return () => {
+//       cancelled = true;
+//       window.removeEventListener("wishlistUpdated", loadWishlist);
+//     };
+//   }, [authUid, authReady, router]);
+
+//   // Sync cart ids (same product can't be added twice)
+//   useEffect(() => {
+//     if (!authUid) {
+//       setCartIds(new Set());
+//       return;
+//     }
+
+//     let cancelled = false;
+
+//     async function syncCart() {
+//       try {
+//         const cart = await getCart(authUid!);
+//         const ids = new Set((cart?.items || []).map((i) => i.productId));
+//         if (!cancelled) setCartIds(ids);
+//       } catch {
+//         if (!cancelled) setCartIds(new Set());
+//       }
+//     }
+
+//     syncCart();
+//     window.addEventListener("cartUpdated", syncCart);
+//     return () => {
+//       cancelled = true;
+//       window.removeEventListener("cartUpdated", syncCart);
+//     };
+//   }, [authUid]);
+
+//   async function handleRemoveFromWishlist(productId: string) {
+//     if (!authUid) {
+//       router.push("/sign-in");
+//       return;
+//     }
+
+//     setBusyId(productId);
+//     try {
+//       const next = await removeFromWishlist(authUid, productId);
+//       setItems(next.items);
+//       window.dispatchEvent(new Event("wishlistUpdated"));
+//     } catch (err) {
+//       console.error(err);
+//     } finally {
+//       setBusyId(null);
+//     }
+//   }
+
+//   async function handleToggleCart(item: WishlistItem) {
+//     if (!authUid) {
+//       router.push("/sign-in");
+//       return;
+//     }
+
+//     const inCart = cartIds.has(item.productId);
+//     setBusyId(item.productId);
+
+//     try {
+//       if (inCart) {
+//         await removeFromCart(authUid, item.productId);
+//         setCartIds((prev) => {
+//           const next = new Set(prev);
+//           next.delete(item.productId);
+//           return next;
+//         });
+//       } else {
+//         // Guard: do not add again if already present
+//         const cart = await getCart(authUid);
+//         const already = cart?.items?.some(
+//           (i) => i.productId === item.productId
+//         );
+//         if (!already) {
+//           await addToCart(authUid, {
+//             productId: item.productId,
+//             name: item.name,
+//             price: item.price,
+//             quantity: 1,
+//             image: item.image || "",
+//             category: item.category || "",
+//           });
+//         }
+//         setCartIds((prev) => new Set(prev).add(item.productId));
+//       }
+//       window.dispatchEvent(new Event("cartUpdated"));
+//     } catch (err) {
+//       console.error(err);
+//     } finally {
+//       setBusyId(null);
+//     }
+//   }
+
+//   if (!authReady || (authUid && loading)) {
+//     return (
+//       <main className="flex min-h-[50vh] items-center justify-center bg-[#f7f9f8]">
+//         <Loader2 className="h-8 w-8 animate-spin text-[#176b5b]" />
+//       </main>
+//     );
+//   }
+
+//   return (
+//     <main className="min-h-screen bg-[#f7f9f8]">
+//       <div className="mx-auto max-w-6xl px-3 py-8 sm:px-6 sm:py-14 lg:px-8">
+//         <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+//           Your Wishlist
+//         </h1>
+//         <p className="mt-1.5 text-sm text-slate-500">
+//           Items you have saved for later.
+//         </p>
+
+//         {items.length === 0 ? (
+//           <div className="mt-10 rounded-xl border border-dashed border-slate-300 bg-white py-14 text-center sm:mt-12 sm:rounded-2xl sm:py-20">
+//             <Heart
+//               size={36}
+//               className="mx-auto text-slate-300 sm:h-10 sm:w-10"
+//             />
+//             <h2 className="mt-4 text-base font-semibold text-slate-900 sm:text-lg">
+//               Your wishlist is empty
+//             </h2>
+//             <p className="mt-2 px-4 text-sm text-slate-500">
+//               Browse our collection and save the pieces you love.
+//             </p>
+//             <Link
+//               href="/products"
+//               className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-[#176b5b] px-5 py-3 text-sm font-semibold text-white"
+//             >
+//               <ShoppingBag size={16} />
+//               Explore Furniture
+//             </Link>
+//           </div>
+//         ) : (
+//           <div className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-5 lg:grid-cols-3">
+//             {items.map((item) => {
+//               const busy = busyId === item.productId;
+//               const inCart = cartIds.has(item.productId);
+
+//               return (
+//                 <article
+//                   key={item.productId}
+//                   className="overflow-hidden rounded-xl border border-slate-200 bg-white sm:rounded-2xl"
+//                 >
+//                   <Link
+//                     href={`/products/${item.productId}`}
+//                     className="relative flex aspect-square items-center justify-center bg-slate-100"
+//                   >
+//                     {item.image ? (
+//                       // eslint-disable-next-line @next/next/no-img-element
+//                       <img
+//                         src={item.image}
+//                         alt={item.name}
+//                         className="h-full w-full object-cover"
+//                       />
+//                     ) : (
+//                       <ShoppingBag
+//                         size={32}
+//                         className="text-slate-300 sm:h-10 sm:w-10"
+//                         strokeWidth={1.2}
+//                       />
+//                     )}
+//                   </Link>
+
+//                   <div className="p-2.5 sm:p-4">
+//                     <p className="truncate text-[9px] font-semibold uppercase tracking-wider text-slate-400 sm:text-[10px]">
+//                       {item.category || "Furniture"}
+//                     </p>
+//                     <Link href={`/products/${item.productId}`}>
+//                       <h2 className="mt-1 line-clamp-2 text-xs font-bold leading-snug text-slate-900 sm:line-clamp-1 sm:text-base">
+//                         {item.name}
+//                       </h2>
+//                     </Link>
+//                     <p className="mt-1.5 text-sm font-bold text-slate-900 sm:mt-2 sm:text-lg">
+//                       {formatCurrency(item.price)}
+//                     </p>
+
+//                     <div className="mt-2.5 flex gap-1.5 sm:mt-4 sm:gap-2">
+//                       <button
+//                         type="button"
+//                         disabled={busy}
+//                         onClick={() => handleToggleCart(item)}
+//                         className={`flex h-9 min-w-0 flex-1 items-center justify-center gap-1 rounded-lg px-2 text-[11px] font-semibold text-white disabled:opacity-60 sm:gap-1.5 sm:px-3 sm:text-xs ${
+//                           inCart
+//                             ? "bg-red-600 hover:bg-red-700"
+//                             : "bg-[#176b5b] hover:bg-[#125849]"
+//                         }`}
+//                       >
+//                         {busy ? (
+//                           <Loader2 size={13} className="animate-spin" />
+//                         ) : inCart ? (
+//                           <>
+//                             <Trash2 size={13} />
+//                             Remove from cart
+//                           </>
+//                         ) : (
+//                           <>
+//                             <ShoppingBag size={13} />
+//                             Add to cart
+//                           </>
+//                         )}
+//                       </button>
+//                       <button
+//                         type="button"
+//                         disabled={busy}
+//                         onClick={() => handleRemoveFromWishlist(item.productId)}
+//                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-60 sm:w-10"
+//                         aria-label="Remove from wishlist"
+//                       >
+//                         <Trash2 size={15} />
+//                       </button>
+//                     </div>
+//                   </div>
+//                 </article>
+//               );
+//             })}
+//           </div>
+//         )}
+//       </div>
+//     </main>
+//   );
+// }
+
+
+
 "use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ArrowRight,
   Heart,
   ShoppingBag,
   Trash2,
@@ -753,6 +1053,20 @@ import {
   removeFromCart,
   getCart,
 } from "@/services/cartService";
+
+const C = {
+  page: "#f7f3ec",
+  card: "#ffffff",
+  border: "#ebe4d8",
+  borderSoft: "#f0ebe3",
+  text: "#1c1916",
+  muted: "#8a8378",
+  soft: "#a39e93",
+  gold: "#9a7b3c",
+  goldHover: "#b8956c",
+  black: "#1a1a1a",
+  iconBg: "#f3efe6",
+};
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -779,7 +1093,6 @@ export default function WishlistPage() {
     return () => unsub();
   }, []);
 
-  // Load wishlist
   useEffect(() => {
     if (!authReady) return;
 
@@ -811,7 +1124,6 @@ export default function WishlistPage() {
     };
   }, [authUid, authReady, router]);
 
-  // Sync cart ids (same product can't be added twice)
   useEffect(() => {
     if (!authUid) {
       setCartIds(new Set());
@@ -874,7 +1186,6 @@ export default function WishlistPage() {
           return next;
         });
       } else {
-        // Guard: do not add again if already present
         const cart = await getCart(authUid);
         const already = cart?.items?.some(
           (i) => i.productId === item.productId
@@ -901,40 +1212,63 @@ export default function WishlistPage() {
 
   if (!authReady || (authUid && loading)) {
     return (
-      <main className="flex min-h-[50vh] items-center justify-center bg-[#f7f9f8]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#176b5b]" />
+      <main
+        className="flex min-h-[50vh] items-center justify-center"
+        style={{ backgroundColor: C.page }}
+      >
+        <Loader2
+          className="h-8 w-8 animate-spin"
+          style={{ color: C.gold }}
+        />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f9f8]">
-      <div className="mx-auto max-w-6xl px-3 py-8 sm:px-6 sm:py-14 lg:px-8">
-        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+    <main className="min-h-screen" style={{ backgroundColor: C.page }}>
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+        <h1
+          className="font-display text-2xl font-semibold tracking-tight sm:text-3xl"
+          style={{ color: C.text }}
+        >
           Your Wishlist
         </h1>
-        <p className="mt-1.5 text-sm text-slate-500">
-          Items you have saved for later.
+        <p className="mt-1.5 text-sm" style={{ color: C.muted }}>
+          {items.length === 0
+            ? "No items yet"
+            : `${items.length} saved piece${items.length === 1 ? "" : "s"}`}
         </p>
 
         {items.length === 0 ? (
-          <div className="mt-10 rounded-xl border border-dashed border-slate-300 bg-white py-14 text-center sm:mt-12 sm:rounded-2xl sm:py-20">
-            <Heart
-              size={36}
-              className="mx-auto text-slate-300 sm:h-10 sm:w-10"
-            />
-            <h2 className="mt-4 text-base font-semibold text-slate-900 sm:text-lg">
+          <div
+            className="mt-8 rounded-[1.25rem] border bg-white px-6 py-14 text-center sm:mt-10 sm:rounded-2xl sm:py-20"
+            style={{ borderColor: C.border }}
+          >
+            <div
+              className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
+              style={{ backgroundColor: C.iconBg }}
+            >
+              <Heart size={22} style={{ color: C.gold }} strokeWidth={1.5} />
+            </div>
+            <h2
+              className="mt-5 text-lg font-semibold tracking-tight sm:text-xl"
+              style={{ color: C.text }}
+            >
               Your wishlist is empty
             </h2>
-            <p className="mt-2 px-4 text-sm text-slate-500">
+            <p
+              className="mx-auto mt-2 max-w-sm text-sm leading-relaxed"
+              style={{ color: C.muted }}
+            >
               Browse our collection and save the pieces you love.
             </p>
             <Link
               href="/products"
-              className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-[#176b5b] px-5 py-3 text-sm font-semibold text-white"
+              className="mt-7 inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full px-7 text-sm font-semibold text-white transition hover:opacity-90"
+              style={{ backgroundColor: C.black }}
             >
-              <ShoppingBag size={16} />
-              Explore Furniture
+              Browse products
+              <ArrowRight size={15} />
             </Link>
           </div>
         ) : (
@@ -946,11 +1280,13 @@ export default function WishlistPage() {
               return (
                 <article
                   key={item.productId}
-                  className="overflow-hidden rounded-xl border border-slate-200 bg-white sm:rounded-2xl"
+                  className="overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:shadow-md"
+                  style={{ borderColor: C.border }}
                 >
                   <Link
                     href={`/products/${item.productId}`}
-                    className="relative flex aspect-square items-center justify-center bg-slate-100"
+                    className="relative flex aspect-square items-center justify-center"
+                    style={{ backgroundColor: C.iconBg }}
                   >
                     {item.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -961,56 +1297,70 @@ export default function WishlistPage() {
                       />
                     ) : (
                       <ShoppingBag
-                        size={32}
-                        className="text-slate-300 sm:h-10 sm:w-10"
+                        size={36}
                         strokeWidth={1.2}
+                        style={{ color: C.soft }}
                       />
                     )}
                   </Link>
 
-                  <div className="p-2.5 sm:p-4">
-                    <p className="truncate text-[9px] font-semibold uppercase tracking-wider text-slate-400 sm:text-[10px]">
+                  <div className="p-3 sm:p-4">
+                    <p
+                      className="truncate text-[10px] font-semibold uppercase tracking-[0.14em]"
+                      style={{ color: C.gold }}
+                    >
                       {item.category || "Furniture"}
                     </p>
                     <Link href={`/products/${item.productId}`}>
-                      <h2 className="mt-1 line-clamp-2 text-xs font-bold leading-snug text-slate-900 sm:line-clamp-1 sm:text-base">
+                      <h2
+                        className="mt-1 line-clamp-2 text-sm font-semibold leading-snug sm:text-[15px]"
+                        style={{ color: C.text }}
+                      >
                         {item.name}
                       </h2>
                     </Link>
-                    <p className="mt-1.5 text-sm font-bold text-slate-900 sm:mt-2 sm:text-lg">
+                    <p
+                      className="mt-2 text-base font-semibold sm:text-lg"
+                      style={{ color: C.text }}
+                    >
                       {formatCurrency(item.price)}
                     </p>
 
-                    <div className="mt-2.5 flex gap-1.5 sm:mt-4 sm:gap-2">
+                    <div className="mt-3 flex gap-2 sm:mt-4">
                       <button
                         type="button"
                         disabled={busy}
                         onClick={() => handleToggleCart(item)}
-                        className={`flex h-9 min-w-0 flex-1 items-center justify-center gap-1 rounded-lg px-2 text-[11px] font-semibold text-white disabled:opacity-60 sm:gap-1.5 sm:px-3 sm:text-xs ${
-                          inCart
-                            ? "bg-red-600 hover:bg-red-700"
-                            : "bg-[#176b5b] hover:bg-[#125849]"
-                        }`}
+                        className="flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold text-white transition disabled:opacity-60 sm:text-[13px]"
+                        style={{
+                          backgroundColor: inCart ? "#b91c1c" : C.black,
+                        }}
                       >
                         {busy ? (
-                          <Loader2 size={13} className="animate-spin" />
+                          <Loader2 size={14} className="animate-spin" />
                         ) : inCart ? (
                           <>
-                            <Trash2 size={13} />
-                            Remove from cart
+                            <Trash2 size={14} />
+                            <span className="truncate">Remove from cart</span>
                           </>
                         ) : (
                           <>
-                            <ShoppingBag size={13} />
-                            Add to cart
+                            <ShoppingBag size={14} />
+                            <span className="truncate">Add to cart</span>
                           </>
                         )}
                       </button>
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => handleRemoveFromWishlist(item.productId)}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-60 sm:w-10"
+                        onClick={() =>
+                          handleRemoveFromWishlist(item.productId)
+                        }
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                        style={{
+                          borderColor: C.border,
+                          color: C.muted,
+                        }}
                         aria-label="Remove from wishlist"
                       >
                         <Trash2 size={15} />

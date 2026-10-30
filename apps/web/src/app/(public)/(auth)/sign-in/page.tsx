@@ -8445,6 +8445,1102 @@
 // }
 
 
+// "use client";
+
+// import Link from "next/link";
+// import { FormEvent, useState, Suspense } from "react";
+// import { useRouter, useSearchParams } from "next/navigation";
+// import {
+//   ArrowRight,
+//   Eye,
+//   EyeOff,
+//   Heart,
+//   Loader2,
+//   Package,
+//   ShieldCheck,
+//   ShoppingBag,
+// } from "lucide-react";
+// import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+// import { doc, getDoc } from "firebase/firestore";
+// import { auth, db } from "@/lib/firebase";
+// import { upsertCustomerFromAuth } from "@/services/customerService";
+
+// const STAFF_ROLES = new Set([
+//   "admin",
+//   "manager",
+//   "sales",
+//   "designer",
+//   "accountant",
+//   "hr",
+//   "employee",
+// ]);
+
+// async function isStaffAccount(uid: string, email: string): Promise<boolean> {
+//   if (email === "admin@akrish.in") return true;
+//   const staffSnap = await getDoc(doc(db, "users", uid));
+//   if (!staffSnap.exists()) return false;
+//   const role = String(staffSnap.data()?.role || "").toLowerCase();
+//   return STAFF_ROLES.has(role);
+// }
+
+// function safeCustomerRedirect(path: string | null): string {
+//   if (path && path.startsWith("/") && !path.startsWith("//")) {
+//     if (
+//       path === "/login" ||
+//       path.startsWith("/erp") ||
+//       path.startsWith("/interior") ||
+//       path.startsWith("/furniture") ||
+//       path.startsWith("/admin") ||
+//       path.startsWith("/account")
+//     ) {
+//       return "/";
+//     }
+//     return path;
+//   }
+//   return "/";
+// }
+
+// function CustomerSignInForm() {
+//   const searchParams = useSearchParams();
+//   const router = useRouter();
+
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [form, setForm] = useState({ email: "", password: "" });
+//   const [error, setError] = useState("");
+//   const [loading, setLoading] = useState(false);
+
+//   const updateField = (field: keyof typeof form, value: string) => {
+//     setForm((current) => ({ ...current, [field]: value }));
+//     setError("");
+//   };
+
+//   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+//     event.preventDefault();
+//     setError("");
+
+//     const email = form.email.trim().toLowerCase();
+
+//     if (!email) {
+//       setError("Please enter your email address.");
+//       return;
+//     }
+//     if (!form.password) {
+//       setError("Please enter your password.");
+//       return;
+//     }
+
+//     setLoading(true);
+
+//     try {
+//       const cred = await signInWithEmailAndPassword(auth, email, form.password);
+//       const uid = cred.user.uid;
+
+//       if (await isStaffAccount(uid, email)) {
+//         await signOut(auth);
+//         setError(
+//           "This is a staff account. Please sign in through the Collective ERP staff login."
+//         );
+//         return;
+//       }
+
+//       let name =
+//         cred.user.displayName ||
+//         email
+//           .split("@")[0]
+//           .replace(/[._]/g, " ")
+//           .split(" ")
+//           .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+//           .join(" ");
+
+//       let phone = "";
+//       let gender = "";
+
+//       const customerSnap = await getDoc(doc(db, "furniture_customers", uid));
+//       if (customerSnap.exists()) {
+//         const data = customerSnap.data();
+//         if (data.name) name = String(data.name);
+//         if (data.phone) phone = String(data.phone);
+//         if (data.gender) gender = String(data.gender);
+//       }
+
+//       await upsertCustomerFromAuth({
+//         uid,
+//         name,
+//         email: cred.user.email || email,
+//         phone,
+//         gender,
+//         photoURL: cred.user.photoURL || "",
+//       });
+
+//       const target = safeCustomerRedirect(searchParams.get("redirect"));
+//       router.replace(target);
+//       router.refresh();
+//     } catch (err: unknown) {
+//       console.error(err);
+//       const errCode =
+//         err && typeof err === "object" && "code" in err
+//           ? String((err as { code: string }).code)
+//           : "";
+
+//       if (
+//         errCode === "auth/invalid-credential" ||
+//         errCode === "auth/wrong-password" ||
+//         errCode === "auth/user-not-found" ||
+//         errCode === "auth/invalid-email"
+//       ) {
+//         setError("Invalid email or password. Please try again.");
+//       } else {
+//         setError("Unable to sign in. Please try again.");
+//       }
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   return (
+//     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-col overflow-hidden bg-[#f5f0e8]">
+//       <div className="pointer-events-none absolute inset-0">
+//         <div className="absolute -left-32 -top-24 h-[28rem] w-[28rem] rounded-full bg-[#b8956c]/15 blur-[100px]" />
+//         <div className="absolute -bottom-40 right-[-10%] h-[32rem] w-[32rem] rounded-full bg-[#d4c4a8]/40 blur-[120px]" />
+//         <div className="absolute left-1/2 top-1/3 h-64 w-64 -translate-x-1/2 rounded-full bg-white/50 blur-[80px]" />
+//         <div
+//           className="absolute inset-0 opacity-[0.35]"
+//           style={{
+//             backgroundImage:
+//               "radial-gradient(circle at 1px 1px, rgba(184,149,108,0.18) 1px, transparent 0)",
+//             backgroundSize: "28px 28px",
+//           }}
+//         />
+//       </div>
+
+//       <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-5 py-8 sm:px-8">
+//         <p
+//           aria-hidden
+//           className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 select-none whitespace-nowrap font-display text-[16vw] font-semibold leading-none tracking-tighter text-[#1a1a1a]/[0.03] sm:block lg:text-[9rem]"
+//         >
+//           SHOP
+//         </p>
+
+//         <div className="relative w-full max-w-[400px]">
+//           <div
+//             aria-hidden
+//             className="absolute -inset-x-2 -bottom-2 top-4 rounded-[1.75rem] bg-gradient-to-br from-[#b8956c]/20 via-[#d4c4a8]/15 to-transparent sm:-inset-x-3 sm:-bottom-3"
+//           />
+
+//           <div className="relative overflow-hidden rounded-[1.5rem] border border-white/80 bg-white/95 shadow-[0_20px_50px_rgba(26,26,26,0.08)] backdrop-blur-md">
+//             <div className="h-1 w-full bg-gradient-to-r from-[#b8956c] via-[#d4b896] to-[#b8956c]/40" />
+
+//             <div className="px-5 pb-5 pt-5 sm:px-7 sm:pb-6 sm:pt-6">
+//               <div className="mb-3">
+//                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#b8956c]">
+//                   Customer account
+//                 </p>
+//               </div>
+
+//               <div className="mb-4 flex items-start justify-between gap-3 sm:mb-5">
+//                 <div>
+//                   <h1 className="font-display text-xl font-semibold tracking-tight text-[#1a1a1a] sm:text-2xl">
+//                     Welcome back
+//                   </h1>
+//                   <p className="mt-1 text-xs text-[#7a746c] sm:text-sm">
+//                     Sign in to shop, track orders &amp; wishlist.
+//                   </p>
+//                 </div>
+//                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#f5f0e8] text-[#b8956c]">
+//                   <ShoppingBag size={18} strokeWidth={1.6} />
+//                 </div>
+//               </div>
+
+//               {error && (
+//                 <div
+//                   role="alert"
+//                   className="mb-4 rounded-2xl border border-red-100 bg-red-50/90 px-3.5 py-2.5 text-sm text-red-700"
+//                 >
+//                   <p>{error}</p>
+//                   {error.includes("staff account") && (
+//                     <Link
+//                       href="/login"
+//                       className="mt-1.5 inline-flex items-center gap-1 font-semibold text-[#b8956c] hover:underline"
+//                     >
+//                       Go to Collective ERP Login
+//                       <ArrowRight size={14} />
+//                     </Link>
+//                   )}
+//                 </div>
+//               )}
+
+//               <form onSubmit={handleSubmit} className="space-y-3.5">
+//                 <div>
+//                   <label
+//                     htmlFor="email"
+//                     className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9188]"
+//                   >
+//                     Email address
+//                   </label>
+//                   <input
+//                     id="email"
+//                     type="email"
+//                     autoComplete="email"
+//                     inputMode="email"
+//                     value={form.email}
+//                     onChange={(e) => updateField("email", e.target.value)}
+//                     placeholder="you@example.com"
+//                     className="h-11 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15"
+//                   />
+//                 </div>
+
+//                 <div>
+//                   <div className="mb-1.5 flex items-center justify-between">
+//                     <label
+//                       htmlFor="password"
+//                       className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9188]"
+//                     >
+//                       Password
+//                     </label>
+//                     <Link
+//                       href="/forgot-password"
+//                       className="text-[11px] font-semibold text-[#b8956c] transition hover:text-[#8b7355]"
+//                     >
+//                       Forgot?
+//                     </Link>
+//                   </div>
+//                   <div className="relative">
+//                     <input
+//                       id="password"
+//                       type={showPassword ? "text" : "password"}
+//                       autoComplete="current-password"
+//                       value={form.password}
+//                       onChange={(e) => updateField("password", e.target.value)}
+//                       placeholder="••••••••"
+//                       className="h-11 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 pr-12 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15"
+//                     />
+//                     <button
+//                       type="button"
+//                       onClick={() => setShowPassword((v) => !v)}
+//                       className="absolute right-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-[#9a9188] transition hover:bg-[#f0e8dc] hover:text-[#1a1a1a]"
+//                       aria-label={
+//                         showPassword ? "Hide password" : "Show password"
+//                       }
+//                     >
+//                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+//                     </button>
+//                   </div>
+//                 </div>
+
+//                 <button
+//                   type="submit"
+//                   disabled={loading}
+//                   className="group relative mt-0.5 flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[#1a1a1a] text-sm font-semibold text-white transition hover:bg-[#2c2a26] disabled:cursor-not-allowed disabled:opacity-60"
+//                 >
+//                   <span
+//                     aria-hidden
+//                     className="absolute inset-y-0 left-0 w-1 bg-[#b8956c]"
+//                   />
+//                   {loading ? (
+//                     <>
+//                       <Loader2 size={16} className="animate-spin" />
+//                       Signing in…
+//                     </>
+//                   ) : (
+//                     <>
+//                       Sign in to shop
+//                       <ArrowRight
+//                         size={16}
+//                         className="transition-transform group-hover:translate-x-0.5"
+//                       />
+//                     </>
+//                   )}
+//                 </button>
+//               </form>
+
+//               <p className="mt-4 text-center text-sm text-[#6b6560]">
+//                 Don&apos;t have an account?{" "}
+//                 <Link
+//                   href="/register"
+//                   className="font-semibold text-[#b8956c] hover:underline"
+//                 >
+//                   Create one
+//                 </Link>
+//               </p>
+//             </div>
+
+//             <div className="grid grid-cols-2 divide-x divide-[#f0ebe3] border-t border-[#f0ebe3] bg-[#faf8f4]/80">
+//               <div className="flex items-center justify-center gap-2 px-3 py-3">
+//                 <Package size={14} className="text-[#b8956c]" />
+//                 <div>
+//                   <p className="text-[11px] font-semibold text-[#1a1a1a]">
+//                     Orders
+//                   </p>
+//                   <p className="text-[10px] text-[#9a9188]">Track delivery</p>
+//                 </div>
+//               </div>
+//               <div className="flex items-center justify-center gap-2 px-3 py-3">
+//                 <Heart size={14} className="text-[#b8956c]" />
+//                 <div>
+//                   <p className="text-[11px] font-semibold text-[#1a1a1a]">
+//                     Wishlist
+//                   </p>
+//                   <p className="text-[10px] text-[#9a9188]">Saved pieces</p>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+
+//           <p className="mt-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-[11px] text-[#9a9188]">
+//             <span className="inline-flex items-center gap-1">
+//               <ShieldCheck size={12} className="text-[#b8956c]" />
+//               Protected customer account
+//             </span>
+//           </p>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+// export default function CustomerSignInPage() {
+//   return (
+//     <Suspense
+//       fallback={
+//         <div className="flex min-h-[50vh] items-center justify-center bg-[#f5f0e8]">
+//           <Loader2 className="h-8 w-8 animate-spin text-[#b8956c]" />
+//         </div>
+//       }
+//     >
+//       <CustomerSignInForm />
+//     </Suspense>
+//   );
+// }
+
+
+
+// "use client";
+
+// import Link from "next/link";
+// import { FormEvent, useState, Suspense } from "react";
+// import { useRouter, useSearchParams } from "next/navigation";
+// import {
+//   ArrowRight,
+//   Eye,
+//   EyeOff,
+//   Heart,
+//   Loader2,
+//   Package,
+//   ShieldCheck,
+//   ShoppingBag,
+// } from "lucide-react";
+// import { signInWithEmailAndPassword } from "firebase/auth";
+// import { doc, getDoc } from "firebase/firestore";
+// import { auth, db } from "@/lib/firebase";
+// import { upsertCustomerFromAuth } from "@/services/customerService";
+
+// function safeCustomerRedirect(path: string | null): string {
+//   if (path && path.startsWith("/") && !path.startsWith("//")) {
+//     if (
+//       path === "/login" ||
+//       path.startsWith("/erp") ||
+//       path.startsWith("/interior") ||
+//       path.startsWith("/furniture") ||
+//       path.startsWith("/admin") ||
+//       path.startsWith("/account")
+//     ) {
+//       return "/";
+//     }
+//     return path;
+//   }
+//   return "/";
+// }
+
+// function CustomerSignInForm() {
+//   const searchParams = useSearchParams();
+//   const router = useRouter();
+
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [form, setForm] = useState({ email: "", password: "" });
+//   const [error, setError] = useState("");
+//   const [loading, setLoading] = useState(false);
+
+//   const updateField = (field: keyof typeof form, value: string) => {
+//     setForm((current) => ({ ...current, [field]: value }));
+//     setError("");
+//   };
+
+//   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+//     event.preventDefault();
+//     setError("");
+
+//     const email = form.email.trim().toLowerCase();
+
+//     if (!email) {
+//       setError("Please enter your email address.");
+//       return;
+//     }
+//     if (!form.password) {
+//       setError("Please enter your password.");
+//       return;
+//     }
+
+//     setLoading(true);
+
+//     try {
+//       const cred = await signInWithEmailAndPassword(auth, email, form.password);
+//       const uid = cred.user.uid;
+
+//       // Allow any valid Firebase user to shop (including staff / admin@akrish.in).
+//       // Staff ERP access stays on /login via AuthContext.
+
+//       let name =
+//         cred.user.displayName ||
+//         email
+//           .split("@")[0]
+//           .replace(/[._]/g, " ")
+//           .split(" ")
+//           .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+//           .join(" ");
+
+//       let phone = "";
+//       let gender = "";
+
+//       const customerSnap = await getDoc(doc(db, "furniture_customers", uid));
+//       if (customerSnap.exists()) {
+//         const data = customerSnap.data();
+//         if (data.name) name = String(data.name);
+//         if (data.phone) phone = String(data.phone);
+//         if (data.gender) gender = String(data.gender);
+//       }
+
+//       await upsertCustomerFromAuth({
+//         uid,
+//         name,
+//         email: cred.user.email || email,
+//         phone,
+//         gender,
+//         photoURL: cred.user.photoURL || "",
+//       });
+
+//       const target = safeCustomerRedirect(searchParams.get("redirect"));
+//       router.replace(target);
+//       router.refresh();
+//     } catch (err: unknown) {
+//       console.error(err);
+//       const errCode =
+//         err && typeof err === "object" && "code" in err
+//           ? String((err as { code: string }).code)
+//           : "";
+
+//       if (
+//         errCode === "auth/invalid-credential" ||
+//         errCode === "auth/wrong-password" ||
+//         errCode === "auth/user-not-found" ||
+//         errCode === "auth/invalid-email"
+//       ) {
+//         setError("Invalid email or password. Please try again.");
+//       } else {
+//         setError("Unable to sign in. Please try again.");
+//       }
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   return (
+//     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-col overflow-hidden bg-[#f5f0e8]">
+//       <div className="pointer-events-none absolute inset-0">
+//         <div className="absolute -left-32 -top-24 h-[28rem] w-[28rem] rounded-full bg-[#b8956c]/15 blur-[100px]" />
+//         <div className="absolute -bottom-40 right-[-10%] h-[32rem] w-[32rem] rounded-full bg-[#d4c4a8]/40 blur-[120px]" />
+//         <div className="absolute left-1/2 top-1/3 h-64 w-64 -translate-x-1/2 rounded-full bg-white/50 blur-[80px]" />
+//         <div
+//           className="absolute inset-0 opacity-[0.35]"
+//           style={{
+//             backgroundImage:
+//               "radial-gradient(circle at 1px 1px, rgba(184,149,108,0.18) 1px, transparent 0)",
+//             backgroundSize: "28px 28px",
+//           }}
+//         />
+//       </div>
+
+//       <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-5 py-8 sm:px-8">
+//         <p
+//           aria-hidden
+//           className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 select-none whitespace-nowrap font-display text-[16vw] font-semibold leading-none tracking-tighter text-[#1a1a1a]/[0.03] sm:block lg:text-[9rem]"
+//         >
+//           SHOP
+//         </p>
+
+//         <div className="relative w-full max-w-[400px]">
+//           <div
+//             aria-hidden
+//             className="absolute -inset-x-2 -bottom-2 top-4 rounded-[1.75rem] bg-gradient-to-br from-[#b8956c]/20 via-[#d4c4a8]/15 to-transparent sm:-inset-x-3 sm:-bottom-3"
+//           />
+
+//           <div className="relative overflow-hidden rounded-[1.5rem] border border-white/80 bg-white/95 shadow-[0_20px_50px_rgba(26,26,26,0.08)] backdrop-blur-md">
+//             <div className="h-1 w-full bg-gradient-to-r from-[#b8956c] via-[#d4b896] to-[#b8956c]/40" />
+
+//             <div className="px-5 pb-5 pt-5 sm:px-7 sm:pb-6 sm:pt-6">
+//               <div className="mb-3">
+//                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#b8956c]">
+//                   Customer account
+//                 </p>
+//               </div>
+
+//               <div className="mb-4 flex items-start justify-between gap-3 sm:mb-5">
+//                 <div>
+//                   <h1 className="font-display text-xl font-semibold tracking-tight text-[#1a1a1a] sm:text-2xl">
+//                     Welcome back
+//                   </h1>
+//                   <p className="mt-1 text-xs text-[#7a746c] sm:text-sm">
+//                     Sign in to shop, track orders &amp; wishlist.
+//                   </p>
+//                 </div>
+//                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#f5f0e8] text-[#b8956c]">
+//                   <ShoppingBag size={18} strokeWidth={1.6} />
+//                 </div>
+//               </div>
+
+//               {error && (
+//                 <div
+//                   role="alert"
+//                   className="mb-4 rounded-2xl border border-red-100 bg-red-50/90 px-3.5 py-2.5 text-sm text-red-700"
+//                 >
+//                   <p>{error}</p>
+//                 </div>
+//               )}
+
+//               <form onSubmit={handleSubmit} className="space-y-3.5">
+//                 <div>
+//                   <label
+//                     htmlFor="email"
+//                     className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9188]"
+//                   >
+//                     Email address
+//                   </label>
+//                   <input
+//                     id="email"
+//                     type="email"
+//                     autoComplete="email"
+//                     inputMode="email"
+//                     value={form.email}
+//                     onChange={(e) => updateField("email", e.target.value)}
+//                     placeholder="you@example.com"
+//                     className="h-11 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15"
+//                   />
+//                 </div>
+
+//                 <div>
+//                   <div className="mb-1.5 flex items-center justify-between">
+//                     <label
+//                       htmlFor="password"
+//                       className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9188]"
+//                     >
+//                       Password
+//                     </label>
+//                     <Link
+//                       href="/forgot-password"
+//                       className="text-[11px] font-semibold text-[#b8956c] transition hover:text-[#8b7355]"
+//                     >
+//                       Forgot?
+//                     </Link>
+//                   </div>
+//                   <div className="relative">
+//                     <input
+//                       id="password"
+//                       type={showPassword ? "text" : "password"}
+//                       autoComplete="current-password"
+//                       value={form.password}
+//                       onChange={(e) => updateField("password", e.target.value)}
+//                       placeholder="••••••••"
+//                       className="h-11 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 pr-12 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15"
+//                     />
+//                     <button
+//                       type="button"
+//                       onClick={() => setShowPassword((v) => !v)}
+//                       className="absolute right-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-[#9a9188] transition hover:bg-[#f0e8dc] hover:text-[#1a1a1a]"
+//                       aria-label={
+//                         showPassword ? "Hide password" : "Show password"
+//                       }
+//                     >
+//                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+//                     </button>
+//                   </div>
+//                 </div>
+
+//                 <button
+//                   type="submit"
+//                   disabled={loading}
+//                   className="group relative mt-0.5 flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[#1a1a1a] text-sm font-semibold text-white transition hover:bg-[#2c2a26] disabled:cursor-not-allowed disabled:opacity-60"
+//                 >
+//                   <span
+//                     aria-hidden
+//                     className="absolute inset-y-0 left-0 w-1 bg-[#b8956c]"
+//                   />
+//                   {loading ? (
+//                     <>
+//                       <Loader2 size={16} className="animate-spin" />
+//                       Signing in…
+//                     </>
+//                   ) : (
+//                     <>
+//                       Sign in to shop
+//                       <ArrowRight
+//                         size={16}
+//                         className="transition-transform group-hover:translate-x-0.5"
+//                       />
+//                     </>
+//                   )}
+//                 </button>
+//               </form>
+
+//               <p className="mt-4 text-center text-sm text-[#6b6560]">
+//                 Don&apos;t have an account?{" "}
+//                 <Link
+//                   href="/register"
+//                   className="font-semibold text-[#b8956c] hover:underline"
+//                 >
+//                   Create one
+//                 </Link>
+//               </p>
+//             </div>
+
+//             <div className="grid grid-cols-2 divide-x divide-[#f0ebe3] border-t border-[#f0ebe3] bg-[#faf8f4]/80">
+//               <div className="flex items-center justify-center gap-2 px-3 py-3">
+//                 <Package size={14} className="text-[#b8956c]" />
+//                 <div>
+//                   <p className="text-[11px] font-semibold text-[#1a1a1a]">
+//                     Orders
+//                   </p>
+//                   <p className="text-[10px] text-[#9a9188]">Track delivery</p>
+//                 </div>
+//               </div>
+//               <div className="flex items-center justify-center gap-2 px-3 py-3">
+//                 <Heart size={14} className="text-[#b8956c]" />
+//                 <div>
+//                   <p className="text-[11px] font-semibold text-[#1a1a1a]">
+//                     Wishlist
+//                   </p>
+//                   <p className="text-[10px] text-[#9a9188]">Saved pieces</p>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+
+//           <p className="mt-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-[11px] text-[#9a9188]">
+//             <span className="inline-flex items-center gap-1">
+//               <ShieldCheck size={12} className="text-[#b8956c]" />
+//               Protected customer account
+//             </span>
+//           </p>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+// export default function CustomerSignInPage() {
+//   return (
+//     <Suspense
+//       fallback={
+//         <div className="flex min-h-[50vh] items-center justify-center bg-[#f5f0e8]">
+//           <Loader2 className="h-8 w-8 animate-spin text-[#b8956c]" />
+//         </div>
+//       }
+//     >
+//       <CustomerSignInForm />
+//     </Suspense>
+//   );
+// }
+
+
+
+
+// "use client";
+
+// import Link from "next/link";
+// import { FormEvent, useState, Suspense } from "react";
+// import { useRouter, useSearchParams } from "next/navigation";
+// import {
+//   ArrowRight,
+//   Eye,
+//   EyeOff,
+//   Heart,
+//   Loader2,
+//   Package,
+//   ShieldCheck,
+//   ShoppingBag,
+// } from "lucide-react";
+// import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+// import { doc, getDoc } from "firebase/firestore";
+// import { auth, db } from "@/lib/firebase";
+// import { upsertCustomerFromAuth } from "@/services/customerService";
+
+// const STAFF_ROLES = new Set([
+//   "admin",
+//   "manager",
+//   "sales",
+//   "designer",
+//   "accountant",
+//   "hr",
+//   "employee",
+// ]);
+
+// /** Staff / ERP accounts must not use customer sign-in. */
+// async function isStaffAccount(uid: string, email: string): Promise<boolean> {
+//   const normalized = (email || "").toLowerCase().trim();
+//   if (normalized === "admin@akrish.in") return true;
+
+//   try {
+//     const staffSnap = await getDoc(doc(db, "users", uid));
+//     if (!staffSnap.exists()) return false;
+//     const role = String(staffSnap.data()?.role || "").toLowerCase();
+//     return STAFF_ROLES.has(role);
+//   } catch {
+//     return false;
+//   }
+// }
+
+// function safeCustomerRedirect(path: string | null): string {
+//   if (path && path.startsWith("/") && !path.startsWith("//")) {
+//     if (
+//       path === "/login" ||
+//       path.startsWith("/erp") ||
+//       path.startsWith("/interior") ||
+//       path.startsWith("/furniture") ||
+//       path.startsWith("/admin") ||
+//       path.startsWith("/account")
+//     ) {
+//       return "/";
+//     }
+//     return path;
+//   }
+//   return "/";
+// }
+
+// function CustomerSignInForm() {
+//   const searchParams = useSearchParams();
+//   const router = useRouter();
+
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [form, setForm] = useState({ email: "", password: "" });
+//   const [error, setError] = useState("");
+//   const [isStaffError, setIsStaffError] = useState(false);
+//   const [loading, setLoading] = useState(false);
+
+//   const updateField = (field: keyof typeof form, value: string) => {
+//     setForm((current) => ({ ...current, [field]: value }));
+//     setError("");
+//     setIsStaffError(false);
+//   };
+
+//   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+//     event.preventDefault();
+//     setError("");
+//     setIsStaffError(false);
+
+//     const email = form.email.trim().toLowerCase();
+
+//     if (!email) {
+//       setError("Please enter your email address.");
+//       return;
+//     }
+//     if (!form.password) {
+//       setError("Please enter your password.");
+//       return;
+//     }
+
+//     setLoading(true);
+
+//     try {
+//       const cred = await signInWithEmailAndPassword(auth, email, form.password);
+//       const uid = cred.user.uid;
+
+//       if (await isStaffAccount(uid, email)) {
+//         await signOut(auth);
+//         setIsStaffError(true);
+//         setError(
+//           "This email is registered for Collective ERP staff access. Website shopping needs a separate customer account."
+//         );
+//         return;
+//       }
+
+//       let name =
+//         cred.user.displayName ||
+//         email
+//           .split("@")[0]
+//           .replace(/[._]/g, " ")
+//           .split(" ")
+//           .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+//           .join(" ");
+
+//       let phone = "";
+//       let gender = "";
+
+//       const customerSnap = await getDoc(doc(db, "furniture_customers", uid));
+//       if (customerSnap.exists()) {
+//         const data = customerSnap.data();
+//         if (data.name) name = String(data.name);
+//         if (data.phone) phone = String(data.phone);
+//         if (data.gender) gender = String(data.gender);
+//       }
+
+//       await upsertCustomerFromAuth({
+//         uid,
+//         name,
+//         email: cred.user.email || email,
+//         phone,
+//         gender,
+//         photoURL: cred.user.photoURL || "",
+//       });
+
+//       const target = safeCustomerRedirect(searchParams.get("redirect"));
+//       router.replace(target);
+//       router.refresh();
+//     } catch (err: unknown) {
+//       console.error(err);
+//       const errCode =
+//         err && typeof err === "object" && "code" in err
+//           ? String((err as { code: string }).code)
+//           : "";
+
+//       if (
+//         errCode === "auth/invalid-credential" ||
+//         errCode === "auth/wrong-password" ||
+//         errCode === "auth/user-not-found" ||
+//         errCode === "auth/invalid-email"
+//       ) {
+//         setError("Invalid email or password. Please try again.");
+//       } else {
+//         setError("Unable to sign in. Please try again.");
+//       }
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   return (
+//     <div className="relative flex min-h-[calc(100dvh-4rem)] flex-col overflow-hidden bg-[#f5f0e8]">
+//       <div className="pointer-events-none absolute inset-0">
+//         <div className="absolute -left-32 -top-24 h-[28rem] w-[28rem] rounded-full bg-[#b8956c]/15 blur-[100px]" />
+//         <div className="absolute -bottom-40 right-[-10%] h-[32rem] w-[32rem] rounded-full bg-[#d4c4a8]/40 blur-[120px]" />
+//         <div className="absolute left-1/2 top-1/3 h-64 w-64 -translate-x-1/2 rounded-full bg-white/50 blur-[80px]" />
+//         <div
+//           className="absolute inset-0 opacity-[0.35]"
+//           style={{
+//             backgroundImage:
+//               "radial-gradient(circle at 1px 1px, rgba(184,149,108,0.18) 1px, transparent 0)",
+//             backgroundSize: "28px 28px",
+//           }}
+//         />
+//       </div>
+
+//       <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-5 py-8 sm:px-8">
+//         <p
+//           aria-hidden
+//           className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 select-none whitespace-nowrap font-display text-[16vw] font-semibold leading-none tracking-tighter text-[#1a1a1a]/[0.03] sm:block lg:text-[9rem]"
+//         >
+//           SHOP
+//         </p>
+
+//         <div className="relative w-full max-w-[400px]">
+//           <div
+//             aria-hidden
+//             className="absolute -inset-x-2 -bottom-2 top-4 rounded-[1.75rem] bg-gradient-to-br from-[#b8956c]/20 via-[#d4c4a8]/15 to-transparent sm:-inset-x-3 sm:-bottom-3"
+//           />
+
+//           <div className="relative overflow-hidden rounded-[1.5rem] border border-white/80 bg-white/95 shadow-[0_20px_50px_rgba(26,26,26,0.08)] backdrop-blur-md">
+//             <div className="h-1 w-full bg-gradient-to-r from-[#b8956c] via-[#d4b896] to-[#b8956c]/40" />
+
+//             <div className="px-5 pb-5 pt-5 sm:px-7 sm:pb-6 sm:pt-6">
+//               <div className="mb-3">
+//                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#b8956c]">
+//                   Customer account
+//                 </p>
+//               </div>
+
+//               <div className="mb-4 flex items-start justify-between gap-3 sm:mb-5">
+//                 <div>
+//                   <h1 className="font-display text-xl font-semibold tracking-tight text-[#1a1a1a] sm:text-2xl">
+//                     Welcome back
+//                   </h1>
+//                   <p className="mt-1 text-xs text-[#7a746c] sm:text-sm">
+//                     Sign in to shop, track orders &amp; wishlist.
+//                   </p>
+//                 </div>
+//                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#f5f0e8] text-[#b8956c]">
+//                   <ShoppingBag size={18} strokeWidth={1.6} />
+//                 </div>
+//               </div>
+
+//               {error && (
+//                 <div
+//                   role="alert"
+//                   className="mb-4 rounded-2xl border border-red-100 bg-red-50/90 px-3.5 py-2.5 text-sm text-red-700"
+//                 >
+//                   <p>{error}</p>
+//                   {isStaffError && (
+//                     <div className="mt-2 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
+//                       <Link
+//                         href="/register"
+//                         className="inline-flex items-center gap-1 font-semibold text-[#b8956c] hover:underline"
+//                       >
+//                         Create a customer account
+//                         <ArrowRight size={14} />
+//                       </Link>
+//                       <Link
+//                         href="/login"
+//                         className="inline-flex items-center gap-1 text-xs font-medium text-[#6b6560] hover:text-[#1a1a1a] hover:underline"
+//                       >
+//                         Staff ERP login
+//                         <ArrowRight size={12} />
+//                       </Link>
+//                     </div>
+//                   )}
+//                 </div>
+//               )}
+
+//               <form onSubmit={handleSubmit} className="space-y-3.5">
+//                 <div>
+//                   <label
+//                     htmlFor="email"
+//                     className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9188]"
+//                   >
+//                     Email address
+//                   </label>
+//                   <input
+//                     id="email"
+//                     type="email"
+//                     autoComplete="email"
+//                     inputMode="email"
+//                     value={form.email}
+//                     onChange={(e) => updateField("email", e.target.value)}
+//                     placeholder="you@example.com"
+//                     className="h-11 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15"
+//                   />
+//                 </div>
+
+//                 <div>
+//                   <div className="mb-1.5 flex items-center justify-between">
+//                     <label
+//                       htmlFor="password"
+//                       className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9188]"
+//                     >
+//                       Password
+//                     </label>
+//                     <Link
+//                       href="/forgot-password"
+//                       className="text-[11px] font-semibold text-[#b8956c] transition hover:text-[#8b7355]"
+//                     >
+//                       Forgot?
+//                     </Link>
+//                   </div>
+//                   <div className="relative">
+//                     <input
+//                       id="password"
+//                       type={showPassword ? "text" : "password"}
+//                       autoComplete="current-password"
+//                       value={form.password}
+//                       onChange={(e) => updateField("password", e.target.value)}
+//                       placeholder="••••••••"
+//                       className="h-11 w-full rounded-2xl border border-[#ebe4d9] bg-[#faf8f4] px-4 pr-12 text-sm text-[#1a1a1a] outline-none transition placeholder:text-[#b8b0a4] focus:border-[#b8956c] focus:bg-white focus:ring-4 focus:ring-[#b8956c]/15"
+//                     />
+//                     <button
+//                       type="button"
+//                       onClick={() => setShowPassword((v) => !v)}
+//                       className="absolute right-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-[#9a9188] transition hover:bg-[#f0e8dc] hover:text-[#1a1a1a]"
+//                       aria-label={
+//                         showPassword ? "Hide password" : "Show password"
+//                       }
+//                     >
+//                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+//                     </button>
+//                   </div>
+//                 </div>
+
+//                 <button
+//                   type="submit"
+//                   disabled={loading}
+//                   className="group relative mt-0.5 flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[#1a1a1a] text-sm font-semibold text-white transition hover:bg-[#2c2a26] disabled:cursor-not-allowed disabled:opacity-60"
+//                 >
+//                   <span
+//                     aria-hidden
+//                     className="absolute inset-y-0 left-0 w-1 bg-[#b8956c]"
+//                   />
+//                   {loading ? (
+//                     <>
+//                       <Loader2 size={16} className="animate-spin" />
+//                       Signing in…
+//                     </>
+//                   ) : (
+//                     <>
+//                       Sign in to shop
+//                       <ArrowRight
+//                         size={16}
+//                         className="transition-transform group-hover:translate-x-0.5"
+//                       />
+//                     </>
+//                   )}
+//                 </button>
+//               </form>
+
+//               <p className="mt-4 text-center text-sm text-[#6b6560]">
+//                 Don&apos;t have an account?{" "}
+//                 <Link
+//                   href="/register"
+//                   className="font-semibold text-[#b8956c] hover:underline"
+//                 >
+//                   Create one
+//                 </Link>
+//               </p>
+//             </div>
+
+//             <div className="grid grid-cols-2 divide-x divide-[#f0ebe3] border-t border-[#f0ebe3] bg-[#faf8f4]/80">
+//               <div className="flex items-center justify-center gap-2 px-3 py-3">
+//                 <Package size={14} className="text-[#b8956c]" />
+//                 <div>
+//                   <p className="text-[11px] font-semibold text-[#1a1a1a]">
+//                     Orders
+//                   </p>
+//                   <p className="text-[10px] text-[#9a9188]">Track delivery</p>
+//                 </div>
+//               </div>
+//               <div className="flex items-center justify-center gap-2 px-3 py-3">
+//                 <Heart size={14} className="text-[#b8956c]" />
+//                 <div>
+//                   <p className="text-[11px] font-semibold text-[#1a1a1a]">
+//                     Wishlist
+//                   </p>
+//                   <p className="text-[10px] text-[#9a9188]">Saved pieces</p>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+
+//           <p className="mt-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-[11px] text-[#9a9188]">
+//             <span className="inline-flex items-center gap-1">
+//               <ShieldCheck size={12} className="text-[#b8956c]" />
+//               Protected customer account
+//             </span>
+//           </p>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+// export default function CustomerSignInPage() {
+//   return (
+//     <Suspense
+//       fallback={
+//         <div className="flex min-h-[50vh] items-center justify-center bg-[#f5f0e8]">
+//           <Loader2 className="h-8 w-8 animate-spin text-[#b8956c]" />
+//         </div>
+//       }
+//     >
+//       <CustomerSignInForm />
+//     </Suspense>
+//   );
+// }
+
+
+
 "use client";
 
 import Link from "next/link";
@@ -8475,12 +9571,19 @@ const STAFF_ROLES = new Set([
   "employee",
 ]);
 
+/** Staff / ERP accounts must not use customer sign-in. */
 async function isStaffAccount(uid: string, email: string): Promise<boolean> {
-  if (email === "admin@akrish.in") return true;
-  const staffSnap = await getDoc(doc(db, "users", uid));
-  if (!staffSnap.exists()) return false;
-  const role = String(staffSnap.data()?.role || "").toLowerCase();
-  return STAFF_ROLES.has(role);
+  const normalized = (email || "").toLowerCase().trim();
+  if (normalized === "admin@akrish.in") return true;
+
+  try {
+    const staffSnap = await getDoc(doc(db, "users", uid));
+    if (!staffSnap.exists()) return false;
+    const role = String(staffSnap.data()?.role || "").toLowerCase();
+    return STAFF_ROLES.has(role);
+  } catch {
+    return false;
+  }
 }
 
 function safeCustomerRedirect(path: string | null): string {
@@ -8507,16 +9610,19 @@ function CustomerSignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [showSignupHint, setShowSignupHint] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
     setError("");
+    setShowSignupHint(false);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
+    setShowSignupHint(false);
 
     const email = form.email.trim().toLowerCase();
 
@@ -8535,10 +9641,12 @@ function CustomerSignInForm() {
       const cred = await signInWithEmailAndPassword(auth, email, form.password);
       const uid = cred.user.uid;
 
+      // Staff emails are not valid customer logins — same UX as “create account”
       if (await isStaffAccount(uid, email)) {
         await signOut(auth);
+        setShowSignupHint(true);
         setError(
-          "This is a staff account. Please sign in through the Collective ERP staff login."
+          "No customer account found for this email. Create an account to shop with us."
         );
         return;
       }
@@ -8588,7 +9696,10 @@ function CustomerSignInForm() {
         errCode === "auth/user-not-found" ||
         errCode === "auth/invalid-email"
       ) {
-        setError("Invalid email or password. Please try again.");
+        setShowSignupHint(true);
+        setError(
+          "No customer account found for this email. Create an account to shop with us."
+        );
       } else {
         setError("Unable to sign in. Please try again.");
       }
@@ -8657,12 +9768,12 @@ function CustomerSignInForm() {
                   className="mb-4 rounded-2xl border border-red-100 bg-red-50/90 px-3.5 py-2.5 text-sm text-red-700"
                 >
                   <p>{error}</p>
-                  {error.includes("staff account") && (
+                  {showSignupHint && (
                     <Link
-                      href="/login"
-                      className="mt-1.5 inline-flex items-center gap-1 font-semibold text-[#b8956c] hover:underline"
+                      href="/register"
+                      className="mt-2 inline-flex items-center gap-1 font-semibold text-[#b8956c] hover:underline"
                     >
-                      Go to Collective ERP Login
+                      Create account / Sign up
                       <ArrowRight size={14} />
                     </Link>
                   )}

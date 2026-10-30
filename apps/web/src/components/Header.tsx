@@ -11780,6 +11780,1489 @@
 // }
 
 
+// "use client";
+
+// import Link from "next/link";
+// import { usePathname } from "next/navigation";
+// import { useEffect, useRef, useState } from "react";
+// import {
+//   Menu,
+//   X,
+//   ShoppingCart,
+//   User,
+//   ChevronDown,
+//   LogOut,
+//   Package,
+//   Heart,
+//   Loader2,
+//   GitCompare,
+// } from "lucide-react";
+// import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+// import { onAuthStateChanged, signOut } from "firebase/auth";
+// import { auth, db } from "@/lib/firebase";
+// import { getCart, getCartItemCount } from "@/services/cartService";
+// import { getCompareCount } from "@/services/compareService";
+
+// interface UserInfo {
+//   name?: string;
+//   email?: string;
+// }
+
+// interface NavLink {
+//   label: string;
+//   href: string;
+// }
+
+// const STAFF_ROLES = new Set([
+//   "admin",
+//   "manager",
+//   "sales",
+//   "designer",
+//   "accountant",
+//   "hr",
+//   "employee",
+// ]);
+
+// async function isStaffOnlyUser(
+//   uid: string,
+//   email: string | null
+// ): Promise<boolean> {
+//   const normalizedEmail = (email || "").toLowerCase();
+
+//   if (normalizedEmail === "admin@akrish.in") return true;
+
+//   try {
+//     const staffSnap = await getDoc(doc(db, "users", uid));
+//     if (!staffSnap.exists()) return false;
+
+//     const role = String(staffSnap.data()?.role || "").toLowerCase();
+//     if (!STAFF_ROLES.has(role)) return false;
+
+//     const customerSnap = await getDoc(doc(db, "furniture_customers", uid));
+//     return !customerSnap.exists();
+//   } catch {
+//     return false;
+//   }
+// }
+
+// export default function Header() {
+//   const pathname = usePathname() || "";
+//   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+//   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
+//   const [furnitureOpen, setFurnitureOpen] = useState(false);
+//   const [userOpen, setUserOpen] = useState(false);
+//   const [furnitureAccordion, setFurnitureAccordion] = useState(false);
+
+//   const [user, setUser] = useState<UserInfo | null>(null);
+//   const [authReady, setAuthReady] = useState(false);
+//   const [cartCount, setCartCount] = useState(0);
+//   const [compareCount, setCompareCount] = useState(0);
+
+//   const [furnitureLinks, setFurnitureLinks] = useState<NavLink[]>([
+//     { label: "All Furniture", href: "/products" },
+//   ]);
+
+//   const mobileMenuRef = useRef<HTMLDivElement>(null);
+//   const userMenuRef = useRef<HTMLDivElement>(null);
+//   const shopMenuRef = useRef<HTMLDivElement>(null);
+
+//   useEffect(() => {
+//     if (!mobileMenuOpen) return;
+
+//     function onPointerDown(e: MouseEvent | TouchEvent) {
+//       const target = e.target as Node;
+//       if (mobileMenuRef.current && !mobileMenuRef.current.contains(target)) {
+//         const toggle = document.getElementById("mobile-menu-toggle");
+//         if (toggle && toggle.contains(target)) return;
+//         setMobileMenuOpen(false);
+//         setFurnitureAccordion(false);
+//       }
+//     }
+
+//     document.addEventListener("mousedown", onPointerDown);
+//     document.addEventListener("touchstart", onPointerDown);
+//     return () => {
+//       document.removeEventListener("mousedown", onPointerDown);
+//       document.removeEventListener("touchstart", onPointerDown);
+//     };
+//   }, [mobileMenuOpen]);
+
+//   useEffect(() => {
+//     if (!userOpen && !furnitureOpen) return;
+
+//     function onPointerDown(e: MouseEvent | TouchEvent) {
+//       const target = e.target as Node;
+//       if (
+//         userOpen &&
+//         userMenuRef.current &&
+//         !userMenuRef.current.contains(target)
+//       ) {
+//         setUserOpen(false);
+//       }
+//       if (
+//         furnitureOpen &&
+//         shopMenuRef.current &&
+//         !shopMenuRef.current.contains(target)
+//       ) {
+//         setFurnitureOpen(false);
+//       }
+//     }
+
+//     document.addEventListener("mousedown", onPointerDown);
+//     document.addEventListener("touchstart", onPointerDown);
+//     return () => {
+//       document.removeEventListener("mousedown", onPointerDown);
+//       document.removeEventListener("touchstart", onPointerDown);
+//     };
+//   }, [userOpen, furnitureOpen]);
+
+//   useEffect(() => {
+//     function onKey(e: KeyboardEvent) {
+//       if (e.key === "Escape") {
+//         setMobileMenuOpen(false);
+//         setAccountPanelOpen(false);
+//         setFurnitureAccordion(false);
+//         setFurnitureOpen(false);
+//         setUserOpen(false);
+//       }
+//     }
+//     window.addEventListener("keydown", onKey);
+//     return () => window.removeEventListener("keydown", onKey);
+//   }, []);
+
+//   useEffect(() => {
+//     if (!accountPanelOpen) return;
+//     const prev = document.body.style.overflow;
+//     document.body.style.overflow = "hidden";
+//     return () => {
+//       document.body.style.overflow = prev;
+//     };
+//   }, [accountPanelOpen]);
+
+//   useEffect(() => {
+//     setMobileMenuOpen(false);
+//     setAccountPanelOpen(false);
+//     setFurnitureOpen(false);
+//     setUserOpen(false);
+//     setFurnitureAccordion(false);
+//   }, [pathname]);
+
+//   useEffect(() => {
+//     const fetchCategories = async () => {
+//       try {
+//         const snapshot = await getDocs(collection(db, "furniture_products"));
+//         const categorySet = new Set<string>();
+
+//         snapshot.docs.forEach((docSnap) => {
+//           const data = docSnap.data();
+//           const status = String(data.status || "In Stock");
+//           const active = data.active !== false && status !== "Inactive";
+//           if (!active) return;
+//           const category = data.category;
+//           if (category && typeof category === "string" && category.trim()) {
+//             categorySet.add(category.trim());
+//           }
+//         });
+
+//         setFurnitureLinks([
+//           { label: "All Furniture", href: "/products" },
+//           ...Array.from(categorySet)
+//             .sort()
+//             .map((cat) => ({
+//               label: cat,
+//               href: `/products?category=${encodeURIComponent(cat)}`,
+//             })),
+//         ]);
+//       } catch (err) {
+//         console.error("Failed to load furniture categories:", err);
+//       }
+//     };
+
+//     fetchCategories();
+//   }, []);
+
+//   useEffect(() => {
+//     let active = true;
+
+//     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+//       if (!active) return;
+
+//       if (!firebaseUser) {
+//         setUser(null);
+//         setCartCount(0);
+//         setAuthReady(true);
+//         return;
+//       }
+
+//       setUser({
+//         name: firebaseUser.displayName || firebaseUser.email || "Account",
+//         email: firebaseUser.email || "",
+//       });
+//       setAuthReady(true);
+
+//       if (await isStaffOnlyUser(firebaseUser.uid, firebaseUser.email)) {
+//         try {
+//           await signOut(auth);
+//         } catch {
+//           /* ignore */
+//         }
+//         if (active) {
+//           setUser(null);
+//           setCartCount(0);
+//         }
+//         return;
+//       }
+
+//       let name = firebaseUser.displayName || "";
+//       let email = firebaseUser.email || "";
+
+//       try {
+//         const snap = await getDoc(
+//           doc(db, "furniture_customers", firebaseUser.uid)
+//         );
+//         if (!active) return;
+//         if (snap.exists()) {
+//           const data = snap.data();
+//           if (data.name) name = String(data.name);
+//           if (data.email) email = String(data.email);
+//         }
+//       } catch {
+//         /* keep firebase name */
+//       }
+
+//       if (!active) return;
+//       setUser({ name, email });
+
+//       try {
+//         const cart = await getCart(firebaseUser.uid);
+//         if (!active) return;
+//         setCartCount(cart ? getCartItemCount(cart.items) : 0);
+//       } catch {
+//         if (active) setCartCount(0);
+//       }
+//     });
+
+//     return () => {
+//       active = false;
+//       unsub();
+//     };
+//   }, []);
+
+//   useEffect(() => {
+//     const loadCount = async () => {
+//       const u = auth.currentUser;
+//       if (!u) {
+//         setCartCount(0);
+//         return;
+//       }
+//       try {
+//         if (await isStaffOnlyUser(u.uid, u.email)) {
+//           setCartCount(0);
+//           return;
+//         }
+//         const cart = await getCart(u.uid);
+//         setCartCount(cart ? getCartItemCount(cart.items) : 0);
+//       } catch {
+//         setCartCount(0);
+//       }
+//     };
+
+//     window.addEventListener("cartUpdated", loadCount);
+//     return () => window.removeEventListener("cartUpdated", loadCount);
+//   }, []);
+
+//   useEffect(() => {
+//     const syncCompare = () => setCompareCount(getCompareCount());
+//     syncCompare();
+//     window.addEventListener("compareUpdated", syncCompare);
+//     return () => window.removeEventListener("compareUpdated", syncCompare);
+//   }, []);
+
+//   const handleLogout = async () => {
+//     try {
+//       await signOut(auth);
+//       setUser(null);
+//       setCartCount(0);
+//       setUserOpen(false);
+//       setAccountPanelOpen(false);
+//       setMobileMenuOpen(false);
+//       window.location.href = "/";
+//     } catch (error) {
+//       console.error("Failed to log out:", error);
+//     }
+//   };
+
+//   const closeMobileMenu = () => {
+//     setMobileMenuOpen(false);
+//     setFurnitureAccordion(false);
+//     setFurnitureOpen(false);
+//   };
+
+//   const userInitial = (user?.name || user?.email || "U")
+//     .charAt(0)
+//     .toUpperCase();
+
+//   const navClass = (href: string) => {
+//     const active =
+//       href === "/"
+//         ? pathname === "/"
+//         : pathname === href || pathname.startsWith(`${href}/`);
+//     return `relative pb-1 text-sm font-medium transition ${
+//       active
+//         ? "text-[#1a1a1a] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#b8956c]"
+//         : "text-[#6b6560] hover:text-[#1a1a1a]"
+//     }`;
+//   };
+
+//   const iconBtn =
+//     "inline-flex h-10 w-10 items-center justify-center rounded-full text-[#6b6560] transition hover:bg-[#e8e0d4] hover:text-[#1a1a1a]";
+
+//   return (
+//     <header className="sticky top-0 z-50 border-b border-[#e0d8cc] bg-[#f0ebe3] pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
+//       <div className="relative mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+//         <div className="flex h-14 items-center justify-between gap-2 sm:h-[4.5rem] sm:gap-3">
+//           <Link
+//             href="/"
+//             onClick={closeMobileMenu}
+//             className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3"
+//           >
+//             {/* eslint-disable-next-line @next/next/no-img-element */}
+//             <img
+//               src="/Akrish.jpg"
+//               alt="Akrish"
+//               className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-[#e0d8cc] sm:h-10 sm:w-10"
+//             />
+//             <div className="min-w-0">
+//               <div className="font-display truncate text-lg font-semibold leading-none tracking-tight text-[#1a1a1a] sm:text-xl">
+//                 Akrish
+//               </div>
+//               <div className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-[#b8956c] sm:text-[10px]">
+//                 Furniture &amp; Interior
+//               </div>
+//             </div>
+//           </Link>
+
+//           <nav className="hidden items-center gap-8 lg:flex">
+//             <Link href="/" className={navClass("/")}>
+//               Home
+//             </Link>
+
+//             <div className="relative" ref={shopMenuRef}>
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setFurnitureOpen((v) => !v);
+//                   setUserOpen(false);
+//                 }}
+//                 className={`relative flex items-center gap-1 pb-1 text-sm font-medium transition ${
+//                   pathname.startsWith("/products")
+//                     ? "text-[#1a1a1a] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#b8956c]"
+//                     : "text-[#6b6560] hover:text-[#1a1a1a]"
+//                 }`}
+//               >
+//                 Shop
+//                 <ChevronDown
+//                   className={`h-3.5 w-3.5 transition ${
+//                     furnitureOpen ? "rotate-180" : ""
+//                   }`}
+//                 />
+//               </button>
+
+//               {furnitureOpen && (
+//                 <div className="absolute left-1/2 top-full z-50 mt-4 max-h-80 w-56 -translate-x-1/2 overflow-y-auto rounded-2xl border border-[#e0d8cc] bg-white p-2 shadow-[0_12px_40px_rgba(26,26,26,0.08)]">
+//                   {furnitureLinks.map((link) => (
+//                     <Link
+//                       key={`${link.label}-${link.href}`}
+//                       href={link.href}
+//                       onClick={() => setFurnitureOpen(false)}
+//                       className="block rounded-xl px-4 py-2.5 text-sm text-[#6b6560] transition hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//                     >
+//                       {link.label}
+//                     </Link>
+//                   ))}
+//                 </div>
+//               )}
+//             </div>
+
+//             <Link href="/about" className={navClass("/about")}>
+//               About
+//             </Link>
+//             <Link href="/services" className={navClass("/services")}>
+//               Services
+//             </Link>
+//             <Link href="/contact" className={navClass("/contact")}>
+//               Contact
+//             </Link>
+//           </nav>
+
+//           <div className="hidden items-center gap-0.5 lg:flex">
+//             <Link
+//               href="/compare"
+//               className={`relative ${iconBtn}`}
+//               aria-label="Compare products"
+//             >
+//               <GitCompare className="h-5 w-5" strokeWidth={1.5} />
+//               {compareCount > 0 ? (
+//                 <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b8956c] px-1 text-[9px] font-bold text-white">
+//                   {compareCount > 9 ? "9+" : compareCount}
+//                 </span>
+//               ) : null}
+//             </Link>
+
+//             <Link href="/wishlist" className={iconBtn} aria-label="Wishlist">
+//               <Heart className="h-5 w-5" strokeWidth={1.5} />
+//             </Link>
+
+//             <div className="relative" ref={userMenuRef}>
+//               {user ? (
+//                 <>
+//                   <button
+//                     type="button"
+//                     onClick={() => {
+//                       setUserOpen((v) => !v);
+//                       setFurnitureOpen(false);
+//                     }}
+//                     className={iconBtn}
+//                     aria-label="Account"
+//                     aria-expanded={userOpen}
+//                   >
+//                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1a1a1a] text-[10px] font-bold text-white">
+//                       {userInitial}
+//                     </span>
+//                   </button>
+
+//                   {userOpen ? (
+//                     <div className="absolute right-0 top-full z-50 mt-3 w-60 rounded-2xl border border-[#e0d8cc] bg-white p-2 shadow-[0_12px_40px_rgba(26,26,26,0.08)]">
+//                       <div className="border-b border-[#e0d8cc] px-3 py-3">
+//                         <p className="truncate text-sm font-semibold text-[#1a1a1a]">
+//                           {user.name || "User"}
+//                         </p>
+//                         {user.email ? (
+//                           <p className="mt-1 truncate text-xs text-[#6b6560]">
+//                             {user.email}
+//                           </p>
+//                         ) : null}
+//                       </div>
+//                       <Link
+//                         href="/account/profile"
+//                         onClick={() => setUserOpen(false)}
+//                         className="mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//                       >
+//                         <User className="h-4 w-4" />
+//                         Profile
+//                       </Link>
+//                       <Link
+//                         href="/account/orders"
+//                         onClick={() => setUserOpen(false)}
+//                         className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//                       >
+//                         <Package className="h-4 w-4" />
+//                         Orders
+//                       </Link>
+//                       <Link
+//                         href="/wishlist"
+//                         onClick={() => setUserOpen(false)}
+//                         className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//                       >
+//                         <Heart className="h-4 w-4" />
+//                         Wishlist
+//                       </Link>
+//                       <Link
+//                         href="/compare"
+//                         onClick={() => setUserOpen(false)}
+//                         className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//                       >
+//                         <GitCompare className="h-4 w-4" />
+//                         Compare
+//                         {compareCount > 0 ? ` (${compareCount})` : ""}
+//                       </Link>
+//                       <button
+//                         type="button"
+//                         onClick={handleLogout}
+//                         className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"
+//                       >
+//                         <LogOut className="h-4 w-4" />
+//                         Logout
+//                       </button>
+//                     </div>
+//                   ) : null}
+//                 </>
+//               ) : !authReady ? (
+//                 <span className="inline-flex h-10 w-10 items-center justify-center text-[#b8956c]">
+//                   <Loader2 className="h-4 w-4 animate-spin" />
+//                 </span>
+//               ) : (
+//                 <Link href="/sign-in" className={iconBtn} aria-label="Sign in">
+//                   <User className="h-5 w-5" strokeWidth={1.5} />
+//                 </Link>
+//               )}
+//             </div>
+
+//             <Link
+//               href="/cart"
+//               className={`relative ${iconBtn}`}
+//               aria-label="Cart"
+//             >
+//               <ShoppingCart className="h-5 w-5" strokeWidth={1.5} />
+//               {cartCount > 0 ? (
+//                 <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b8956c] px-1 text-[9px] font-bold text-white">
+//                   {cartCount > 99 ? "99+" : cartCount}
+//                 </span>
+//               ) : null}
+//             </Link>
+//           </div>
+
+//           <div className="relative flex shrink-0 items-center gap-0.5 lg:hidden">
+//             <Link
+//               href="/compare"
+//               className={`relative ${iconBtn}`}
+//               aria-label="Compare"
+//             >
+//               <GitCompare className="h-5 w-5" strokeWidth={1.5} />
+//               {compareCount > 0 ? (
+//                 <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b8956c] px-1 text-[9px] font-bold text-white">
+//                   {compareCount > 9 ? "9+" : compareCount}
+//                 </span>
+//               ) : null}
+//             </Link>
+
+//             <Link href="/wishlist" className={iconBtn} aria-label="Wishlist">
+//               <Heart className="h-5 w-5" strokeWidth={1.5} />
+//             </Link>
+
+//             {user ? (
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setAccountPanelOpen(true);
+//                   setMobileMenuOpen(false);
+//                 }}
+//                 className={iconBtn}
+//                 aria-label="My account"
+//               >
+//                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1a1a1a] text-[11px] font-bold text-white">
+//                   {userInitial}
+//                 </span>
+//               </button>
+//             ) : !authReady ? (
+//               <span className="inline-flex h-10 w-10 items-center justify-center text-[#b8956c]">
+//                 <Loader2 className="h-4 w-4 animate-spin" />
+//               </span>
+//             ) : (
+//               <Link href="/sign-in" className={iconBtn} aria-label="Sign in">
+//                 <User className="h-5 w-5" strokeWidth={1.5} />
+//               </Link>
+//             )}
+
+//             <Link
+//               href="/cart"
+//               className={`relative ${iconBtn}`}
+//               aria-label="Cart"
+//             >
+//               <ShoppingCart className="h-5 w-5" strokeWidth={1.5} />
+//               {cartCount > 0 ? (
+//                 <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b8956c] px-1 text-[9px] font-bold text-white">
+//                   {cartCount > 99 ? "99+" : cartCount}
+//                 </span>
+//               ) : null}
+//             </Link>
+
+//             <button
+//               id="mobile-menu-toggle"
+//               type="button"
+//               onClick={() => {
+//                 setMobileMenuOpen((v) => !v);
+//                 if (mobileMenuOpen) setFurnitureAccordion(false);
+//                 setAccountPanelOpen(false);
+//               }}
+//               className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#1a1a1a] hover:bg-[#e8e0d4]"
+//               aria-label="Toggle menu"
+//               aria-expanded={mobileMenuOpen}
+//             >
+//               {mobileMenuOpen ? (
+//                 <X className="h-5 w-5" />
+//               ) : (
+//                 <Menu className="h-5 w-5" />
+//               )}
+//             </button>
+
+//             {mobileMenuOpen ? (
+//               <div
+//                 ref={mobileMenuRef}
+//                 className="absolute right-0 top-[calc(100%+8px)] z-[60] w-[min(18rem,calc(100vw-1.5rem))] origin-top-right overflow-hidden rounded-2xl border border-[#e0d8cc] bg-white shadow-[0_12px_40px_rgba(26,26,26,0.08)]"
+//               >
+//                 <div className="max-h-[min(70vh,28rem)] overflow-y-auto overscroll-contain py-2">
+//                   <nav className="px-2">
+//                     <Link
+//                       href="/"
+//                       onClick={closeMobileMenu}
+//                       className="flex min-h-[42px] items-center rounded-xl px-3 text-sm font-medium text-[#1a1a1a]"
+//                     >
+//                       Home
+//                     </Link>
+//                     <div>
+//                       <button
+//                         type="button"
+//                         onClick={() => setFurnitureAccordion((v) => !v)}
+//                         className="flex min-h-[42px] w-full items-center justify-between rounded-xl px-3 text-left text-sm font-medium text-[#1a1a1a]"
+//                       >
+//                         Shop
+//                         <ChevronDown
+//                           className={`h-4 w-4 text-[#6b6560] transition ${
+//                             furnitureAccordion ? "rotate-180" : ""
+//                           }`}
+//                         />
+//                       </button>
+//                       {furnitureAccordion ? (
+//                         <div className="mb-1 ml-2 space-y-0.5 border-l border-[#e0d8cc] pl-2">
+//                           {furnitureLinks.map((link) => (
+//                             <Link
+//                               key={`${link.label}-${link.href}`}
+//                               href={link.href}
+//                               onClick={closeMobileMenu}
+//                               className="flex min-h-[36px] items-center rounded-lg px-2.5 text-[13px] text-[#6b6560]"
+//                             >
+//                               {link.label}
+//                             </Link>
+//                           ))}
+//                         </div>
+//                       ) : null}
+//                     </div>
+//                     {[
+//                       { href: "/about", label: "About" },
+//                       { href: "/services", label: "Services" },
+//                       { href: "/contact", label: "Contact" },
+//                       { href: "/compare", label: "Compare" },
+//                     ].map((item) => (
+//                       <Link
+//                         key={item.href}
+//                         href={item.href}
+//                         onClick={closeMobileMenu}
+//                         className="flex min-h-[42px] items-center rounded-xl px-3 text-sm font-medium text-[#1a1a1a]"
+//                       >
+//                         {item.label}
+//                         {item.href === "/compare" && compareCount > 0
+//                           ? ` (${compareCount})`
+//                           : ""}
+//                       </Link>
+//                     ))}
+//                   </nav>
+//                 </div>
+//               </div>
+//             ) : null}
+//           </div>
+//         </div>
+//       </div>
+
+//       {accountPanelOpen && user ? (
+//         <div className="fixed inset-0 z-[70] lg:hidden">
+//           <button
+//             type="button"
+//             className="absolute inset-0 bg-black/40 backdrop-blur-[1px]"
+//             aria-label="Close account menu"
+//             onClick={() => setAccountPanelOpen(false)}
+//           />
+//           <aside className="absolute left-3 top-3 w-[min(18rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl bg-white shadow-[0_12px_40px_rgba(26,26,26,0.08)] ring-1 ring-[#e0d8cc]">
+//             <div className="flex items-center justify-between border-b border-[#e0d8cc] px-4 py-3">
+//               <div className="flex min-w-0 items-center gap-2.5">
+//                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1a1a1a] text-sm font-bold text-white">
+//                   {userInitial}
+//                 </div>
+//                 <div className="min-w-0">
+//                   <p className="text-sm font-semibold text-[#1a1a1a]">
+//                     My Account
+//                   </p>
+//                   <p className="truncate text-xs text-[#6b6560]">
+//                     {user.name || user.email || "User"}
+//                   </p>
+//                 </div>
+//               </div>
+//               <button
+//                 type="button"
+//                 onClick={() => setAccountPanelOpen(false)}
+//                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#6b6560] hover:bg-[#f0ebe3]"
+//               >
+//                 <X size={18} />
+//               </button>
+//             </div>
+//             <nav className="flex flex-col gap-0.5 p-2">
+//               <Link
+//                 href="/account/profile"
+//                 onClick={() => setAccountPanelOpen(false)}
+//                 className="flex min-h-[40px] items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//               >
+//                 <User size={17} />
+//                 Profile
+//               </Link>
+//               <Link
+//                 href="/account/orders"
+//                 onClick={() => setAccountPanelOpen(false)}
+//                 className="flex min-h-[40px] items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//               >
+//                 <Package size={17} />
+//                 Orders
+//               </Link>
+//               <Link
+//                 href="/wishlist"
+//                 onClick={() => setAccountPanelOpen(false)}
+//                 className="flex min-h-[40px] items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//               >
+//                 <Heart size={17} />
+//                 Wishlist
+//               </Link>
+//               <Link
+//                 href="/compare"
+//                 onClick={() => setAccountPanelOpen(false)}
+//                 className="flex min-h-[40px] items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//               >
+//                 <GitCompare size={17} />
+//                 Compare
+//                 {compareCount > 0 ? ` (${compareCount})` : ""}
+//               </Link>
+//               <button
+//                 type="button"
+//                 onClick={handleLogout}
+//                 className="flex min-h-[40px] items-center gap-3 rounded-xl px-3 text-sm font-medium text-red-600 hover:bg-red-50"
+//               >
+//                 <LogOut size={17} />
+//                 Logout
+//               </button>
+//             </nav>
+//             <div className="border-t border-[#e0d8cc] p-2.5">
+//               <Link
+//                 href="/products"
+//                 onClick={() => setAccountPanelOpen(false)}
+//                 className="block rounded-xl bg-[#f0ebe3] py-2 text-center text-sm font-semibold text-[#1a1a1a]"
+//               >
+//                 Back to store
+//               </Link>
+//             </div>
+//           </aside>
+//         </div>
+//       ) : null}
+//     </header>
+//   );
+// }
+
+
+
+// "use client";
+
+// import Link from "next/link";
+// import { usePathname } from "next/navigation";
+// import { useEffect, useRef, useState } from "react";
+// import {
+//   Menu,
+//   X,
+//   ShoppingCart,
+//   User,
+//   ChevronDown,
+//   LogOut,
+//   Package,
+//   Heart,
+//   Loader2,
+//   GitCompare,
+// } from "lucide-react";
+// import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+// import { onAuthStateChanged, signOut } from "firebase/auth";
+// import { auth, db } from "@/lib/firebase";
+// import { getCart, getCartItemCount } from "@/services/cartService";
+// import { getCompareCount } from "@/services/compareService";
+
+// interface UserInfo {
+//   name?: string;
+//   email?: string;
+// }
+
+// interface NavLink {
+//   label: string;
+//   href: string;
+// }
+
+// export default function Header() {
+//   const pathname = usePathname() || "";
+//   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+//   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
+//   const [furnitureOpen, setFurnitureOpen] = useState(false);
+//   const [userOpen, setUserOpen] = useState(false);
+//   const [furnitureAccordion, setFurnitureAccordion] = useState(false);
+
+//   const [user, setUser] = useState<UserInfo | null>(null);
+//   const [authReady, setAuthReady] = useState(false);
+//   const [cartCount, setCartCount] = useState(0);
+//   const [compareCount, setCompareCount] = useState(0);
+
+//   const [furnitureLinks, setFurnitureLinks] = useState<NavLink[]>([
+//     { label: "All Furniture", href: "/products" },
+//   ]);
+
+//   const mobileMenuRef = useRef<HTMLDivElement>(null);
+//   const userMenuRef = useRef<HTMLDivElement>(null);
+//   const shopMenuRef = useRef<HTMLDivElement>(null);
+
+//   useEffect(() => {
+//     if (!mobileMenuOpen) return;
+
+//     function onPointerDown(e: MouseEvent | TouchEvent) {
+//       const target = e.target as Node;
+//       if (mobileMenuRef.current && !mobileMenuRef.current.contains(target)) {
+//         const toggle = document.getElementById("mobile-menu-toggle");
+//         if (toggle && toggle.contains(target)) return;
+//         setMobileMenuOpen(false);
+//         setFurnitureAccordion(false);
+//       }
+//     }
+
+//     document.addEventListener("mousedown", onPointerDown);
+//     document.addEventListener("touchstart", onPointerDown);
+//     return () => {
+//       document.removeEventListener("mousedown", onPointerDown);
+//       document.removeEventListener("touchstart", onPointerDown);
+//     };
+//   }, [mobileMenuOpen]);
+
+//   useEffect(() => {
+//     if (!userOpen && !furnitureOpen) return;
+
+//     function onPointerDown(e: MouseEvent | TouchEvent) {
+//       const target = e.target as Node;
+//       if (
+//         userOpen &&
+//         userMenuRef.current &&
+//         !userMenuRef.current.contains(target)
+//       ) {
+//         setUserOpen(false);
+//       }
+//       if (
+//         furnitureOpen &&
+//         shopMenuRef.current &&
+//         !shopMenuRef.current.contains(target)
+//       ) {
+//         setFurnitureOpen(false);
+//       }
+//     }
+
+//     document.addEventListener("mousedown", onPointerDown);
+//     document.addEventListener("touchstart", onPointerDown);
+//     return () => {
+//       document.removeEventListener("mousedown", onPointerDown);
+//       document.removeEventListener("touchstart", onPointerDown);
+//     };
+//   }, [userOpen, furnitureOpen]);
+
+//   useEffect(() => {
+//     function onKey(e: KeyboardEvent) {
+//       if (e.key === "Escape") {
+//         setMobileMenuOpen(false);
+//         setAccountPanelOpen(false);
+//         setFurnitureAccordion(false);
+//         setFurnitureOpen(false);
+//         setUserOpen(false);
+//       }
+//     }
+//     window.addEventListener("keydown", onKey);
+//     return () => window.removeEventListener("keydown", onKey);
+//   }, []);
+
+//   useEffect(() => {
+//     if (!accountPanelOpen) return;
+//     const prev = document.body.style.overflow;
+//     document.body.style.overflow = "hidden";
+//     return () => {
+//       document.body.style.overflow = prev;
+//     };
+//   }, [accountPanelOpen]);
+
+//   useEffect(() => {
+//     setMobileMenuOpen(false);
+//     setAccountPanelOpen(false);
+//     setFurnitureOpen(false);
+//     setUserOpen(false);
+//     setFurnitureAccordion(false);
+//   }, [pathname]);
+
+//   useEffect(() => {
+//     const fetchCategories = async () => {
+//       try {
+//         const snapshot = await getDocs(collection(db, "furniture_products"));
+//         const categorySet = new Set<string>();
+
+//         snapshot.docs.forEach((docSnap) => {
+//           const data = docSnap.data();
+//           const status = String(data.status || "In Stock");
+//           const active = data.active !== false && status !== "Inactive";
+//           if (!active) return;
+//           const category = data.category;
+//           if (category && typeof category === "string" && category.trim()) {
+//             categorySet.add(category.trim());
+//           }
+//         });
+
+//         setFurnitureLinks([
+//           { label: "All Furniture", href: "/products" },
+//           ...Array.from(categorySet)
+//             .sort()
+//             .map((cat) => ({
+//               label: cat,
+//               href: `/products?category=${encodeURIComponent(cat)}`,
+//             })),
+//         ]);
+//       } catch (err) {
+//         console.error("Failed to load furniture categories:", err);
+//       }
+//     };
+
+//     fetchCategories();
+//   }, []);
+
+//   useEffect(() => {
+//     let active = true;
+
+//     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+//       if (!active) return;
+
+//       if (!firebaseUser) {
+//         setUser(null);
+//         setCartCount(0);
+//         setAuthReady(true);
+//         return;
+//       }
+
+//       // Any signed-in user (including staff / admin@akrish.in) can use the storefront.
+//       setAuthReady(true);
+
+//       let name = firebaseUser.displayName || "";
+//       let email = firebaseUser.email || "";
+
+//       try {
+//         const snap = await getDoc(
+//           doc(db, "furniture_customers", firebaseUser.uid)
+//         );
+//         if (!active) return;
+//         if (snap.exists()) {
+//           const data = snap.data();
+//           if (data.name) name = String(data.name);
+//           if (data.email) email = String(data.email);
+//         }
+//       } catch {
+//         /* keep firebase name */
+//       }
+
+//       if (!active) return;
+
+//       setUser({
+//         name: name || email || "Account",
+//         email,
+//       });
+
+//       try {
+//         const cart = await getCart(firebaseUser.uid);
+//         if (!active) return;
+//         setCartCount(cart ? getCartItemCount(cart.items) : 0);
+//       } catch {
+//         if (active) setCartCount(0);
+//       }
+//     });
+
+//     return () => {
+//       active = false;
+//       unsub();
+//     };
+//   }, []);
+
+//   useEffect(() => {
+//     const loadCount = async () => {
+//       const u = auth.currentUser;
+//       if (!u) {
+//         setCartCount(0);
+//         return;
+//       }
+//       try {
+//         const cart = await getCart(u.uid);
+//         setCartCount(cart ? getCartItemCount(cart.items) : 0);
+//       } catch {
+//         setCartCount(0);
+//       }
+//     };
+
+//     window.addEventListener("cartUpdated", loadCount);
+//     return () => window.removeEventListener("cartUpdated", loadCount);
+//   }, []);
+
+//   useEffect(() => {
+//     const syncCompare = () => setCompareCount(getCompareCount());
+//     syncCompare();
+//     window.addEventListener("compareUpdated", syncCompare);
+//     return () => window.removeEventListener("compareUpdated", syncCompare);
+//   }, []);
+
+//   const handleLogout = async () => {
+//     try {
+//       await signOut(auth);
+//       setUser(null);
+//       setCartCount(0);
+//       setUserOpen(false);
+//       setAccountPanelOpen(false);
+//       setMobileMenuOpen(false);
+//       window.location.href = "/";
+//     } catch (error) {
+//       console.error("Failed to log out:", error);
+//     }
+//   };
+
+//   const closeMobileMenu = () => {
+//     setMobileMenuOpen(false);
+//     setFurnitureAccordion(false);
+//     setFurnitureOpen(false);
+//   };
+
+//   const userInitial = (user?.name || user?.email || "U")
+//     .charAt(0)
+//     .toUpperCase();
+
+//   const navClass = (href: string) => {
+//     const active =
+//       href === "/"
+//         ? pathname === "/"
+//         : pathname === href || pathname.startsWith(`${href}/`);
+//     return `relative pb-1 text-sm font-medium transition ${
+//       active
+//         ? "text-[#1a1a1a] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#b8956c]"
+//         : "text-[#6b6560] hover:text-[#1a1a1a]"
+//     }`;
+//   };
+
+//   const iconBtn =
+//     "inline-flex h-10 w-10 items-center justify-center rounded-full text-[#6b6560] transition hover:bg-[#e8e0d4] hover:text-[#1a1a1a]";
+
+//   return (
+//     <header className="sticky top-0 z-50 border-b border-[#e0d8cc] bg-[#f0ebe3] pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
+//       <div className="relative mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+//         <div className="flex h-14 items-center justify-between gap-2 sm:h-[4.5rem] sm:gap-3">
+//           <Link
+//             href="/"
+//             onClick={closeMobileMenu}
+//             className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3"
+//           >
+//             {/* eslint-disable-next-line @next/next/no-img-element */}
+//             <img
+//               src="/Akrish.jpg"
+//               alt="Akrish"
+//               className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-[#e0d8cc] sm:h-10 sm:w-10"
+//             />
+//             <div className="min-w-0">
+//               <div className="font-display truncate text-lg font-semibold leading-none tracking-tight text-[#1a1a1a] sm:text-xl">
+//                 Akrish
+//               </div>
+//               <div className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-[#b8956c] sm:text-[10px]">
+//                 Furniture &amp; Interior
+//               </div>
+//             </div>
+//           </Link>
+
+//           <nav className="hidden items-center gap-8 lg:flex">
+//             <Link href="/" className={navClass("/")}>
+//               Home
+//             </Link>
+
+//             <div className="relative" ref={shopMenuRef}>
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setFurnitureOpen((v) => !v);
+//                   setUserOpen(false);
+//                 }}
+//                 className={`relative flex items-center gap-1 pb-1 text-sm font-medium transition ${
+//                   pathname.startsWith("/products")
+//                     ? "text-[#1a1a1a] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#b8956c]"
+//                     : "text-[#6b6560] hover:text-[#1a1a1a]"
+//                 }`}
+//               >
+//                 Shop
+//                 <ChevronDown
+//                   className={`h-3.5 w-3.5 transition ${
+//                     furnitureOpen ? "rotate-180" : ""
+//                   }`}
+//                 />
+//               </button>
+
+//               {furnitureOpen && (
+//                 <div className="absolute left-1/2 top-full z-50 mt-4 max-h-80 w-56 -translate-x-1/2 overflow-y-auto rounded-2xl border border-[#e0d8cc] bg-white p-2 shadow-[0_12px_40px_rgba(26,26,26,0.08)]">
+//                   {furnitureLinks.map((link) => (
+//                     <Link
+//                       key={`${link.label}-${link.href}`}
+//                       href={link.href}
+//                       onClick={() => setFurnitureOpen(false)}
+//                       className="block rounded-xl px-4 py-2.5 text-sm text-[#6b6560] transition hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//                     >
+//                       {link.label}
+//                     </Link>
+//                   ))}
+//                 </div>
+//               )}
+//             </div>
+
+//             <Link href="/about" className={navClass("/about")}>
+//               About
+//             </Link>
+//             <Link href="/services" className={navClass("/services")}>
+//               Services
+//             </Link>
+//             <Link href="/contact" className={navClass("/contact")}>
+//               Contact
+//             </Link>
+//           </nav>
+
+//           <div className="hidden items-center gap-0.5 lg:flex">
+//             <Link
+//               href="/compare"
+//               className={`relative ${iconBtn}`}
+//               aria-label="Compare products"
+//             >
+//               <GitCompare className="h-5 w-5" strokeWidth={1.5} />
+//               {compareCount > 0 ? (
+//                 <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b8956c] px-1 text-[9px] font-bold text-white">
+//                   {compareCount > 9 ? "9+" : compareCount}
+//                 </span>
+//               ) : null}
+//             </Link>
+
+//             <Link href="/wishlist" className={iconBtn} aria-label="Wishlist">
+//               <Heart className="h-5 w-5" strokeWidth={1.5} />
+//             </Link>
+
+//             <div className="relative" ref={userMenuRef}>
+//               {user ? (
+//                 <>
+//                   <button
+//                     type="button"
+//                     onClick={() => {
+//                       setUserOpen((v) => !v);
+//                       setFurnitureOpen(false);
+//                     }}
+//                     className={iconBtn}
+//                     aria-label="Account"
+//                     aria-expanded={userOpen}
+//                   >
+//                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1a1a1a] text-[10px] font-bold text-white">
+//                       {userInitial}
+//                     </span>
+//                   </button>
+
+//                   {userOpen ? (
+//                     <div className="absolute right-0 top-full z-50 mt-3 w-60 rounded-2xl border border-[#e0d8cc] bg-white p-2 shadow-[0_12px_40px_rgba(26,26,26,0.08)]">
+//                       <div className="border-b border-[#e0d8cc] px-3 py-3">
+//                         <p className="truncate text-sm font-semibold text-[#1a1a1a]">
+//                           {user.name || "User"}
+//                         </p>
+//                         {user.email ? (
+//                           <p className="mt-1 truncate text-xs text-[#6b6560]">
+//                             {user.email}
+//                           </p>
+//                         ) : null}
+//                       </div>
+//                       <Link
+//                         href="/account/profile"
+//                         onClick={() => setUserOpen(false)}
+//                         className="mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//                       >
+//                         <User className="h-4 w-4" />
+//                         Profile
+//                       </Link>
+//                       <Link
+//                         href="/account/orders"
+//                         onClick={() => setUserOpen(false)}
+//                         className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//                       >
+//                         <Package className="h-4 w-4" />
+//                         Orders
+//                       </Link>
+//                       <Link
+//                         href="/wishlist"
+//                         onClick={() => setUserOpen(false)}
+//                         className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//                       >
+//                         <Heart className="h-4 w-4" />
+//                         Wishlist
+//                       </Link>
+//                       <Link
+//                         href="/compare"
+//                         onClick={() => setUserOpen(false)}
+//                         className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//                       >
+//                         <GitCompare className="h-4 w-4" />
+//                         Compare
+//                         {compareCount > 0 ? ` (${compareCount})` : ""}
+//                       </Link>
+//                       <button
+//                         type="button"
+//                         onClick={handleLogout}
+//                         className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-50"
+//                       >
+//                         <LogOut className="h-4 w-4" />
+//                         Logout
+//                       </button>
+//                     </div>
+//                   ) : null}
+//                 </>
+//               ) : !authReady ? (
+//                 <span className="inline-flex h-10 w-10 items-center justify-center text-[#b8956c]">
+//                   <Loader2 className="h-4 w-4 animate-spin" />
+//                 </span>
+//               ) : (
+//                 <Link href="/sign-in" className={iconBtn} aria-label="Sign in">
+//                   <User className="h-5 w-5" strokeWidth={1.5} />
+//                 </Link>
+//               )}
+//             </div>
+
+//             <Link
+//               href="/cart"
+//               className={`relative ${iconBtn}`}
+//               aria-label="Cart"
+//             >
+//               <ShoppingCart className="h-5 w-5" strokeWidth={1.5} />
+//               {cartCount > 0 ? (
+//                 <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b8956c] px-1 text-[9px] font-bold text-white">
+//                   {cartCount > 99 ? "99+" : cartCount}
+//                 </span>
+//               ) : null}
+//             </Link>
+//           </div>
+
+//           <div className="relative flex shrink-0 items-center gap-0.5 lg:hidden">
+//             <Link
+//               href="/compare"
+//               className={`relative ${iconBtn}`}
+//               aria-label="Compare"
+//             >
+//               <GitCompare className="h-5 w-5" strokeWidth={1.5} />
+//               {compareCount > 0 ? (
+//                 <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b8956c] px-1 text-[9px] font-bold text-white">
+//                   {compareCount > 9 ? "9+" : compareCount}
+//                 </span>
+//               ) : null}
+//             </Link>
+
+//             <Link href="/wishlist" className={iconBtn} aria-label="Wishlist">
+//               <Heart className="h-5 w-5" strokeWidth={1.5} />
+//             </Link>
+
+//             {user ? (
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setAccountPanelOpen(true);
+//                   setMobileMenuOpen(false);
+//                 }}
+//                 className={iconBtn}
+//                 aria-label="My account"
+//               >
+//                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1a1a1a] text-[11px] font-bold text-white">
+//                   {userInitial}
+//                 </span>
+//               </button>
+//             ) : !authReady ? (
+//               <span className="inline-flex h-10 w-10 items-center justify-center text-[#b8956c]">
+//                 <Loader2 className="h-4 w-4 animate-spin" />
+//               </span>
+//             ) : (
+//               <Link href="/sign-in" className={iconBtn} aria-label="Sign in">
+//                 <User className="h-5 w-5" strokeWidth={1.5} />
+//               </Link>
+//             )}
+
+//             <Link
+//               href="/cart"
+//               className={`relative ${iconBtn}`}
+//               aria-label="Cart"
+//             >
+//               <ShoppingCart className="h-5 w-5" strokeWidth={1.5} />
+//               {cartCount > 0 ? (
+//                 <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b8956c] px-1 text-[9px] font-bold text-white">
+//                   {cartCount > 99 ? "99+" : cartCount}
+//                 </span>
+//               ) : null}
+//             </Link>
+
+//             <button
+//               id="mobile-menu-toggle"
+//               type="button"
+//               onClick={() => {
+//                 setMobileMenuOpen((v) => !v);
+//                 if (mobileMenuOpen) setFurnitureAccordion(false);
+//                 setAccountPanelOpen(false);
+//               }}
+//               className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#1a1a1a] hover:bg-[#e8e0d4]"
+//               aria-label="Toggle menu"
+//               aria-expanded={mobileMenuOpen}
+//             >
+//               {mobileMenuOpen ? (
+//                 <X className="h-5 w-5" />
+//               ) : (
+//                 <Menu className="h-5 w-5" />
+//               )}
+//             </button>
+
+//             {mobileMenuOpen ? (
+//               <div
+//                 ref={mobileMenuRef}
+//                 className="absolute right-0 top-[calc(100%+8px)] z-[60] w-[min(18rem,calc(100vw-1.5rem))] origin-top-right overflow-hidden rounded-2xl border border-[#e0d8cc] bg-white shadow-[0_12px_40px_rgba(26,26,26,0.08)]"
+//               >
+//                 <div className="max-h-[min(70vh,28rem)] overflow-y-auto overscroll-contain py-2">
+//                   <nav className="px-2">
+//                     <Link
+//                       href="/"
+//                       onClick={closeMobileMenu}
+//                       className="flex min-h-[42px] items-center rounded-xl px-3 text-sm font-medium text-[#1a1a1a]"
+//                     >
+//                       Home
+//                     </Link>
+//                     <div>
+//                       <button
+//                         type="button"
+//                         onClick={() => setFurnitureAccordion((v) => !v)}
+//                         className="flex min-h-[42px] w-full items-center justify-between rounded-xl px-3 text-left text-sm font-medium text-[#1a1a1a]"
+//                       >
+//                         Shop
+//                         <ChevronDown
+//                           className={`h-4 w-4 text-[#6b6560] transition ${
+//                             furnitureAccordion ? "rotate-180" : ""
+//                           }`}
+//                         />
+//                       </button>
+//                       {furnitureAccordion ? (
+//                         <div className="mb-1 ml-2 space-y-0.5 border-l border-[#e0d8cc] pl-2">
+//                           {furnitureLinks.map((link) => (
+//                             <Link
+//                               key={`${link.label}-${link.href}`}
+//                               href={link.href}
+//                               onClick={closeMobileMenu}
+//                               className="flex min-h-[36px] items-center rounded-lg px-2.5 text-[13px] text-[#6b6560]"
+//                             >
+//                               {link.label}
+//                             </Link>
+//                           ))}
+//                         </div>
+//                       ) : null}
+//                     </div>
+//                     {[
+//                       { href: "/about", label: "About" },
+//                       { href: "/services", label: "Services" },
+//                       { href: "/contact", label: "Contact" },
+//                       { href: "/compare", label: "Compare" },
+//                     ].map((item) => (
+//                       <Link
+//                         key={item.href}
+//                         href={item.href}
+//                         onClick={closeMobileMenu}
+//                         className="flex min-h-[42px] items-center rounded-xl px-3 text-sm font-medium text-[#1a1a1a]"
+//                       >
+//                         {item.label}
+//                         {item.href === "/compare" && compareCount > 0
+//                           ? ` (${compareCount})`
+//                           : ""}
+//                       </Link>
+//                     ))}
+//                   </nav>
+//                 </div>
+//               </div>
+//             ) : null}
+//           </div>
+//         </div>
+//       </div>
+
+//       {accountPanelOpen && user ? (
+//         <div className="fixed inset-0 z-[70] lg:hidden">
+//           <button
+//             type="button"
+//             className="absolute inset-0 bg-black/40 backdrop-blur-[1px]"
+//             aria-label="Close account menu"
+//             onClick={() => setAccountPanelOpen(false)}
+//           />
+//           <aside className="absolute left-3 top-3 w-[min(18rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl bg-white shadow-[0_12px_40px_rgba(26,26,26,0.08)] ring-1 ring-[#e0d8cc]">
+//             <div className="flex items-center justify-between border-b border-[#e0d8cc] px-4 py-3">
+//               <div className="flex min-w-0 items-center gap-2.5">
+//                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1a1a1a] text-sm font-bold text-white">
+//                   {userInitial}
+//                 </div>
+//                 <div className="min-w-0">
+//                   <p className="text-sm font-semibold text-[#1a1a1a]">
+//                     My Account
+//                   </p>
+//                   <p className="truncate text-xs text-[#6b6560]">
+//                     {user.name || user.email || "User"}
+//                   </p>
+//                 </div>
+//               </div>
+//               <button
+//                 type="button"
+//                 onClick={() => setAccountPanelOpen(false)}
+//                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#6b6560] hover:bg-[#f0ebe3]"
+//               >
+//                 <X size={18} />
+//               </button>
+//             </div>
+//             <nav className="flex flex-col gap-0.5 p-2">
+//               <Link
+//                 href="/account/profile"
+//                 onClick={() => setAccountPanelOpen(false)}
+//                 className="flex min-h-[40px] items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//               >
+//                 <User size={17} />
+//                 Profile
+//               </Link>
+//               <Link
+//                 href="/account/orders"
+//                 onClick={() => setAccountPanelOpen(false)}
+//                 className="flex min-h-[40px] items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//               >
+//                 <Package size={17} />
+//                 Orders
+//               </Link>
+//               <Link
+//                 href="/wishlist"
+//                 onClick={() => setAccountPanelOpen(false)}
+//                 className="flex min-h-[40px] items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//               >
+//                 <Heart size={17} />
+//                 Wishlist
+//               </Link>
+//               <Link
+//                 href="/compare"
+//                 onClick={() => setAccountPanelOpen(false)}
+//                 className="flex min-h-[40px] items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
+//               >
+//                 <GitCompare size={17} />
+//                 Compare
+//                 {compareCount > 0 ? ` (${compareCount})` : ""}
+//               </Link>
+//               <button
+//                 type="button"
+//                 onClick={handleLogout}
+//                 className="flex min-h-[40px] items-center gap-3 rounded-xl px-3 text-sm font-medium text-red-600 hover:bg-red-50"
+//               >
+//                 <LogOut size={17} />
+//                 Logout
+//               </button>
+//             </nav>
+//             <div className="border-t border-[#e0d8cc] p-2.5">
+//               <Link
+//                 href="/products"
+//                 onClick={() => setAccountPanelOpen(false)}
+//                 className="block rounded-xl bg-[#f0ebe3] py-2 text-center text-sm font-semibold text-[#1a1a1a]"
+//               >
+//                 Back to store
+//               </Link>
+//             </div>
+//           </aside>
+//         </div>
+//       ) : null}
+//     </header>
+//   );
+// }
+
+
 "use client";
 
 import Link from "next/link";
@@ -11823,12 +13306,12 @@ const STAFF_ROLES = new Set([
   "employee",
 ]);
 
+/** True for ERP staff who must not stay signed in on the public website. */
 async function isStaffOnlyUser(
   uid: string,
   email: string | null
 ): Promise<boolean> {
-  const normalizedEmail = (email || "").toLowerCase();
-
+  const normalizedEmail = (email || "").toLowerCase().trim();
   if (normalizedEmail === "admin@akrish.in") return true;
 
   try {
@@ -11838,6 +13321,7 @@ async function isStaffOnlyUser(
     const role = String(staffSnap.data()?.role || "").toLowerCase();
     if (!STAFF_ROLES.has(role)) return false;
 
+    // Staff without a customer profile = staff-only (block on website)
     const customerSnap = await getDoc(doc(db, "furniture_customers", uid));
     return !customerSnap.exists();
   } catch {
@@ -11994,12 +13478,6 @@ export default function Header() {
         return;
       }
 
-      setUser({
-        name: firebaseUser.displayName || firebaseUser.email || "Account",
-        email: firebaseUser.email || "",
-      });
-      setAuthReady(true);
-
       if (await isStaffOnlyUser(firebaseUser.uid, firebaseUser.email)) {
         try {
           await signOut(auth);
@@ -12009,9 +13487,12 @@ export default function Header() {
         if (active) {
           setUser(null);
           setCartCount(0);
+          setAuthReady(true);
         }
         return;
       }
+
+      setAuthReady(true);
 
       let name = firebaseUser.displayName || "";
       let email = firebaseUser.email || "";
@@ -12031,7 +13512,11 @@ export default function Header() {
       }
 
       if (!active) return;
-      setUser({ name, email });
+
+      setUser({
+        name: name || email || "Account",
+        email,
+      });
 
       try {
         const cart = await getCart(firebaseUser.uid);
@@ -12267,7 +13752,7 @@ export default function Header() {
                         <Heart className="h-4 w-4" />
                         Wishlist
                       </Link>
-                      <Link
+                      {/* <Link
                         href="/compare"
                         onClick={() => setUserOpen(false)}
                         className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
@@ -12275,7 +13760,7 @@ export default function Header() {
                         <GitCompare className="h-4 w-4" />
                         Compare
                         {compareCount > 0 ? ` (${compareCount})` : ""}
-                      </Link>
+                      </Link> */}
                       <button
                         type="button"
                         onClick={handleLogout}
@@ -12510,7 +13995,7 @@ export default function Header() {
                 <Heart size={17} />
                 Wishlist
               </Link>
-              <Link
+              {/* <Link
                 href="/compare"
                 onClick={() => setAccountPanelOpen(false)}
                 className="flex min-h-[40px] items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#6b6560] hover:bg-[#f0ebe3] hover:text-[#1a1a1a]"
@@ -12518,7 +14003,7 @@ export default function Header() {
                 <GitCompare size={17} />
                 Compare
                 {compareCount > 0 ? ` (${compareCount})` : ""}
-              </Link>
+              </Link> */}
               <button
                 type="button"
                 onClick={handleLogout}
