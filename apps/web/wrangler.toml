@@ -1,0 +1,8 @@
+name = "akrish-collective-erp"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Optional: bind if you add R2/KV later
+# [[r2_buckets]]
+# binding = "ASSETS"
+# bucket_name = "akrish-assets"
