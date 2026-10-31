@@ -5063,6 +5063,1208 @@
 //   );
 // }
 
+// "use client";
+
+// import { useEffect, useMemo, useState } from "react";
+// import Link from "next/link";
+// import {
+//   getAllInteriorProjects,
+//   createProject,
+//   updateProject,
+//   deleteProject as deleteProjectFromDb,
+//   type InteriorProject,
+// } from "@/modules/interior/services/projectService";
+// import {
+//   getAllClients,
+//   type InteriorClient,
+// } from "@/modules/interior/services/clientService";
+// import {
+//   getAllEmployees,
+//   type InteriorEmployee,
+// } from "@/modules/interior/services/employeeService";
+// import { Timestamp } from "firebase/firestore";
+// import { Plus } from "lucide-react";
+
+// type ProjectStatus =
+//   | "New"
+//   | "Designing"
+//   | "In Progress"
+//   | "On Hold"
+//   | "Completed"
+//   | "Cancelled";
+
+// type ProjectType =
+//   | "Residential"
+//   | "Commercial"
+//   | "Office"
+//   | "Villa"
+//   | "Apartment";
+
+// type Project = {
+//   id: string;
+//   projectNo: string;
+//   client: string;
+//   clientId: string;
+//   projectName: string;
+//   type: ProjectType;
+//   location: string;
+//   designer: string;
+//   manager: string;
+//   managerId: string;
+//   startDate: string;
+//   expectedDate: string;
+//   value: number;
+//   paid: number;
+//   progress: number;
+//   status: ProjectStatus;
+//   rooms: number;
+//   createdDate: string;
+// };
+
+// const statusOptions: ProjectStatus[] = [
+//   "New",
+//   "Designing",
+//   "In Progress",
+//   "On Hold",
+//   "Completed",
+//   "Cancelled",
+// ];
+
+// const typeOptions: ProjectType[] = [
+//   "Residential",
+//   "Commercial",
+//   "Office",
+//   "Villa",
+//   "Apartment",
+// ];
+
+// const emptyProject: Omit<Project, "id" | "projectNo" | "createdDate"> = {
+//   client: "",
+//   clientId: "",
+//   projectName: "",
+//   type: "Residential",
+//   location: "",
+//   designer: "Akrish Design Team",
+//   manager: "",
+//   managerId: "",
+//   startDate: "",
+//   expectedDate: "",
+//   value: 0,
+//   paid: 0,
+//   progress: 0,
+//   status: "New",
+//   rooms: 0,
+// };
+
+// function formatCurrency(value: number) {
+//   return `₹${value.toLocaleString("en-IN")}`;
+// }
+
+// function statusClass(status: ProjectStatus) {
+//   switch (status) {
+//     case "New":
+//       return "bg-blue-50 text-blue-700 border-blue-200";
+//     case "Designing":
+//       return "bg-purple-50 text-purple-700 border-purple-200";
+//     case "In Progress":
+//       return "bg-amber-50 text-amber-700 border-amber-200";
+//     case "On Hold":
+//       return "bg-orange-50 text-orange-700 border-orange-200";
+//     case "Completed":
+//       return "bg-green-50 text-green-700 border-green-200";
+//     case "Cancelled":
+//       return "bg-red-50 text-red-700 border-red-200";
+//     default:
+//       return "bg-gray-50 text-gray-700 border-gray-200";
+//   }
+// }
+
+// function progressFromStatus(status: ProjectStatus): number {
+//   if (status === "New") return 10;
+//   if (status === "Designing") return 35;
+//   if (status === "In Progress") return 65;
+//   if (status === "On Hold") return 50;
+//   if (status === "Completed") return 100;
+//   return 0;
+// }
+
+// function toDateString(value: unknown): string {
+//   if (!value) return "";
+//   if (typeof value === "string") return value.slice(0, 10);
+//   try {
+//     if (typeof (value as Timestamp).toDate === "function") {
+//       return (value as Timestamp).toDate().toISOString().slice(0, 10);
+//     }
+//   } catch {
+//     /* ignore */
+//   }
+//   return "";
+// }
+
+// function normalizeStatus(raw?: string): ProjectStatus {
+//   const s = (raw || "New").trim();
+//   if ((statusOptions as string[]).includes(s)) return s as ProjectStatus;
+//   const lower = s.toLowerCase();
+//   if (lower.includes("design")) return "Designing";
+//   if (lower.includes("progress") || lower === "active") return "In Progress";
+//   if (lower.includes("hold")) return "On Hold";
+//   if (lower.includes("complete") || lower === "done") return "Completed";
+//   if (lower.includes("cancel")) return "Cancelled";
+//   return "New";
+// }
+
+// function normalizeType(raw?: string): ProjectType {
+//   const s = (raw || "Residential").trim();
+//   if ((typeOptions as string[]).includes(s)) return s as ProjectType;
+//   const lower = s.toLowerCase();
+//   if (lower.includes("commercial")) return "Commercial";
+//   if (lower.includes("office")) return "Office";
+//   if (lower.includes("villa")) return "Villa";
+//   if (lower.includes("apartment")) return "Apartment";
+//   return "Residential";
+// }
+
+// function mapToUi(p: InteriorProject): Project {
+//   const status = normalizeStatus(p.status);
+//   const value = Number(p.value ?? p.projectValue ?? p.totalValue ?? 0) || 0;
+//   const paid = Number(p.paid ?? p.amountPaid ?? 0) || 0;
+//   const progress =
+//     typeof p.progress === "number" && p.progress >= 0
+//       ? Math.min(100, Math.round(p.progress))
+//       : progressFromStatus(status);
+
+//   const extra = p as InteriorProject & {
+//     clientId?: string;
+//     managerId?: string;
+//   };
+
+//   return {
+//     id: p.id,
+//     projectNo:
+//       p.projectNo || p.projectId || `INT-${p.id.slice(0, 6).toUpperCase()}`,
+//     client: p.clientName || p.client || p.customerName || "Unknown",
+//     clientId: extra.clientId || "",
+//     projectName: p.projectName || p.name || "Untitled Project",
+//     type: normalizeType(p.projectType || p.type),
+//     location: p.location || "—",
+//     designer: p.designer || "—",
+//     manager: p.manager || "—",
+//     managerId: extra.managerId || "",
+//     startDate: p.startDate || toDateString(p.createdAt) || "—",
+//     expectedDate: p.expectedDate || p.deadline || p.endDate || "—",
+//     value,
+//     paid,
+//     progress,
+//     status,
+//     rooms: Number(p.rooms ?? 0) || 0,
+//     createdDate: p.createdDate || toDateString(p.createdAt) || "—",
+//   };
+// }
+
+// function clientLabel(c: InteriorClient) {
+//   const name = c.name || c.company || "Unnamed";
+//   const phone = c.phone ? ` · ${c.phone}` : "";
+//   return `${name}${phone}`;
+// }
+
+// function employeeLabel(e: InteriorEmployee) {
+//   const name = e.name || "Unnamed";
+//   const id = e.employeeId ? ` (${e.employeeId})` : "";
+//   const role = e.designation ? ` · ${e.designation}` : "";
+//   return `${name}${id}${role}`;
+// }
+
+// function isActiveEmployee(e: InteriorEmployee) {
+//   const s = (e.status || "Active").toLowerCase();
+//   return !s.includes("inactive") && !s.includes("resign");
+// }
+
+// export default function InteriorProjectsPage() {
+//   const [projects, setProjects] = useState<Project[]>([]);
+//   const [clients, setClients] = useState<InteriorClient[]>([]);
+//   const [employees, setEmployees] = useState<InteriorEmployee[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [saving, setSaving] = useState(false);
+
+//   const [search, setSearch] = useState("");
+//   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "All">(
+//     "All"
+//   );
+//   const [typeFilter, setTypeFilter] = useState<ProjectType | "All">("All");
+
+//   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+//   const [showNewModal, setShowNewModal] = useState(false);
+//   const [showEditModal, setShowEditModal] = useState(false);
+//   const [newProject, setNewProject] = useState(emptyProject);
+//   const [editProject, setEditProject] = useState<Project | null>(null);
+
+//   useEffect(() => {
+//     let cancelled = false;
+
+//     async function load() {
+//       setLoading(true);
+//       try {
+//         const [projectData, clientData, employeeData] = await Promise.all([
+//           getAllInteriorProjects(),
+//           getAllClients(),
+//           getAllEmployees(),
+//         ]);
+//         if (cancelled) return;
+//         setProjects(projectData.map(mapToUi));
+//         setClients(clientData);
+//         setEmployees(employeeData);
+//       } catch (err) {
+//         console.error("Failed to load projects:", err);
+//       } finally {
+//         if (!cancelled) setLoading(false);
+//       }
+//     }
+
+//     load();
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, []);
+
+//   useEffect(() => {
+//     if (!selectedProject && !showNewModal && !showEditModal) return;
+//     const prev = document.body.style.overflow;
+//     document.body.style.overflow = "hidden";
+//     return () => {
+//       document.body.style.overflow = prev;
+//     };
+//   }, [selectedProject, showNewModal, showEditModal]);
+
+//   const managerOptions = useMemo(
+//     () =>
+//       employees
+//         .filter(isActiveEmployee)
+//         .sort((a, b) => (a.name || "").localeCompare(b.name || "")),
+//     [employees]
+//   );
+
+//   const filteredProjects = useMemo(() => {
+//     const query = search.toLowerCase().trim();
+
+//     return projects.filter((project) => {
+//       const matchesSearch =
+//         !query ||
+//         project.projectNo.toLowerCase().includes(query) ||
+//         project.client.toLowerCase().includes(query) ||
+//         project.projectName.toLowerCase().includes(query) ||
+//         project.location.toLowerCase().includes(query) ||
+//         project.designer.toLowerCase().includes(query) ||
+//         project.manager.toLowerCase().includes(query);
+
+//       const matchesStatus =
+//         statusFilter === "All" || project.status === statusFilter;
+
+//       const matchesType = typeFilter === "All" || project.type === typeFilter;
+
+//       return matchesSearch && matchesStatus && matchesType;
+//     });
+//   }, [projects, search, statusFilter, typeFilter]);
+
+//   const totalProjects = projects.length;
+//   const activeProjects = projects.filter(
+//     (p) => p.status !== "Completed" && p.status !== "Cancelled"
+//   ).length;
+//   const completedProjects = projects.filter(
+//     (p) => p.status === "Completed"
+//   ).length;
+//   const totalValue = projects.reduce((s, p) => s + p.value, 0);
+//   const totalReceived = projects.reduce((s, p) => s + p.paid, 0);
+//   const totalPending = totalValue - totalReceived;
+//   const averageProgress =
+//     totalProjects === 0
+//       ? 0
+//       : Math.round(
+//           projects.reduce((s, p) => s + p.progress, 0) / totalProjects
+//         );
+
+//   function openEdit(project: Project) {
+//     setEditProject({ ...project });
+//     setShowEditModal(true);
+//     setSelectedProject(null);
+//   }
+
+//   async function addProject() {
+//     if (!newProject.client.trim() || !newProject.projectName.trim()) {
+//       alert("Please select a client and enter project name.");
+//       return;
+//     }
+
+//     setSaving(true);
+//     try {
+//       const today = new Date().toISOString().split("T")[0];
+//       const projectNo = `INT-${Date.now().toString().slice(-6)}`;
+
+//       const payload = {
+//         projectNo,
+//         clientId: newProject.clientId || "",
+//         client: newProject.client.trim(),
+//         clientName: newProject.client.trim(),
+//         projectName: newProject.projectName.trim(),
+//         name: newProject.projectName.trim(),
+//         projectType: newProject.type,
+//         type: newProject.type,
+//         location: newProject.location.trim(),
+//         designer: newProject.designer.trim(),
+//         manager: newProject.manager.trim(),
+//         managerId: newProject.managerId || "",
+//         startDate: newProject.startDate || today,
+//         expectedDate: newProject.expectedDate,
+//         endDate: newProject.expectedDate,
+//         value: Number(newProject.value) || 0,
+//         paid: Number(newProject.paid) || 0,
+//         progress:
+//           Number(newProject.progress) || progressFromStatus(newProject.status),
+//         status: newProject.status,
+//         rooms: Number(newProject.rooms) || 0,
+//         createdDate: today,
+//       };
+
+//       const id = await createProject(payload);
+
+//       setProjects((current) => [
+//         {
+//           id,
+//           projectNo,
+//           client: payload.client,
+//           clientId: payload.clientId,
+//           projectName: payload.projectName,
+//           type: newProject.type,
+//           location: payload.location || "—",
+//           designer: payload.designer || "—",
+//           manager: payload.manager || "—",
+//           managerId: payload.managerId,
+//           startDate: payload.startDate,
+//           expectedDate: payload.expectedDate || "—",
+//           value: payload.value,
+//           paid: payload.paid,
+//           progress: payload.progress,
+//           status: newProject.status,
+//           rooms: payload.rooms,
+//           createdDate: today,
+//         },
+//         ...current,
+//       ]);
+
+//       setNewProject(emptyProject);
+//       setShowNewModal(false);
+//     } catch (err) {
+//       console.error(err);
+//       alert("Unable to create project.");
+//     } finally {
+//       setSaving(false);
+//     }
+//   }
+
+//   async function saveEdit() {
+//     if (!editProject) return;
+//     if (!editProject.client.trim() || !editProject.projectName.trim()) {
+//       alert("Please select a client and enter project name.");
+//       return;
+//     }
+
+//     setSaving(true);
+//     try {
+//       const payload = {
+//         clientId: editProject.clientId || "",
+//         client: editProject.client.trim(),
+//         clientName: editProject.client.trim(),
+//         projectName: editProject.projectName.trim(),
+//         name: editProject.projectName.trim(),
+//         projectType: editProject.type,
+//         type: editProject.type,
+//         location: editProject.location.trim(),
+//         designer: editProject.designer.trim(),
+//         manager: editProject.manager.trim(),
+//         managerId: editProject.managerId || "",
+//         startDate: editProject.startDate,
+//         expectedDate: editProject.expectedDate,
+//         endDate: editProject.expectedDate,
+//         value: Number(editProject.value) || 0,
+//         paid: Number(editProject.paid) || 0,
+//         progress: Number(editProject.progress) || 0,
+//         status: editProject.status,
+//         rooms: Number(editProject.rooms) || 0,
+//       };
+
+//       await updateProject(editProject.id, payload);
+
+//       setProjects((current) =>
+//         current.map((p) =>
+//           p.id === editProject.id ? { ...editProject, ...payload } : p
+//         )
+//       );
+//       setShowEditModal(false);
+//       setEditProject(null);
+//     } catch (err) {
+//       console.error(err);
+//       alert("Unable to update project.");
+//     } finally {
+//       setSaving(false);
+//     }
+//   }
+
+//   async function changeStatus(id: string, status: ProjectStatus) {
+//     const progress = progressFromStatus(status);
+
+//     setProjects((current) =>
+//       current.map((p) => (p.id === id ? { ...p, status, progress } : p))
+//     );
+//     setSelectedProject((current) =>
+//       current && current.id === id ? { ...current, status, progress } : current
+//     );
+
+//     try {
+//       await updateProject(id, { status, progress });
+//     } catch (err) {
+//       console.error(err);
+//       try {
+//         const data = await getAllInteriorProjects();
+//         setProjects(data.map(mapToUi));
+//       } catch {
+//         /* ignore */
+//       }
+//     }
+//   }
+
+//   async function removeProject(project: Project) {
+//     const confirmed = window.confirm(
+//       `Delete project "${project.projectName}"?`
+//     );
+//     if (!confirmed) return;
+
+//     setProjects((current) => current.filter((p) => p.id !== project.id));
+//     setSelectedProject(null);
+
+//     try {
+//       await deleteProjectFromDb(project.id);
+//     } catch (err) {
+//       console.error(err);
+//       try {
+//         const data = await getAllInteriorProjects();
+//         setProjects(data.map(mapToUi));
+//       } catch {
+//         /* ignore */
+//       }
+//     }
+//   }
+
+//   return (
+//     <div className="min-h-screen bg-[#f7f7f4] text-[#252525]">
+//       {/* Header: title + New Project beside */}
+//       <div className="border-b border-[#e4e2da] bg-white">
+//         <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-5 sm:py-5 lg:px-8">
+//           <div className="flex items-start justify-between gap-3 sm:items-center">
+//             <div className="min-w-0 flex-1">
+//               <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+//                 Projects
+//               </h1>
+//               <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+//                 Track interior projects, progress and collections.
+//                 {loading && (
+//                   <span className="ml-2 text-[#176b5b]">Loading…</span>
+//                 )}
+//               </p>
+//             </div>
+//             <button
+//               type="button"
+//               onClick={() => {
+//                 setNewProject(emptyProject);
+//                 setShowNewModal(true);
+//               }}
+//               className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#176b5b] px-3 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#125848] sm:gap-2 sm:px-5 sm:py-3 sm:text-sm"
+//             >
+//               <Plus size={16} strokeWidth={2.5} />
+//               <span className="hidden sm:inline">New Project</span>
+//               <span className="sm:hidden">New</span>
+//             </button>
+//           </div>
+//         </div>
+//       </div>
+
+//       <main className="mx-auto max-w-[1600px] space-y-4 px-3 py-4 sm:space-y-6 sm:px-5 sm:py-6 lg:px-8">
+//         <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+//           <SummaryCard
+//             label="Total Projects"
+//             value={loading ? "…" : String(totalProjects)}
+//             helper={`${activeProjects} active · ${completedProjects} done`}
+//           />
+//           <SummaryCard
+//             label="Project Value"
+//             value={loading ? "…" : formatCurrency(totalValue)}
+//             helper={`Received ${formatCurrency(totalReceived)}`}
+//           />
+//           <SummaryCard
+//             label="Pending"
+//             value={loading ? "…" : formatCurrency(totalPending)}
+//             helper="Outstanding collections"
+//           />
+//           <SummaryCard
+//             label="Avg Progress"
+//             value={loading ? "…" : `${averageProgress}%`}
+//             helper="Across all projects"
+//           />
+//         </section>
+
+//         <section className="rounded-xl border border-[#e4e2da] bg-white p-3 sm:p-4">
+//           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+//             <input
+//               value={search}
+//               onChange={(e) => setSearch(e.target.value)}
+//               placeholder="Search project, client, manager..."
+//               className="w-full rounded-lg border border-gray-200 bg-[#fafaf8] px-3 py-2.5 text-sm outline-none focus:border-[#176b5b] sm:max-w-md sm:flex-1"
+//             />
+//             <div className="flex gap-2">
+//               <select
+//                 value={statusFilter}
+//                 onChange={(e) =>
+//                   setStatusFilter(e.target.value as ProjectStatus | "All")
+//                 }
+//                 className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2.5 text-xs outline-none focus:border-[#176b5b] sm:flex-none sm:px-3 sm:text-sm"
+//               >
+//                 <option value="All">All Status</option>
+//                 {statusOptions.map((s) => (
+//                   <option key={s} value={s}>
+//                     {s}
+//                   </option>
+//                 ))}
+//               </select>
+//               <select
+//                 value={typeFilter}
+//                 onChange={(e) =>
+//                   setTypeFilter(e.target.value as ProjectType | "All")
+//                 }
+//                 className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2.5 text-xs outline-none focus:border-[#176b5b] sm:flex-none sm:px-3 sm:text-sm"
+//               >
+//                 <option value="All">All Types</option>
+//                 {typeOptions.map((t) => (
+//                   <option key={t} value={t}>
+//                     {t}
+//                   </option>
+//                 ))}
+//               </select>
+//             </div>
+//           </div>
+//         </section>
+
+//         <section className="overflow-hidden rounded-xl border border-[#e4e2da] bg-white shadow-sm">
+//           <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//             <h2 className="font-semibold">Project Directory</h2>
+//             <p className="mt-1 text-xs text-gray-500">
+//               {filteredProjects.length} projects
+//             </p>
+//           </div>
+
+//           {/* Desktop table */}
+//           <div className="hidden overflow-x-auto md:block">
+//             <table className="w-full min-w-[1000px] text-left">
+//               <thead className="bg-[#fafaf8] text-xs uppercase tracking-wide text-gray-500">
+//                 <tr>
+//                   <th className="px-5 py-3 font-semibold">Project</th>
+//                   <th className="px-4 py-3 font-semibold">Client</th>
+//                   <th className="px-4 py-3 font-semibold">Value</th>
+//                   <th className="px-4 py-3 font-semibold">Progress</th>
+//                   <th className="px-4 py-3 font-semibold">Status</th>
+//                   <th className="px-4 py-3 font-semibold">Deadline</th>
+//                   <th className="px-4 py-3 text-right font-semibold">Action</th>
+//                 </tr>
+//               </thead>
+//               <tbody className="divide-y divide-[#eeece6]">
+//                 {loading ? (
+//                   <tr>
+//                     <td
+//                       colSpan={7}
+//                       className="px-5 py-12 text-center text-sm text-gray-500"
+//                     >
+//                       Loading projects…
+//                     </td>
+//                   </tr>
+//                 ) : filteredProjects.length === 0 ? (
+//                   <tr>
+//                     <td
+//                       colSpan={7}
+//                       className="px-5 py-12 text-center text-sm text-gray-500"
+//                     >
+//                       No projects found.
+//                     </td>
+//                   </tr>
+//                 ) : (
+//                   filteredProjects.map((project) => (
+//                     <tr key={project.id} className="hover:bg-[#fafaf8]">
+//                       <td className="px-5 py-4">
+//                         <p className="text-xs font-semibold text-[#176b5b]">
+//                           {project.projectNo}
+//                         </p>
+//                         <p className="mt-1 font-medium text-gray-900">
+//                           {project.projectName}
+//                         </p>
+//                         <p className="mt-0.5 text-xs text-gray-400">
+//                           {project.type} · {project.location}
+//                         </p>
+//                       </td>
+//                       <td className="px-4 py-4">
+//                         <p className="text-sm font-medium text-gray-800">
+//                           {project.client}
+//                         </p>
+//                         <p className="text-xs text-gray-400">
+//                           Mgr: {project.manager}
+//                         </p>
+//                       </td>
+//                       <td className="px-4 py-4">
+//                         <p className="text-sm font-semibold text-gray-900">
+//                           {formatCurrency(project.value)}
+//                         </p>
+//                         <p className="text-xs text-gray-400">
+//                           Paid {formatCurrency(project.paid)}
+//                         </p>
+//                       </td>
+//                       <td className="px-4 py-4">
+//                         <div className="flex items-center gap-2">
+//                           <div className="h-2 w-20 overflow-hidden rounded-full bg-gray-100">
+//                             <div
+//                               className="h-full rounded-full bg-[#176b5b]"
+//                               style={{ width: `${project.progress}%` }}
+//                             />
+//                           </div>
+//                           <span className="text-xs text-gray-500">
+//                             {project.progress}%
+//                           </span>
+//                         </div>
+//                       </td>
+//                       <td className="px-4 py-4">
+//                         <span
+//                           className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${statusClass(
+//                             project.status
+//                           )}`}
+//                         >
+//                           {project.status}
+//                         </span>
+//                       </td>
+//                       <td className="px-4 py-4 text-sm text-gray-600">
+//                         {project.expectedDate}
+//                       </td>
+//                       <td className="px-4 py-4 text-right">
+//                         <div className="flex justify-end gap-2">
+//                           <button
+//                             type="button"
+//                             onClick={() => setSelectedProject(project)}
+//                             className="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-[#176b5b] hover:text-[#176b5b]"
+//                           >
+//                             View
+//                           </button>
+//                           <button
+//                             type="button"
+//                             onClick={() => openEdit(project)}
+//                             className="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+//                           >
+//                             Edit
+//                           </button>
+//                           <Link
+//                             href={`/interior/projects/${project.id}/timeline`}
+//                             className="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+//                           >
+//                             Open
+//                           </Link>
+//                         </div>
+//                       </td>
+//                     </tr>
+//                   ))
+//                 )}
+//               </tbody>
+//             </table>
+//           </div>
+
+//           {/* Mobile cards */}
+//           <div className="space-y-3 p-3 md:hidden">
+//             {loading ? (
+//               <p className="py-10 text-center text-sm text-gray-500">
+//                 Loading projects…
+//               </p>
+//             ) : filteredProjects.length === 0 ? (
+//               <p className="py-10 text-center text-sm text-gray-500">
+//                 No projects found.
+//               </p>
+//             ) : (
+//               filteredProjects.map((project) => (
+//                 <article
+//                   key={project.id}
+//                   className="rounded-xl border border-[#e4e2da] bg-[#fafaf8] p-3.5"
+//                 >
+//                   <div className="flex items-start justify-between gap-2">
+//                     <div className="min-w-0">
+//                       <p className="text-[11px] font-semibold text-[#176b5b]">
+//                         {project.projectNo}
+//                       </p>
+//                       <p className="mt-0.5 truncate font-medium text-gray-900">
+//                         {project.projectName}
+//                       </p>
+//                       <p className="mt-0.5 text-xs text-gray-500">
+//                         {project.client} · {project.type}
+//                       </p>
+//                     </div>
+//                     <span
+//                       className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${statusClass(
+//                         project.status
+//                       )}`}
+//                     >
+//                       {project.status}
+//                     </span>
+//                   </div>
+//                   <div className="mt-2 flex items-center justify-between text-sm">
+//                     <span className="font-semibold text-gray-900">
+//                       {formatCurrency(project.value)}
+//                     </span>
+//                     <span className="text-xs text-gray-500">
+//                       Due {project.expectedDate}
+//                     </span>
+//                   </div>
+//                   <div className="mt-2 flex items-center gap-2">
+//                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200">
+//                       <div
+//                         className="h-full rounded-full bg-[#176b5b]"
+//                         style={{ width: `${project.progress}%` }}
+//                       />
+//                     </div>
+//                     <span className="text-[11px] text-gray-500">
+//                       {project.progress}%
+//                     </span>
+//                   </div>
+//                   <div className="mt-3 flex gap-2">
+//                     <button
+//                       type="button"
+//                       onClick={() => setSelectedProject(project)}
+//                       className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-xs font-medium text-gray-700"
+//                     >
+//                       View
+//                     </button>
+//                     <button
+//                       type="button"
+//                       onClick={() => openEdit(project)}
+//                       className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-xs font-medium text-gray-700"
+//                     >
+//                       Edit
+//                     </button>
+//                     <Link
+//                       href={`/interior/projects/${project.id}/timeline`}
+//                       className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-center text-xs font-medium text-gray-700"
+//                     >
+//                       Open
+//                     </Link>
+//                   </div>
+//                 </article>
+//               ))
+//             )}
+//           </div>
+//         </section>
+//       </main>
+
+//       {/* Detail modal */}
+//       {selectedProject && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
+//           <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+//             <div className="sticky top-0 flex items-center justify-between border-b border-[#e4e2da] bg-white px-4 py-4 sm:px-6">
+//               <div className="min-w-0">
+//                 <p className="text-xs font-semibold text-[#176b5b]">
+//                   {selectedProject.projectNo}
+//                 </p>
+//                 <h2 className="mt-1 truncate text-lg font-bold sm:text-xl">
+//                   {selectedProject.projectName}
+//                 </h2>
+//               </div>
+//               <button
+//                 type="button"
+//                 onClick={() => setSelectedProject(null)}
+//                 className="shrink-0 rounded-lg px-3 py-2 text-gray-500 hover:bg-gray-100"
+//               >
+//                 ✕
+//               </button>
+//             </div>
+
+//             <div className="grid grid-cols-2 gap-2 p-4 sm:gap-3 sm:p-6">
+//               <Info label="Client" value={selectedProject.client} />
+//               <Info label="Type" value={selectedProject.type} />
+//               <Info label="Location" value={selectedProject.location} />
+//               <Info label="Designer" value={selectedProject.designer} />
+//               <Info label="Manager" value={selectedProject.manager} />
+//               <Info label="Rooms" value={String(selectedProject.rooms)} />
+//               <Info label="Start" value={selectedProject.startDate} />
+//               <Info label="Expected" value={selectedProject.expectedDate} />
+//               <Info
+//                 label="Value"
+//                 value={formatCurrency(selectedProject.value)}
+//               />
+//               <Info
+//                 label="Paid"
+//                 value={formatCurrency(selectedProject.paid)}
+//               />
+//               <Info label="Progress" value={`${selectedProject.progress}%`} />
+//               <Info label="Created" value={selectedProject.createdDate} />
+//             </div>
+
+//             <div className="px-4 pb-2 sm:px-6">
+//               <p className="mb-2 text-xs font-semibold uppercase text-gray-400">
+//                 Update Status
+//               </p>
+//               <div className="flex flex-wrap gap-2">
+//                 {statusOptions.map((status) => (
+//                   <button
+//                     key={status}
+//                     type="button"
+//                     onClick={() => changeStatus(selectedProject.id, status)}
+//                     className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+//                       selectedProject.status === status
+//                         ? statusClass(status)
+//                         : "border-gray-200 text-gray-600 hover:bg-gray-50"
+//                     }`}
+//                   >
+//                     {status}
+//                   </button>
+//                 ))}
+//               </div>
+//             </div>
+
+//             <div className="flex flex-wrap gap-2 border-t border-[#e4e2da] px-4 py-4 sm:px-6">
+//               <button
+//                 type="button"
+//                 onClick={() => openEdit(selectedProject)}
+//                 className="rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#125848]"
+//               >
+//                 Edit
+//               </button>
+//               <Link
+//                 href={`/interior/projects/${selectedProject.id}/timeline`}
+//                 className="rounded-lg border border-[#176b5b] px-4 py-2.5 text-sm font-semibold text-[#176b5b]"
+//               >
+//                 Timeline
+//               </Link>
+//               <Link
+//                 href={`/interior/projects/${selectedProject.id}/checklist`}
+//                 className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700"
+//               >
+//                 Checklist
+//               </Link>
+//               <button
+//                 type="button"
+//                 onClick={() => removeProject(selectedProject)}
+//                 className="rounded-lg border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600"
+//               >
+//                 Delete
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+
+//       {(showNewModal || (showEditModal && editProject)) && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
+//           <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+//             <div className="sticky top-0 flex items-center justify-between border-b border-[#e4e2da] bg-white px-4 py-4 sm:px-6">
+//               <h2 className="text-base font-bold sm:text-lg">
+//                 {showNewModal ? "New Project" : "Edit Project"}
+//               </h2>
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setShowNewModal(false);
+//                   setShowEditModal(false);
+//                   setEditProject(null);
+//                 }}
+//                 className="rounded-lg px-3 py-2 text-gray-500 hover:bg-gray-100"
+//               >
+//                 ✕
+//               </button>
+//             </div>
+
+//             <ProjectForm
+//               data={showNewModal ? newProject : editProject!}
+//               clients={clients}
+//               managers={managerOptions}
+//               onChange={(field, value) => {
+//                 if (showNewModal) {
+//                   setNewProject((current) => ({
+//                     ...current,
+//                     [field]: value,
+//                   }));
+//                 } else {
+//                   setEditProject((current) =>
+//                     current ? { ...current, [field]: value } : current
+//                   );
+//                 }
+//               }}
+//               onClientSelect={(clientId) => {
+//                 const c = clients.find((x) => x.id === clientId);
+//                 const name = c ? c.name || c.company || "Unknown" : "";
+//                 if (showNewModal) {
+//                   setNewProject((current) => ({
+//                     ...current,
+//                     clientId,
+//                     client: name,
+//                     location:
+//                       current.location ||
+//                       (c?.location ? String(c.location) : current.location),
+//                   }));
+//                 } else {
+//                   setEditProject((current) =>
+//                     current ? { ...current, clientId, client: name } : current
+//                   );
+//                 }
+//               }}
+//               onManagerSelect={(managerId) => {
+//                 const e = managerOptions.find((x) => x.id === managerId);
+//                 const name = e?.name || "";
+//                 if (showNewModal) {
+//                   setNewProject((current) => ({
+//                     ...current,
+//                     managerId,
+//                     manager: name,
+//                   }));
+//                 } else {
+//                   setEditProject((current) =>
+//                     current
+//                       ? { ...current, managerId, manager: name }
+//                       : current
+//                   );
+//                 }
+//               }}
+//             />
+
+//             <div className="flex flex-col-reverse gap-2 border-t border-[#e4e2da] bg-[#fafaf8] px-4 py-4 sm:flex-row sm:justify-end sm:gap-3 sm:px-6">
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setShowNewModal(false);
+//                   setShowEditModal(false);
+//                   setEditProject(null);
+//                 }}
+//                 className="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700"
+//               >
+//                 Cancel
+//               </button>
+//               <button
+//                 type="button"
+//                 disabled={saving}
+//                 onClick={showNewModal ? addProject : saveEdit}
+//                 className="rounded-lg bg-[#176b5b] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#125848] disabled:opacity-60"
+//               >
+//                 {saving
+//                   ? "Saving…"
+//                   : showNewModal
+//                     ? "Create Project"
+//                     : "Save Changes"}
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+// function ProjectForm({
+//   data,
+//   clients,
+//   managers,
+//   onChange,
+//   onClientSelect,
+//   onManagerSelect,
+// }: {
+//   data: Omit<Project, "id" | "projectNo" | "createdDate"> | Project;
+//   clients: InteriorClient[];
+//   managers: InteriorEmployee[];
+//   onChange: (field: keyof typeof emptyProject, value: string | number) => void;
+//   onClientSelect: (clientId: string) => void;
+//   onManagerSelect: (managerId: string) => void;
+// }) {
+//   return (
+//     <div className="grid gap-3 p-4 sm:grid-cols-2 sm:gap-4 sm:p-6">
+//       <div>
+//         <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//           Client *
+//         </label>
+//         <select
+//           value={data.clientId || ""}
+//           onChange={(e) => onClientSelect(e.target.value)}
+//           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+//         >
+//           <option value="">— Select client —</option>
+//           {clients.map((c) => (
+//             <option key={c.id} value={c.id}>
+//               {clientLabel(c)}
+//             </option>
+//           ))}
+//         </select>
+//         {clients.length === 0 && (
+//           <p className="mt-1 text-[11px] text-gray-400">
+//             Add clients under Clients first.
+//           </p>
+//         )}
+//       </div>
+
+//       <Field
+//         label="Project Name *"
+//         value={data.projectName}
+//         onChange={(v) => onChange("projectName", v)}
+//       />
+
+//       <div>
+//         <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//           Type
+//         </label>
+//         <select
+//           value={data.type}
+//           onChange={(e) => onChange("type", e.target.value)}
+//           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+//         >
+//           {typeOptions.map((t) => (
+//             <option key={t} value={t}>
+//               {t}
+//             </option>
+//           ))}
+//         </select>
+//       </div>
+
+//       <Field
+//         label="Location"
+//         value={data.location === "—" ? "" : data.location}
+//         onChange={(v) => onChange("location", v)}
+//       />
+
+//       <Field
+//         label="Designer"
+//         value={data.designer === "—" ? "" : data.designer}
+//         onChange={(v) => onChange("designer", v)}
+//       />
+
+//       <div>
+//         <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//           Manager
+//         </label>
+//         <select
+//           value={data.managerId || ""}
+//           onChange={(e) => onManagerSelect(e.target.value)}
+//           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+//         >
+//           <option value="">— Select manager —</option>
+//           {managers.map((e) => (
+//             <option key={e.id} value={e.id}>
+//               {employeeLabel(e)}
+//             </option>
+//           ))}
+//         </select>
+//       </div>
+
+//       <Field
+//         label="Start Date"
+//         type="date"
+//         value={data.startDate === "—" ? "" : data.startDate}
+//         onChange={(v) => onChange("startDate", v)}
+//       />
+//       <Field
+//         label="Expected Date"
+//         type="date"
+//         value={data.expectedDate === "—" ? "" : data.expectedDate}
+//         onChange={(v) => onChange("expectedDate", v)}
+//       />
+//       <Field
+//         label="Value"
+//         type="number"
+//         value={String(data.value || "")}
+//         onChange={(v) => onChange("value", Number(v) || 0)}
+//       />
+//       <Field
+//         label="Paid"
+//         type="number"
+//         value={String(data.paid || "")}
+//         onChange={(v) => onChange("paid", Number(v) || 0)}
+//       />
+//       <Field
+//         label="Progress %"
+//         type="number"
+//         value={String(data.progress || "")}
+//         onChange={(v) => onChange("progress", Number(v) || 0)}
+//       />
+//       <div>
+//         <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//           Status
+//         </label>
+//         <select
+//           value={data.status}
+//           onChange={(e) => onChange("status", e.target.value)}
+//           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+//         >
+//           {statusOptions.map((s) => (
+//             <option key={s} value={s}>
+//               {s}
+//             </option>
+//           ))}
+//         </select>
+//       </div>
+//     </div>
+//   );
+// }
+
+// function SummaryCard({
+//   label,
+//   value,
+//   helper,
+// }: {
+//   label: string;
+//   value: string;
+//   helper: string;
+// }) {
+//   return (
+//     <div className="rounded-xl border border-[#e4e2da] bg-white p-3.5 shadow-sm sm:p-5">
+//       <p className="text-xs text-gray-500 sm:text-sm">{label}</p>
+//       <p className="mt-1.5 truncate text-lg font-bold text-gray-900 sm:mt-2 sm:text-2xl">
+//         {value}
+//       </p>
+//       <p className="mt-1 text-[10px] text-gray-400 sm:text-xs">{helper}</p>
+//     </div>
+//   );
+// }
+
+// function Info({ label, value }: { label: string; value: string }) {
+//   return (
+//     <div className="rounded-xl bg-[#fafaf8] p-3">
+//       <p className="text-xs text-gray-400">{label}</p>
+//       <p className="mt-1 break-words text-sm font-semibold text-gray-800">
+//         {value}
+//       </p>
+//     </div>
+//   );
+// }
+
+// function Field({
+//   label,
+//   value,
+//   onChange,
+//   type = "text",
+// }: {
+//   label: string;
+//   value: string;
+//   onChange: (value: string) => void;
+//   type?: string;
+// }) {
+//   return (
+//     <div>
+//       <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//         {label}
+//       </label>
+//       <input
+//         type={type}
+//         value={value}
+//         onChange={(e) => onChange(e.target.value)}
+//         className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+//       />
+//     </div>
+//   );
+// }
+
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -5083,7 +6285,7 @@ import {
   type InteriorEmployee,
 } from "@/modules/interior/services/employeeService";
 import { Timestamp } from "firebase/firestore";
-import { Plus } from "lucide-react";
+import { Plus, Eye, Pencil, LayoutList } from "lucide-react";
 
 type ProjectStatus =
   | "New"
@@ -5277,6 +6479,48 @@ function employeeLabel(e: InteriorEmployee) {
 function isActiveEmployee(e: InteriorEmployee) {
   const s = (e.status || "Active").toLowerCase();
   return !s.includes("inactive") && !s.includes("resign");
+}
+
+function ProjectActionButtons({
+  project,
+  onView,
+  onEdit,
+  compact,
+}: {
+  project: Project;
+  onView: () => void;
+  onEdit: () => void;
+  compact?: boolean;
+}) {
+  const btn = compact
+    ? "inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-gray-200 bg-white py-2 text-xs font-medium text-gray-700 hover:border-[#176b5b] hover:text-[#176b5b]"
+    : "inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:border-[#176b5b] hover:text-[#176b5b]";
+
+  return (
+    <div
+      className={
+        compact
+          ? "mt-3 flex gap-2"
+          : "flex flex-wrap items-center justify-end gap-1.5"
+      }
+    >
+      <button type="button" onClick={onView} className={btn}>
+        <Eye size={12} />
+        View
+      </button>
+      <button type="button" onClick={onEdit} className={btn}>
+        <Pencil size={12} />
+        Edit
+      </button>
+      <Link
+        href={`/interior/projects/${project.id}/timeline`}
+        className={btn}
+      >
+        <LayoutList size={12} />
+        Open
+      </Link>
+    </div>
+  );
 }
 
 export default function InteriorProjectsPage() {
@@ -5555,7 +6799,6 @@ export default function InteriorProjectsPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f7f4] text-[#252525]">
-      {/* Header: title + New Project beside */}
       <div className="border-b border-[#e4e2da] bg-white">
         <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-5 sm:py-5 lg:px-8">
           <div className="flex items-start justify-between gap-3 sm:items-center">
@@ -5659,7 +6902,6 @@ export default function InteriorProjectsPage() {
             </p>
           </div>
 
-          {/* Desktop table */}
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1000px] text-left">
               <thead className="bg-[#fafaf8] text-xs uppercase tracking-wide text-gray-500">
@@ -5711,7 +6953,7 @@ export default function InteriorProjectsPage() {
                           {project.client}
                         </p>
                         <p className="text-xs text-gray-400">
-                          Mgr: {project.manager}
+                          Mgr: {project.designer}
                         </p>
                       </td>
                       <td className="px-4 py-4">
@@ -5748,28 +6990,11 @@ export default function InteriorProjectsPage() {
                         {project.expectedDate}
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedProject(project)}
-                            className="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-[#176b5b] hover:text-[#176b5b]"
-                          >
-                            View
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openEdit(project)}
-                            className="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                          >
-                            Edit
-                          </button>
-                          <Link
-                            href={`/interior/projects/${project.id}/timeline`}
-                            className="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                          >
-                            Open
-                          </Link>
-                        </div>
+                        <ProjectActionButtons
+                          project={project}
+                          onView={() => setSelectedProject(project)}
+                          onEdit={() => openEdit(project)}
+                        />
                       </td>
                     </tr>
                   ))
@@ -5778,7 +7003,6 @@ export default function InteriorProjectsPage() {
             </table>
           </div>
 
-          {/* Mobile cards */}
           <div className="space-y-3 p-3 md:hidden">
             {loading ? (
               <p className="py-10 text-center text-sm text-gray-500">
@@ -5833,28 +7057,12 @@ export default function InteriorProjectsPage() {
                       {project.progress}%
                     </span>
                   </div>
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProject(project)}
-                      className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-xs font-medium text-gray-700"
-                    >
-                      View
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openEdit(project)}
-                      className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-xs font-medium text-gray-700"
-                    >
-                      Edit
-                    </button>
-                    <Link
-                      href={`/interior/projects/${project.id}/timeline`}
-                      className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-center text-xs font-medium text-gray-700"
-                    >
-                      Open
-                    </Link>
-                  </div>
+                  <ProjectActionButtons
+                    compact
+                    project={project}
+                    onView={() => setSelectedProject(project)}
+                    onEdit={() => openEdit(project)}
+                  />
                 </article>
               ))
             )}
@@ -5862,7 +7070,6 @@ export default function InteriorProjectsPage() {
         </section>
       </main>
 
-      {/* Detail modal */}
       {selectedProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
           <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
@@ -5931,14 +7138,16 @@ export default function InteriorProjectsPage() {
               <button
                 type="button"
                 onClick={() => openEdit(selectedProject)}
-                className="rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#125848]"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#125848]"
               >
+                <Pencil size={14} />
                 Edit
               </button>
               <Link
                 href={`/interior/projects/${selectedProject.id}/timeline`}
-                className="rounded-lg border border-[#176b5b] px-4 py-2.5 text-sm font-semibold text-[#176b5b]"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#176b5b] px-4 py-2.5 text-sm font-semibold text-[#176b5b]"
               >
+                <LayoutList size={14} />
                 Timeline
               </Link>
               <Link

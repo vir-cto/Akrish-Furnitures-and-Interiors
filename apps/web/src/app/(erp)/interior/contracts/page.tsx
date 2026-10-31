@@ -2641,6 +2641,987 @@
 //   );
 // }
 
+// "use client";
+
+// import { useEffect, useMemo, useState } from "react";
+// import {
+//   getAllContracts,
+//   createContract,
+//   updateContract,
+//   deleteContract as deleteContractFromDb,
+//   type InteriorContract,
+// } from "@/modules/interior/services/contractService";
+// import { Timestamp } from "firebase/firestore";
+// import { Plus } from "lucide-react";
+
+// type ContractStatus =
+//   | "Draft"
+//   | "Sent"
+//   | "Active"
+//   | "Completed"
+//   | "Expired"
+//   | "Cancelled";
+
+// type Contract = {
+//   id: string;
+//   contractNo: string;
+//   client: string;
+//   project: string;
+//   projectType: string;
+//   startDate: string;
+//   endDate: string;
+//   value: number;
+//   paid: number;
+//   pending: number;
+//   status: ContractStatus;
+//   paymentTerms: string;
+//   designer: string;
+//   createdDate: string;
+//   notes: string;
+// };
+
+// const tabs = ["All", "Active", "Completed", "Draft"] as const;
+
+// const statusOptions: ContractStatus[] = [
+//   "Draft",
+//   "Sent",
+//   "Active",
+//   "Completed",
+//   "Expired",
+//   "Cancelled",
+// ];
+
+// function formatCurrency(value: number) {
+//   return `₹${value.toLocaleString("en-IN")}`;
+// }
+
+// function statusClass(status: ContractStatus) {
+//   switch (status) {
+//     case "Draft":
+//       return "bg-gray-100 text-gray-700 border-gray-200";
+//     case "Sent":
+//       return "bg-blue-50 text-blue-700 border-blue-200";
+//     case "Active":
+//       return "bg-emerald-50 text-emerald-700 border-emerald-200";
+//     case "Completed":
+//       return "bg-green-50 text-green-700 border-green-200";
+//     case "Expired":
+//       return "bg-amber-50 text-amber-700 border-amber-200";
+//     case "Cancelled":
+//       return "bg-red-50 text-red-700 border-red-200";
+//     default:
+//       return "bg-gray-50 text-gray-700 border-gray-200";
+//   }
+// }
+
+// function toDateString(value: unknown): string {
+//   if (!value) return "";
+//   if (typeof value === "string") return value.slice(0, 10);
+//   try {
+//     if (typeof (value as Timestamp).toDate === "function") {
+//       return (value as Timestamp).toDate().toISOString().slice(0, 10);
+//     }
+//   } catch {
+//     /* ignore */
+//   }
+//   return "";
+// }
+
+// function normalizeStatus(raw?: string): ContractStatus {
+//   const s = (raw || "Draft").trim();
+//   if ((statusOptions as string[]).includes(s)) return s as ContractStatus;
+//   const lower = s.toLowerCase();
+//   if (lower.includes("active") || lower.includes("progress")) return "Active";
+//   if (lower.includes("complete") || lower.includes("done")) return "Completed";
+//   if (lower.includes("sent")) return "Sent";
+//   if (lower.includes("expir")) return "Expired";
+//   if (lower.includes("cancel")) return "Cancelled";
+//   return "Draft";
+// }
+
+// function mapToUi(c: InteriorContract): Contract {
+//   const value = Number(c.value ?? 0) || 0;
+//   const paid = Number(c.paid ?? 0) || 0;
+//   const pending =
+//     c.pending !== undefined && c.pending !== null
+//       ? Number(c.pending) || 0
+//       : Math.max(value - paid, 0);
+
+//   return {
+//     id: c.id,
+//     contractNo: c.contractNo || `AKR-CON-${c.id.slice(0, 6).toUpperCase()}`,
+//     client: c.client || c.clientName || "Unknown",
+//     project: c.project || c.projectName || "—",
+//     projectType: c.projectType || "Residential",
+//     startDate: c.startDate || "—",
+//     endDate: c.endDate || "—",
+//     value,
+//     paid,
+//     pending,
+//     status: normalizeStatus(c.status),
+//     paymentTerms:
+//       c.paymentTerms || "50% Advance / 30% Production / 20% Completion",
+//     designer: c.designer || "—",
+//     createdDate: c.createdDate || toDateString(c.createdAt) || "—",
+//     notes: c.notes || "",
+//   };
+// }
+
+// export default function InteriorContractsPage() {
+//   const [contracts, setContracts] = useState<Contract[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [saving, setSaving] = useState(false);
+
+//   const [search, setSearch] = useState("");
+//   const [statusFilter, setStatusFilter] = useState<"All" | ContractStatus>(
+//     "All"
+//   );
+//   const [typeFilter, setTypeFilter] = useState("All");
+//   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("All");
+
+//   const [selectedContract, setSelectedContract] = useState<Contract | null>(
+//     null
+//   );
+//   const [showDetailsModal, setShowDetailsModal] = useState(false);
+//   const [showContractModal, setShowContractModal] = useState(false);
+//   const [editingContract, setEditingContract] = useState<Contract | null>(null);
+
+//   const [form, setForm] = useState({
+//     client: "",
+//     project: "",
+//     projectType: "Residential",
+//     startDate: "",
+//     endDate: "",
+//     value: "",
+//     paymentTerms: "50% Advance / 30% Production / 20% Completion",
+//     designer: "Akrish Design Team",
+//     notes: "",
+//   });
+
+//   useEffect(() => {
+//     let cancelled = false;
+
+//     async function load() {
+//       setLoading(true);
+//       try {
+//         const data = await getAllContracts();
+//         if (cancelled) return;
+//         setContracts(data.map(mapToUi));
+//       } catch (err) {
+//         console.error("Failed to load contracts:", err);
+//       } finally {
+//         if (!cancelled) setLoading(false);
+//       }
+//     }
+
+//     load();
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, []);
+
+//   useEffect(() => {
+//     if (!showDetailsModal && !showContractModal) return;
+//     const prev = document.body.style.overflow;
+//     document.body.style.overflow = "hidden";
+//     return () => {
+//       document.body.style.overflow = prev;
+//     };
+//   }, [showDetailsModal, showContractModal]);
+
+//   const totalContracts = contracts.length;
+//   const activeContracts = contracts.filter((c) => c.status === "Active").length;
+//   const totalValue = contracts.reduce((s, c) => s + c.value, 0);
+//   const totalPending = contracts.reduce((s, c) => s + c.pending, 0);
+
+//   const filteredContracts = useMemo(() => {
+//     const query = search.toLowerCase().trim();
+
+//     return contracts.filter((contract) => {
+//       const matchesSearch =
+//         !query ||
+//         contract.contractNo.toLowerCase().includes(query) ||
+//         contract.client.toLowerCase().includes(query) ||
+//         contract.project.toLowerCase().includes(query) ||
+//         contract.designer.toLowerCase().includes(query);
+
+//       const matchesStatus =
+//         statusFilter === "All" || contract.status === statusFilter;
+
+//       const matchesType =
+//         typeFilter === "All" || contract.projectType === typeFilter;
+
+//       const matchesTab =
+//         activeTab === "All" ||
+//         (activeTab === "Active" && contract.status === "Active") ||
+//         (activeTab === "Completed" && contract.status === "Completed") ||
+//         (activeTab === "Draft" && contract.status === "Draft");
+
+//       return matchesSearch && matchesStatus && matchesType && matchesTab;
+//     });
+//   }, [contracts, search, statusFilter, typeFilter, activeTab]);
+
+//   function resetForm() {
+//     setForm({
+//       client: "",
+//       project: "",
+//       projectType: "Residential",
+//       startDate: "",
+//       endDate: "",
+//       value: "",
+//       paymentTerms: "50% Advance / 30% Production / 20% Completion",
+//       designer: "Akrish Design Team",
+//       notes: "",
+//     });
+//   }
+
+//   function openNewContract() {
+//     setEditingContract(null);
+//     resetForm();
+//     setShowContractModal(true);
+//   }
+
+//   function openEditContract(contract: Contract) {
+//     setEditingContract(contract);
+//     setForm({
+//       client: contract.client,
+//       project: contract.project,
+//       projectType: contract.projectType,
+//       startDate: contract.startDate === "—" ? "" : contract.startDate,
+//       endDate: contract.endDate === "—" ? "" : contract.endDate,
+//       value: String(contract.value),
+//       paymentTerms: contract.paymentTerms,
+//       designer: contract.designer,
+//       notes: contract.notes,
+//     });
+//     setShowContractModal(true);
+//   }
+
+//   async function saveContract() {
+//     if (
+//       !form.client.trim() ||
+//       !form.project.trim() ||
+//       !form.startDate ||
+//       !form.endDate
+//     ) {
+//       window.alert("Please fill client, project, start date and end date.");
+//       return;
+//     }
+
+//     const value = Number(form.value) || 0;
+//     setSaving(true);
+
+//     try {
+//       if (editingContract) {
+//         const payload = {
+//           client: form.client.trim(),
+//           project: form.project.trim(),
+//           projectType: form.projectType,
+//           startDate: form.startDate,
+//           endDate: form.endDate,
+//           value,
+//           pending: Math.max(0, value - editingContract.paid),
+//           paymentTerms: form.paymentTerms,
+//           designer: form.designer.trim(),
+//           notes: form.notes.trim(),
+//         };
+
+//         await updateContract(editingContract.id, payload);
+
+//         setContracts((current) =>
+//           current.map((contract) =>
+//             contract.id === editingContract.id
+//               ? { ...contract, ...payload }
+//               : contract
+//           )
+//         );
+//       } else {
+//         const today = new Date().toISOString().slice(0, 10);
+//         const contractNo = `AKR-CON-${Date.now().toString().slice(-6)}`;
+
+//         const payload = {
+//           contractNo,
+//           client: form.client.trim(),
+//           project: form.project.trim(),
+//           projectType: form.projectType,
+//           startDate: form.startDate,
+//           endDate: form.endDate,
+//           value,
+//           paid: 0,
+//           pending: value,
+//           status: "Draft",
+//           paymentTerms: form.paymentTerms,
+//           designer: form.designer.trim(),
+//           createdDate: today,
+//           notes: form.notes.trim(),
+//         };
+
+//         const id = await createContract(payload);
+
+//         setContracts((current) => [
+//           {
+//             id,
+//             ...payload,
+//             status: "Draft" as ContractStatus,
+//           },
+//           ...current,
+//         ]);
+//       }
+
+//       setShowContractModal(false);
+//       resetForm();
+//       setEditingContract(null);
+//     } catch (err) {
+//       console.error(err);
+//       alert("Unable to save contract. Please try again.");
+//     } finally {
+//       setSaving(false);
+//     }
+//   }
+
+//   async function changeStatus(id: string, status: ContractStatus) {
+//     setContracts((current) =>
+//       current.map((c) => (c.id === id ? { ...c, status } : c))
+//     );
+//     setSelectedContract((current) =>
+//       current && current.id === id ? { ...current, status } : current
+//     );
+
+//     try {
+//       await updateContract(id, { status });
+//     } catch (err) {
+//       console.error(err);
+//       try {
+//         const data = await getAllContracts();
+//         setContracts(data.map(mapToUi));
+//       } catch {
+//         /* ignore */
+//       }
+//     }
+//   }
+
+//   async function removeContract(contract: Contract) {
+//     const confirmed = window.confirm(
+//       `Delete contract "${contract.contractNo}"?`
+//     );
+//     if (!confirmed) return;
+
+//     setContracts((current) => current.filter((c) => c.id !== contract.id));
+//     setSelectedContract(null);
+//     setShowDetailsModal(false);
+
+//     try {
+//       await deleteContractFromDb(contract.id);
+//     } catch (err) {
+//       console.error(err);
+//       try {
+//         const data = await getAllContracts();
+//         setContracts(data.map(mapToUi));
+//       } catch {
+//         /* ignore */
+//       }
+//     }
+//   }
+
+//   return (
+//     <div className="min-h-screen bg-[#f7f7f4] text-[#252525]">
+//       {/* Header: title + New Contract beside */}
+//       <div className="border-b border-[#e4e2da] bg-white">
+//         <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-5 sm:py-5 lg:px-8">
+//           <div className="flex items-start justify-between gap-3 sm:items-center">
+//             <div className="min-w-0 flex-1">
+//               <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+//                 Contracts
+//               </h1>
+//               <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+//                 Manage interior project contracts and payment schedules.
+//                 {loading && (
+//                   <span className="ml-2 text-[#176b5b]">Loading…</span>
+//                 )}
+//               </p>
+//             </div>
+//             <button
+//               type="button"
+//               onClick={openNewContract}
+//               className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#176b5b] px-3 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#125848] sm:gap-2 sm:px-5 sm:py-3 sm:text-sm"
+//             >
+//               <Plus size={16} strokeWidth={2.5} />
+//               <span className="hidden sm:inline">New Contract</span>
+//               <span className="sm:hidden">New</span>
+//             </button>
+//           </div>
+//         </div>
+//       </div>
+
+//       <main className="mx-auto max-w-[1600px] space-y-4 px-3 py-4 sm:space-y-6 sm:px-5 sm:py-6 lg:px-8">
+//         <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+//           <SummaryCard
+//             label="Total Contracts"
+//             value={loading ? "…" : String(totalContracts)}
+//             helper={`${activeContracts} active`}
+//           />
+//           <SummaryCard
+//             label="Active"
+//             value={loading ? "…" : String(activeContracts)}
+//             helper="Currently running"
+//           />
+//           <SummaryCard
+//             label="Contract Value"
+//             value={loading ? "…" : formatCurrency(totalValue)}
+//             helper="All contracts"
+//           />
+//           <SummaryCard
+//             label="Pending"
+//             value={loading ? "…" : formatCurrency(totalPending)}
+//             helper="Outstanding amount"
+//           />
+//         </section>
+
+//         <section className="rounded-xl border border-[#e4e2da] bg-white p-1.5 sm:p-2">
+//           <div className="flex gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+//             {tabs.map((tab) => (
+//               <button
+//                 key={tab}
+//                 type="button"
+//                 onClick={() => setActiveTab(tab)}
+//                 className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition sm:px-4 sm:py-2.5 sm:text-sm ${
+//                   activeTab === tab
+//                     ? "bg-[#176b5b] text-white"
+//                     : "text-gray-600 hover:bg-[#f7f7f4]"
+//                 }`}
+//               >
+//                 {tab}
+//               </button>
+//             ))}
+//           </div>
+//         </section>
+
+//         <section className="rounded-xl border border-[#e4e2da] bg-white p-3 sm:p-4">
+//           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+//             <input
+//               value={search}
+//               onChange={(e) => setSearch(e.target.value)}
+//               placeholder="Search contract, client, project..."
+//               className="w-full rounded-lg border border-gray-200 bg-[#fafaf8] px-3 py-2.5 text-sm outline-none focus:border-[#176b5b] sm:max-w-md sm:flex-1"
+//             />
+//             <div className="flex gap-2">
+//               <select
+//                 value={statusFilter}
+//                 onChange={(e) =>
+//                   setStatusFilter(e.target.value as "All" | ContractStatus)
+//                 }
+//                 className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2.5 text-xs outline-none focus:border-[#176b5b] sm:flex-none sm:px-3 sm:text-sm"
+//               >
+//                 <option value="All">All Status</option>
+//                 {statusOptions.map((s) => (
+//                   <option key={s} value={s}>
+//                     {s}
+//                   </option>
+//                 ))}
+//               </select>
+//               <select
+//                 value={typeFilter}
+//                 onChange={(e) => setTypeFilter(e.target.value)}
+//                 className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2.5 text-xs outline-none focus:border-[#176b5b] sm:flex-none sm:px-3 sm:text-sm"
+//               >
+//                 <option value="All">All Types</option>
+//                 <option value="Residential">Residential</option>
+//                 <option value="Commercial">Commercial</option>
+//               </select>
+//             </div>
+//           </div>
+//         </section>
+
+//         <section className="overflow-hidden rounded-xl border border-[#e4e2da] bg-white shadow-sm">
+//           <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//             <h2 className="font-semibold">Contract List</h2>
+//             <p className="mt-1 text-xs text-gray-500">
+//               {filteredContracts.length} records
+//             </p>
+//           </div>
+
+//           {/* Desktop table */}
+//           <div className="hidden overflow-x-auto md:block">
+//             <table className="w-full min-w-[1000px] text-left">
+//               <thead className="bg-[#fafaf8] text-xs uppercase tracking-wide text-gray-500">
+//                 <tr>
+//                   <th className="px-5 py-3 font-semibold">Contract</th>
+//                   <th className="px-4 py-3 font-semibold">Client</th>
+//                   <th className="px-4 py-3 font-semibold">Project</th>
+//                   <th className="px-4 py-3 font-semibold">Value</th>
+//                   <th className="px-4 py-3 font-semibold">Pending</th>
+//                   <th className="px-4 py-3 font-semibold">Period</th>
+//                   <th className="px-4 py-3 font-semibold">Status</th>
+//                   <th className="px-4 py-3 text-right font-semibold">Action</th>
+//                 </tr>
+//               </thead>
+//               <tbody className="divide-y divide-[#eeece6]">
+//                 {loading ? (
+//                   <tr>
+//                     <td
+//                       colSpan={8}
+//                       className="px-5 py-12 text-center text-sm text-gray-500"
+//                     >
+//                       Loading contracts…
+//                     </td>
+//                   </tr>
+//                 ) : filteredContracts.length === 0 ? (
+//                   <tr>
+//                     <td
+//                       colSpan={8}
+//                       className="px-5 py-12 text-center text-sm text-gray-500"
+//                     >
+//                       No contracts found.
+//                     </td>
+//                   </tr>
+//                 ) : (
+//                   filteredContracts.map((contract) => (
+//                     <tr key={contract.id} className="hover:bg-[#fafaf8]">
+//                       <td className="px-5 py-4">
+//                         <p className="font-semibold text-[#176b5b]">
+//                           {contract.contractNo}
+//                         </p>
+//                         <p className="mt-0.5 text-xs text-gray-400">
+//                           {contract.createdDate}
+//                         </p>
+//                       </td>
+//                       <td className="px-4 py-4 text-sm font-medium text-gray-900">
+//                         {contract.client}
+//                       </td>
+//                       <td className="px-4 py-4">
+//                         <p className="text-sm font-medium text-gray-800">
+//                           {contract.project}
+//                         </p>
+//                         <p className="text-xs text-gray-400">
+//                           {contract.projectType}
+//                         </p>
+//                       </td>
+//                       <td className="px-4 py-4 text-sm font-semibold text-gray-900">
+//                         {formatCurrency(contract.value)}
+//                       </td>
+//                       <td className="px-4 py-4 text-sm font-semibold text-orange-700">
+//                         {formatCurrency(contract.pending)}
+//                       </td>
+//                       <td className="px-4 py-4 text-xs text-gray-600">
+//                         {contract.startDate}
+//                         <br />
+//                         to {contract.endDate}
+//                       </td>
+//                       <td className="px-4 py-4">
+//                         <span
+//                           className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass(
+//                             contract.status
+//                           )}`}
+//                         >
+//                           {contract.status}
+//                         </span>
+//                       </td>
+//                       <td className="px-4 py-4 text-right">
+//                         <div className="flex justify-end gap-2">
+//                           <button
+//                             type="button"
+//                             onClick={() => {
+//                               setSelectedContract(contract);
+//                               setShowDetailsModal(true);
+//                             }}
+//                             className="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-[#176b5b] hover:text-[#176b5b]"
+//                           >
+//                             View
+//                           </button>
+//                           <button
+//                             type="button"
+//                             onClick={() => openEditContract(contract)}
+//                             className="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+//                           >
+//                             Edit
+//                           </button>
+//                         </div>
+//                       </td>
+//                     </tr>
+//                   ))
+//                 )}
+//               </tbody>
+//             </table>
+//           </div>
+
+//           {/* Mobile cards */}
+//           <div className="space-y-3 p-3 md:hidden">
+//             {loading ? (
+//               <p className="py-10 text-center text-sm text-gray-500">
+//                 Loading contracts…
+//               </p>
+//             ) : filteredContracts.length === 0 ? (
+//               <p className="py-10 text-center text-sm text-gray-500">
+//                 No contracts found.
+//               </p>
+//             ) : (
+//               filteredContracts.map((contract) => (
+//                 <article
+//                   key={contract.id}
+//                   className="rounded-xl border border-[#e4e2da] bg-[#fafaf8] p-3.5"
+//                 >
+//                   <div className="flex items-start justify-between gap-2">
+//                     <div className="min-w-0">
+//                       <p className="font-semibold text-[#176b5b]">
+//                         {contract.contractNo}
+//                       </p>
+//                       <p className="mt-0.5 truncate text-sm font-medium text-gray-900">
+//                         {contract.client}
+//                       </p>
+//                       <p className="mt-0.5 text-xs text-gray-500">
+//                         {contract.project} · {contract.projectType}
+//                       </p>
+//                     </div>
+//                     <span
+//                       className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusClass(
+//                         contract.status
+//                       )}`}
+//                     >
+//                       {contract.status}
+//                     </span>
+//                   </div>
+//                   <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+//                     <span className="font-semibold text-gray-900">
+//                       {formatCurrency(contract.value)}
+//                     </span>
+//                     <span className="text-orange-700">
+//                       Due {formatCurrency(contract.pending)}
+//                     </span>
+//                   </div>
+//                   <p className="mt-1 text-[11px] text-gray-500">
+//                     {contract.startDate} → {contract.endDate}
+//                   </p>
+//                   <div className="mt-3 flex gap-2">
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setSelectedContract(contract);
+//                         setShowDetailsModal(true);
+//                       }}
+//                       className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-xs font-medium text-gray-700"
+//                     >
+//                       View
+//                     </button>
+//                     <button
+//                       type="button"
+//                       onClick={() => openEditContract(contract)}
+//                       className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-xs font-medium text-gray-700"
+//                     >
+//                       Edit
+//                     </button>
+//                   </div>
+//                 </article>
+//               ))
+//             )}
+//           </div>
+//         </section>
+//       </main>
+
+//       {/* Details modal */}
+//       {showDetailsModal && selectedContract && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
+//           <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+//             <div className="sticky top-0 flex items-center justify-between border-b border-[#e4e2da] bg-white px-4 py-4 sm:px-6">
+//               <div className="min-w-0">
+//                 <p className="text-xs font-semibold text-[#176b5b]">
+//                   {selectedContract.contractNo}
+//                 </p>
+//                 <h2 className="mt-1 truncate text-lg font-bold sm:text-xl">
+//                   {selectedContract.project}
+//                 </h2>
+//               </div>
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setShowDetailsModal(false);
+//                   setSelectedContract(null);
+//                 }}
+//                 className="shrink-0 rounded-lg px-3 py-2 text-gray-500 hover:bg-gray-100"
+//               >
+//                 ✕
+//               </button>
+//             </div>
+
+//             <div className="grid grid-cols-2 gap-2 p-4 sm:gap-3 sm:p-6">
+//               <Info label="Client" value={selectedContract.client} />
+//               <Info label="Designer" value={selectedContract.designer} />
+//               <Info label="Type" value={selectedContract.projectType} />
+//               <Info label="Created" value={selectedContract.createdDate} />
+//               <Info label="Start" value={selectedContract.startDate} />
+//               <Info label="End" value={selectedContract.endDate} />
+//               <Info
+//                 label="Value"
+//                 value={formatCurrency(selectedContract.value)}
+//               />
+//               <Info
+//                 label="Paid"
+//                 value={formatCurrency(selectedContract.paid)}
+//               />
+//               <Info
+//                 label="Pending"
+//                 value={formatCurrency(selectedContract.pending)}
+//               />
+//               <div className="rounded-xl bg-[#fafaf8] p-3">
+//                 <p className="text-xs text-gray-400">Status</p>
+//                 <span
+//                   className={`mt-1 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass(
+//                     selectedContract.status
+//                   )}`}
+//                 >
+//                   {selectedContract.status}
+//                 </span>
+//               </div>
+//             </div>
+
+//             <div className="px-4 pb-2 sm:px-6">
+//               <p className="text-xs text-gray-400">Payment Terms</p>
+//               <p className="mt-1 text-sm text-gray-700">
+//                 {selectedContract.paymentTerms}
+//               </p>
+//             </div>
+
+//             <div className="px-4 pb-2 sm:px-6">
+//               <p className="mb-2 text-xs font-semibold uppercase text-gray-400">
+//                 Update Status
+//               </p>
+//               <div className="flex flex-wrap gap-2">
+//                 {statusOptions.map((status) => (
+//                   <button
+//                     key={status}
+//                     type="button"
+//                     onClick={() => changeStatus(selectedContract.id, status)}
+//                     className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+//                       selectedContract.status === status
+//                         ? statusClass(status)
+//                         : "border-gray-200 text-gray-600 hover:bg-gray-50"
+//                     }`}
+//                   >
+//                     {status}
+//                   </button>
+//                 ))}
+//               </div>
+//             </div>
+
+//             {selectedContract.notes && (
+//               <div className="mx-4 mb-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-700 sm:mx-6">
+//                 {selectedContract.notes}
+//               </div>
+//             )}
+
+//             <div className="flex flex-wrap gap-2 border-t border-[#e4e2da] px-4 py-4 sm:px-6">
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setShowDetailsModal(false);
+//                   openEditContract(selectedContract);
+//                 }}
+//                 className="rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#125848]"
+//               >
+//                 Edit
+//               </button>
+//               <button
+//                 type="button"
+//                 onClick={() => removeContract(selectedContract)}
+//                 className="rounded-lg border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600"
+//               >
+//                 Delete
+//               </button>
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setShowDetailsModal(false);
+//                   setSelectedContract(null);
+//                 }}
+//                 className="ml-auto rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700"
+//               >
+//                 Close
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Create / Edit modal */}
+//       {showContractModal && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
+//           <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+//             <div className="sticky top-0 flex items-center justify-between border-b border-[#e4e2da] bg-white px-4 py-4 sm:px-6">
+//               <h2 className="text-base font-bold sm:text-lg">
+//                 {editingContract ? "Edit Contract" : "New Contract"}
+//               </h2>
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setShowContractModal(false);
+//                   setEditingContract(null);
+//                   resetForm();
+//                 }}
+//                 className="rounded-lg px-3 py-2 text-gray-500 hover:bg-gray-100"
+//               >
+//                 ✕
+//               </button>
+//             </div>
+
+//             <div className="grid gap-3 p-4 sm:grid-cols-2 sm:gap-4 sm:p-6">
+//               <Field
+//                 label="Client *"
+//                 value={form.client}
+//                 onChange={(v) => setForm((f) => ({ ...f, client: v }))}
+//               />
+//               <Field
+//                 label="Project *"
+//                 value={form.project}
+//                 onChange={(v) => setForm((f) => ({ ...f, project: v }))}
+//               />
+//               <div>
+//                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                   Project Type
+//                 </label>
+//                 <select
+//                   value={form.projectType}
+//                   onChange={(e) =>
+//                     setForm((f) => ({ ...f, projectType: e.target.value }))
+//                   }
+//                   className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+//                 >
+//                   <option>Residential</option>
+//                   <option>Commercial</option>
+//                 </select>
+//               </div>
+//               <Field
+//                 label="Designer"
+//                 value={form.designer}
+//                 onChange={(v) => setForm((f) => ({ ...f, designer: v }))}
+//               />
+//               <Field
+//                 label="Start Date *"
+//                 type="date"
+//                 value={form.startDate}
+//                 onChange={(v) => setForm((f) => ({ ...f, startDate: v }))}
+//               />
+//               <Field
+//                 label="End Date *"
+//                 type="date"
+//                 value={form.endDate}
+//                 onChange={(v) => setForm((f) => ({ ...f, endDate: v }))}
+//               />
+//               <Field
+//                 label="Contract Value"
+//                 type="number"
+//                 value={form.value}
+//                 onChange={(v) => setForm((f) => ({ ...f, value: v }))}
+//               />
+//               <Field
+//                 label="Payment Terms"
+//                 value={form.paymentTerms}
+//                 onChange={(v) => setForm((f) => ({ ...f, paymentTerms: v }))}
+//               />
+//               <div className="sm:col-span-2">
+//                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                   Notes
+//                 </label>
+//                 <textarea
+//                   rows={3}
+//                   value={form.notes}
+//                   onChange={(e) =>
+//                     setForm((f) => ({ ...f, notes: e.target.value }))
+//                   }
+//                   className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+//                 />
+//               </div>
+//             </div>
+
+//             <div className="flex flex-col-reverse gap-2 border-t border-[#e4e2da] bg-[#fafaf8] px-4 py-4 sm:flex-row sm:justify-end sm:gap-3 sm:px-6">
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setShowContractModal(false);
+//                   setEditingContract(null);
+//                   resetForm();
+//                 }}
+//                 className="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700"
+//               >
+//                 Cancel
+//               </button>
+//               <button
+//                 type="button"
+//                 disabled={saving}
+//                 onClick={saveContract}
+//                 className="rounded-lg bg-[#176b5b] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#125848] disabled:opacity-60"
+//               >
+//                 {saving
+//                   ? "Saving…"
+//                   : editingContract
+//                     ? "Save Changes"
+//                     : "Create Contract"}
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+// function SummaryCard({
+//   label,
+//   value,
+//   helper,
+// }: {
+//   label: string;
+//   value: string;
+//   helper: string;
+// }) {
+//   return (
+//     <div className="rounded-xl border border-[#e4e2da] bg-white p-3.5 shadow-sm sm:p-5">
+//       <p className="text-xs text-gray-500 sm:text-sm">{label}</p>
+//       <p className="mt-1.5 truncate text-lg font-bold text-gray-900 sm:mt-2 sm:text-2xl">
+//         {value}
+//       </p>
+//       <p className="mt-1 text-[10px] text-gray-400 sm:text-xs">{helper}</p>
+//     </div>
+//   );
+// }
+
+// function Info({ label, value }: { label: string; value: string }) {
+//   return (
+//     <div className="rounded-xl bg-[#fafaf8] p-3">
+//       <p className="text-xs text-gray-400">{label}</p>
+//       <p className="mt-1 break-words text-sm font-semibold text-gray-800">
+//         {value}
+//       </p>
+//     </div>
+//   );
+// }
+
+// function Field({
+//   label,
+//   value,
+//   onChange,
+//   type = "text",
+// }: {
+//   label: string;
+//   value: string;
+//   onChange: (value: string) => void;
+//   type?: string;
+// }) {
+//   return (
+//     <div>
+//       <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//         {label}
+//       </label>
+//       <input
+//         type={type}
+//         value={value}
+//         onChange={(e) => onChange(e.target.value)}
+//         className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+//       />
+//     </div>
+//   );
+// }
+
+
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -2651,6 +3632,14 @@ import {
   deleteContract as deleteContractFromDb,
   type InteriorContract,
 } from "@/modules/interior/services/contractService";
+import {
+  getAllClients,
+  type InteriorClient,
+} from "@/modules/interior/services/clientService";
+import {
+  getAllInteriorProjects,
+  type InteriorProject,
+} from "@/modules/interior/services/projectService";
 import { Timestamp } from "firebase/firestore";
 import { Plus } from "lucide-react";
 
@@ -2666,7 +3655,9 @@ type Contract = {
   id: string;
   contractNo: string;
   client: string;
+  clientId: string;
   project: string;
+  projectId: string;
   projectType: string;
   startDate: string;
   endDate: string;
@@ -2689,6 +3680,21 @@ const statusOptions: ContractStatus[] = [
   "Completed",
   "Expired",
   "Cancelled",
+];
+
+const projectTypeOptions = [
+  "Residential",
+  "Commercial",
+  "Office",
+  "Villa",
+  "Apartment",
+];
+
+const paymentTermsOptions = [
+  "40% Advance, 40% During Work, 20% On Completion",
+  "50% Advance, 50% On Completion",
+  "30% Advance, 40% During Work, 30% On Completion",
+  "100% Advance",
 ];
 
 function formatCurrency(value: number) {
@@ -2747,11 +3753,18 @@ function mapToUi(c: InteriorContract): Contract {
       ? Number(c.pending) || 0
       : Math.max(value - paid, 0);
 
+  const extra = c as InteriorContract & {
+    clientId?: string;
+    projectId?: string;
+  };
+
   return {
     id: c.id,
     contractNo: c.contractNo || `AKR-CON-${c.id.slice(0, 6).toUpperCase()}`,
     client: c.client || c.clientName || "Unknown",
+    clientId: extra.clientId || "",
     project: c.project || c.projectName || "—",
+    projectId: extra.projectId || "",
     projectType: c.projectType || "Residential",
     startDate: c.startDate || "—",
     endDate: c.endDate || "—",
@@ -2759,16 +3772,35 @@ function mapToUi(c: InteriorContract): Contract {
     paid,
     pending,
     status: normalizeStatus(c.status),
-    paymentTerms:
-      c.paymentTerms || "50% Advance / 30% Production / 20% Completion",
+    // paymentTerms:
+    //   c.paymentTerms || "50% Advance / 30% Production / 20% Completion",
+    paymentTerms: paymentTermsOptions[0],
     designer: c.designer || "—",
     createdDate: c.createdDate || toDateString(c.createdAt) || "—",
     notes: c.notes || "",
   };
 }
 
+function clientLabel(c: InteriorClient) {
+  const name = c.name || c.company || "Unnamed";
+  const phone = c.phone ? ` · ${c.phone}` : "";
+  return `${name}${phone}`;
+}
+
+function projectLabel(p: InteriorProject) {
+  const no = p.projectNo || p.projectId || "";
+  const name = p.projectName || p.name || "Untitled";
+  return no ? `${no} · ${name}` : name;
+}
+
+function projectClientName(p: InteriorProject) {
+  return (p.clientName || p.client || p.customerName || "").trim().toLowerCase();
+}
+
 export default function InteriorContractsPage() {
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [clients, setClients] = useState<InteriorClient[]>([]);
+  const [projects, setProjects] = useState<InteriorProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -2787,14 +3819,16 @@ export default function InteriorContractsPage() {
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
 
   const [form, setForm] = useState({
+    clientId: "",
     client: "",
+    projectId: "",
     project: "",
     projectType: "Residential",
     startDate: "",
     endDate: "",
     value: "",
     paymentTerms: "50% Advance / 30% Production / 20% Completion",
-    designer: "Akrish Design Team",
+    designer: "",
     notes: "",
   });
 
@@ -2804,9 +3838,15 @@ export default function InteriorContractsPage() {
     async function load() {
       setLoading(true);
       try {
-        const data = await getAllContracts();
+        const [contractData, clientData, projectData] = await Promise.all([
+          getAllContracts(),
+          getAllClients(),
+          getAllInteriorProjects(),
+        ]);
         if (cancelled) return;
-        setContracts(data.map(mapToUi));
+        setContracts(contractData.map(mapToUi));
+        setClients(clientData);
+        setProjects(projectData);
       } catch (err) {
         console.error("Failed to load contracts:", err);
       } finally {
@@ -2828,6 +3868,31 @@ export default function InteriorContractsPage() {
       document.body.style.overflow = prev;
     };
   }, [showDetailsModal, showContractModal]);
+
+  /** Projects for dropdown: prefer matching selected client */
+  const projectOptions = useMemo(() => {
+    if (!form.clientId && !form.client) return projects;
+
+    const client = clients.find((c) => c.id === form.clientId);
+    const clientName = (
+      form.client ||
+      client?.name ||
+      client?.company ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
+
+    const filtered = projects.filter((p) => {
+      const pClientId = (p as InteriorProject & { clientId?: string }).clientId;
+      if (form.clientId && pClientId && pClientId === form.clientId) return true;
+      if (clientName && projectClientName(p) === clientName) return true;
+      return false;
+    });
+
+    // If no match, still show all so user can pick any project
+    return filtered.length > 0 ? filtered : projects;
+  }, [projects, clients, form.clientId, form.client]);
 
   const totalContracts = contracts.length;
   const activeContracts = contracts.filter((c) => c.status === "Active").length;
@@ -2863,14 +3928,16 @@ export default function InteriorContractsPage() {
 
   function resetForm() {
     setForm({
+      clientId: "",
       client: "",
+      projectId: "",
       project: "",
       projectType: "Residential",
       startDate: "",
       endDate: "",
       value: "",
       paymentTerms: "50% Advance / 30% Production / 20% Completion",
-      designer: "Akrish Design Team",
+      designer: "",
       notes: "",
     });
   }
@@ -2884,17 +3951,64 @@ export default function InteriorContractsPage() {
   function openEditContract(contract: Contract) {
     setEditingContract(contract);
     setForm({
+      clientId: contract.clientId || "",
       client: contract.client,
-      project: contract.project,
+      projectId: contract.projectId || "",
+      project: contract.project === "—" ? "" : contract.project,
       projectType: contract.projectType,
       startDate: contract.startDate === "—" ? "" : contract.startDate,
       endDate: contract.endDate === "—" ? "" : contract.endDate,
       value: String(contract.value),
       paymentTerms: contract.paymentTerms,
-      designer: contract.designer,
+      designer: contract.designer === "—" ? "" : contract.designer,
       notes: contract.notes,
     });
     setShowContractModal(true);
+  }
+
+  function onClientSelect(clientId: string) {
+    const c = clients.find((x) => x.id === clientId);
+    const name = c ? c.name || c.company || "Unknown" : "";
+    setForm((f) => ({
+      ...f,
+      clientId,
+      client: name,
+      // reset project when client changes
+      projectId: "",
+      project: "",
+    }));
+  }
+
+  function onProjectSelect(projectId: string) {
+    const p = projects.find((x) => x.id === projectId);
+    if (!p) {
+      setForm((f) => ({ ...f, projectId: "", project: "" }));
+      return;
+    }
+
+    const name = p.projectName || p.name || "Untitled Project";
+    const value = Number(p.value ?? p.projectValue ?? p.totalValue ?? 0) || 0;
+    const type = p.projectType || p.type || "Residential";
+    const designer = p.designer || "";
+    const start = p.startDate || "";
+    const end = p.expectedDate || p.endDate || p.deadline || "";
+
+    // Optionally sync client from project
+    const pClientId = (p as InteriorProject & { clientId?: string }).clientId || "";
+    const pClientName = p.clientName || p.client || p.customerName || "";
+
+    setForm((f) => ({
+      ...f,
+      projectId,
+      project: name,
+      projectType: type,
+      designer,
+      value: value ? String(value) : f.value,
+      startDate: start || f.startDate,
+      endDate: end || f.endDate,
+      clientId: pClientId || f.clientId,
+      client: pClientName || f.client,
+    }));
   }
 
   async function saveContract() {
@@ -2904,7 +4018,7 @@ export default function InteriorContractsPage() {
       !form.startDate ||
       !form.endDate
     ) {
-      window.alert("Please fill client, project, start date and end date.");
+      window.alert("Please select client, project, start date and end date.");
       return;
     }
 
@@ -2914,8 +4028,12 @@ export default function InteriorContractsPage() {
     try {
       if (editingContract) {
         const payload = {
+          clientId: form.clientId || "",
           client: form.client.trim(),
+          clientName: form.client.trim(),
+          projectId: form.projectId || "",
           project: form.project.trim(),
+          projectName: form.project.trim(),
           projectType: form.projectType,
           startDate: form.startDate,
           endDate: form.endDate,
@@ -2931,7 +4049,12 @@ export default function InteriorContractsPage() {
         setContracts((current) =>
           current.map((contract) =>
             contract.id === editingContract.id
-              ? { ...contract, ...payload }
+              ? {
+                  ...contract,
+                  ...payload,
+                  client: payload.client,
+                  project: payload.project,
+                }
               : contract
           )
         );
@@ -2941,8 +4064,12 @@ export default function InteriorContractsPage() {
 
         const payload = {
           contractNo,
+          clientId: form.clientId || "",
           client: form.client.trim(),
+          clientName: form.client.trim(),
+          projectId: form.projectId || "",
           project: form.project.trim(),
+          projectName: form.project.trim(),
           projectType: form.projectType,
           startDate: form.startDate,
           endDate: form.endDate,
@@ -2961,8 +4088,22 @@ export default function InteriorContractsPage() {
         setContracts((current) => [
           {
             id,
-            ...payload,
+            contractNo,
+            client: payload.client,
+            clientId: payload.clientId,
+            project: payload.project,
+            projectId: payload.projectId,
+            projectType: payload.projectType,
+            startDate: payload.startDate,
+            endDate: payload.endDate,
+            value: payload.value,
+            paid: 0,
+            pending: value,
             status: "Draft" as ContractStatus,
+            paymentTerms: payload.paymentTerms,
+            designer: payload.designer,
+            createdDate: today,
+            notes: payload.notes,
           },
           ...current,
         ]);
@@ -3025,7 +4166,6 @@ export default function InteriorContractsPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f7f4] text-[#252525]">
-      {/* Header: title + New Contract beside */}
       <div className="border-b border-[#e4e2da] bg-white">
         <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-5 sm:py-5 lg:px-8">
           <div className="flex items-start justify-between gap-3 sm:items-center">
@@ -3125,8 +4265,11 @@ export default function InteriorContractsPage() {
                 className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2.5 text-xs outline-none focus:border-[#176b5b] sm:flex-none sm:px-3 sm:text-sm"
               >
                 <option value="All">All Types</option>
-                <option value="Residential">Residential</option>
-                <option value="Commercial">Commercial</option>
+                {projectTypeOptions.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -3140,7 +4283,6 @@ export default function InteriorContractsPage() {
             </p>
           </div>
 
-          {/* Desktop table */}
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1000px] text-left">
               <thead className="bg-[#fafaf8] text-xs uppercase tracking-wide text-gray-500">
@@ -3244,7 +4386,6 @@ export default function InteriorContractsPage() {
             </table>
           </div>
 
-          {/* Mobile cards */}
           <div className="space-y-3 p-3 md:hidden">
             {loading ? (
               <p className="py-10 text-center text-sm text-gray-500">
@@ -3317,7 +4458,6 @@ export default function InteriorContractsPage() {
         </section>
       </main>
 
-      {/* Details modal */}
       {showDetailsModal && selectedContract && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
           <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
@@ -3441,7 +4581,7 @@ export default function InteriorContractsPage() {
         </div>
       )}
 
-      {/* Create / Edit modal */}
+      {/* Create / Edit — Client & Project dropdowns */}
       {showContractModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
           <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
@@ -3463,16 +4603,52 @@ export default function InteriorContractsPage() {
             </div>
 
             <div className="grid gap-3 p-4 sm:grid-cols-2 sm:gap-4 sm:p-6">
-              <Field
-                label="Client *"
-                value={form.client}
-                onChange={(v) => setForm((f) => ({ ...f, client: v }))}
-              />
-              <Field
-                label="Project *"
-                value={form.project}
-                onChange={(v) => setForm((f) => ({ ...f, project: v }))}
-              />
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Client *
+                </label>
+                <select
+                  value={form.clientId}
+                  onChange={(e) => onClientSelect(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+                >
+                  <option value="">— Select client —</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {clientLabel(c)}
+                    </option>
+                  ))}
+                </select>
+                {clients.length === 0 && (
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    Add clients under Clients first.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Project *
+                </label>
+                <select
+                  value={form.projectId}
+                  onChange={(e) => onProjectSelect(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+                >
+                  <option value="">— Select project —</option>
+                  {projectOptions.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {projectLabel(p)}
+                    </option>
+                  ))}
+                </select>
+                {projects.length === 0 && (
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    Add projects under Projects first.
+                  </p>
+                )}
+              </div>
+
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
                   Project Type
@@ -3484,10 +4660,14 @@ export default function InteriorContractsPage() {
                   }
                   className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
                 >
-                  <option>Residential</option>
-                  <option>Commercial</option>
+                  {projectTypeOptions.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
                 </select>
               </div>
+
               <Field
                 label="Designer"
                 value={form.designer}
@@ -3511,11 +4691,31 @@ export default function InteriorContractsPage() {
                 value={form.value}
                 onChange={(v) => setForm((f) => ({ ...f, value: v }))}
               />
-              <Field
+              {/* <Field
                 label="Payment Terms"
                 value={form.paymentTerms}
                 onChange={(v) => setForm((f) => ({ ...f, paymentTerms: v }))}
-              />
+              /> */}
+
+                            <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Payment Terms
+                </label>
+                <select
+                  value={form.paymentTerms}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, paymentTerms: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+                >
+                  {paymentTermsOptions.map((term) => (
+                    <option key={term} value={term}>
+                      {term}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="sm:col-span-2">
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
                   Notes

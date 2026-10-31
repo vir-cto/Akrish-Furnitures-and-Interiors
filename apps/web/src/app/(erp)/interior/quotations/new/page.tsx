@@ -1408,6 +1408,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import {
   createQuotation,
   type QuotationItem,
@@ -1735,7 +1736,7 @@ export default function NewInteriorQuotationPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f7f4] text-gray-900">
-      {toast && (
+      {/* {toast && (
         <div className="fixed right-4 top-4 z-[100] max-w-sm rounded-xl border border-[#e4e2da] bg-white px-4 py-3 shadow-lg">
           <p
             className={`text-sm font-medium ${
@@ -1745,7 +1746,25 @@ export default function NewInteriorQuotationPage() {
             {toast.message}
           </p>
         </div>
-      )}
+      )} */}
+
+      {toast &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed right-3 z-[99999] w-[min(22rem,calc(100vw-1.5rem))] sm:right-5"
+            style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
+          >
+            <div
+              className={`pointer-events-auto max-w-sm rounded-xl border border-[#e4e2da] bg-white px-4 py-3 shadow-lg ${
+                toast.type === "success" ? "text-[#176b5b]" : "text-red-600"
+              }`}
+            >
+              <p className="text-sm font-medium">{toast.message}</p>
+            </div>
+          </div>,
+          document.body
+        )}
 
       <div className="border-b border-[#e4e2da] bg-white">
         <div className="mx-auto max-w-[1450px] px-5 py-5">
@@ -1774,13 +1793,13 @@ export default function NewInteriorQuotationPage() {
               >
                 ← Back
               </button>
-              <button
+              {/* <button
                 type="button"
                 onClick={printQuotation}
                 className="rounded-lg border border-[#d9d7ce] bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Print
-              </button>
+              </button> */}
               <button
                 type="button"
                 onClick={saveQuotation}

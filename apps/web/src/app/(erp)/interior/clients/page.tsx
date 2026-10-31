@@ -2208,6 +2208,967 @@
 //   );
 // }
 
+// "use client";
+
+// import { useEffect, useMemo, useState } from "react";
+// import {
+//   getAllClients,
+//   createClient,
+//   updateClient,
+//   deleteClient as deleteClientFromDb,
+//   type InteriorClient,
+// } from "@/modules/interior/services/clientService";
+// import { Timestamp } from "firebase/firestore";
+// import { Plus } from "lucide-react";
+
+// type ClientStatus = "Active" | "Lead" | "Inactive";
+
+// type Client = {
+//   id: string;
+//   name: string;
+//   company: string;
+//   phone: string;
+//   email: string;
+//   location: string;
+//   project: string;
+//   projectType: string;
+//   projectValue: number;
+//   paid: number;
+//   pending: number;
+//   status: ClientStatus;
+//   source: string;
+//   lastContact: string;
+//   joinedDate: string;
+//   notes: string;
+// };
+
+// const tabs = ["All Clients", "Active", "Leads", "Inactive"] as const;
+
+// function formatCurrency(value: number) {
+//   return `₹${value.toLocaleString("en-IN")}`;
+// }
+
+// function statusClass(status: ClientStatus) {
+//   if (status === "Active") return "bg-green-50 text-green-700 border-green-200";
+//   if (status === "Lead") return "bg-blue-50 text-blue-700 border-blue-200";
+//   return "bg-gray-100 text-gray-600 border-gray-200";
+// }
+
+// function toDateString(value: unknown): string {
+//   if (!value) return "";
+//   if (typeof value === "string") return value.slice(0, 10);
+//   try {
+//     if (typeof (value as Timestamp).toDate === "function") {
+//       return (value as Timestamp).toDate().toISOString().slice(0, 10);
+//     }
+//   } catch {
+//     /* ignore */
+//   }
+//   return "";
+// }
+
+// function normalizeStatus(raw?: string): ClientStatus {
+//   const s = (raw || "Active").toLowerCase();
+//   if (s.includes("lead") || s === "new") return "Lead";
+//   if (s.includes("inactive") || s.includes("closed")) return "Inactive";
+//   return "Active";
+// }
+
+// function mapToUi(c: InteriorClient): Client {
+//   const projectValue = Number(c.projectValue ?? c.value ?? 0) || 0;
+//   const paid = Number(c.paid ?? 0) || 0;
+//   const pending =
+//     c.pending !== undefined && c.pending !== null
+//       ? Number(c.pending) || 0
+//       : Math.max(projectValue - paid, 0);
+
+//   return {
+//     id: c.clientId || c.id,
+//     name: c.name || "Unknown",
+//     company: c.company || "",
+//     phone: c.phone || "—",
+//     email: c.email || "",
+//     location: c.location || "—",
+//     project: c.project || c.projectName || "—",
+//     projectType: c.projectType || "Residential",
+//     projectValue,
+//     paid,
+//     pending,
+//     status: normalizeStatus(c.status),
+//     source: c.source || "Website",
+//     lastContact:
+//       c.lastContact || toDateString(c.updatedAt || c.createdAt) || "—",
+//     joinedDate: c.joinedDate || toDateString(c.createdAt) || "—",
+//     notes: c.notes || "",
+//   };
+// }
+
+// export default function InteriorClientsPage() {
+//   const [clients, setClients] = useState<Client[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [saving, setSaving] = useState(false);
+
+//   const [search, setSearch] = useState("");
+//   const [statusFilter, setStatusFilter] = useState<"All" | ClientStatus>("All");
+//   const [typeFilter, setTypeFilter] = useState("All");
+//   const [activeTab, setActiveTab] =
+//     useState<(typeof tabs)[number]>("All Clients");
+
+//   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+//   const [showDetailsModal, setShowDetailsModal] = useState(false);
+//   const [showClientModal, setShowClientModal] = useState(false);
+//   const [editingClient, setEditingClient] = useState<Client | null>(null);
+
+//   const [form, setForm] = useState({
+//     name: "",
+//     company: "",
+//     phone: "",
+//     email: "",
+//     location: "",
+//     project: "",
+//     projectType: "Residential",
+//     projectValue: "",
+//     source: "Website",
+//     notes: "",
+//   });
+
+//   useEffect(() => {
+//     let cancelled = false;
+
+//     async function load() {
+//       setLoading(true);
+//       try {
+//         const data = await getAllClients();
+//         if (cancelled) return;
+//         setClients(data.map(mapToUi));
+//       } catch (err) {
+//         console.error("Failed to load clients:", err);
+//       } finally {
+//         if (!cancelled) setLoading(false);
+//       }
+//     }
+
+//     load();
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, []);
+
+//   useEffect(() => {
+//     if (!showClientModal && !showDetailsModal) return;
+//     const prev = document.body.style.overflow;
+//     document.body.style.overflow = "hidden";
+//     return () => {
+//       document.body.style.overflow = prev;
+//     };
+//   }, [showClientModal, showDetailsModal]);
+
+//   const totalClients = clients.length;
+//   const activeClients = clients.filter((c) => c.status === "Active").length;
+//   const leadClients = clients.filter((c) => c.status === "Lead").length;
+//   const totalProjectValue = clients.reduce((s, c) => s + c.projectValue, 0);
+//   const totalPending = clients.reduce((s, c) => s + c.pending, 0);
+
+//   const filteredClients = useMemo(() => {
+//     const query = search.toLowerCase().trim();
+
+//     return clients.filter((client) => {
+//       const matchesSearch =
+//         !query ||
+//         client.name.toLowerCase().includes(query) ||
+//         client.company.toLowerCase().includes(query) ||
+//         client.phone.toLowerCase().includes(query) ||
+//         client.email.toLowerCase().includes(query) ||
+//         client.project.toLowerCase().includes(query) ||
+//         client.location.toLowerCase().includes(query);
+
+//       const matchesStatus =
+//         statusFilter === "All" || client.status === statusFilter;
+
+//       const matchesType =
+//         typeFilter === "All" || client.projectType === typeFilter;
+
+//       const matchesTab =
+//         activeTab === "All Clients" ||
+//         (activeTab === "Active" && client.status === "Active") ||
+//         (activeTab === "Leads" && client.status === "Lead") ||
+//         (activeTab === "Inactive" && client.status === "Inactive");
+
+//       return matchesSearch && matchesStatus && matchesType && matchesTab;
+//     });
+//   }, [clients, search, statusFilter, typeFilter, activeTab]);
+
+//   function resetForm() {
+//     setForm({
+//       name: "",
+//       company: "",
+//       phone: "",
+//       email: "",
+//       location: "",
+//       project: "",
+//       projectType: "Residential",
+//       projectValue: "",
+//       source: "Website",
+//       notes: "",
+//     });
+//   }
+
+//   function openNewClient() {
+//     setEditingClient(null);
+//     resetForm();
+//     setShowClientModal(true);
+//   }
+
+//   function openEditClient(client: Client) {
+//     setEditingClient(client);
+//     setForm({
+//       name: client.name,
+//       company: client.company,
+//       phone: client.phone,
+//       email: client.email,
+//       location: client.location,
+//       project: client.project,
+//       projectType: client.projectType,
+//       projectValue: String(client.projectValue),
+//       source: client.source,
+//       notes: client.notes,
+//     });
+//     setShowClientModal(true);
+//   }
+
+//   async function saveClient() {
+//     if (!form.name.trim() || !form.phone.trim()) {
+//       window.alert("Please enter client name and phone number.");
+//       return;
+//     }
+
+//     const projectValue = Number(form.projectValue) || 0;
+//     setSaving(true);
+
+//     try {
+//       if (editingClient) {
+//         const payload = {
+//           name: form.name.trim(),
+//           company: form.company.trim(),
+//           phone: form.phone.trim(),
+//           email: form.email.trim(),
+//           location: form.location.trim(),
+//           project: form.project.trim(),
+//           projectType: form.projectType,
+//           projectValue,
+//           source: form.source,
+//           notes: form.notes.trim(),
+//         };
+
+//         await updateClient(editingClient.id, payload);
+
+//         setClients((current) =>
+//           current.map((client) =>
+//             client.id === editingClient.id
+//               ? {
+//                   ...client,
+//                   ...payload,
+//                   pending: Math.max(projectValue - client.paid, 0),
+//                 }
+//               : client
+//           )
+//         );
+//       } else {
+//         const today = new Date().toISOString().slice(0, 10);
+//         const payload = {
+//           name: form.name.trim(),
+//           company: form.company.trim(),
+//           phone: form.phone.trim(),
+//           email: form.email.trim(),
+//           location: form.location.trim(),
+//           project: form.project.trim(),
+//           projectType: form.projectType,
+//           projectValue,
+//           paid: 0,
+//           pending: projectValue,
+//           status: "Lead",
+//           source: form.source,
+//           lastContact: today,
+//           joinedDate: today,
+//           notes: form.notes.trim(),
+//         };
+
+//         const id = await createClient(payload);
+
+//         setClients((current) => [
+//           {
+//             id,
+//             ...payload,
+//             status: "Lead" as ClientStatus,
+//           },
+//           ...current,
+//         ]);
+//       }
+
+//       setShowClientModal(false);
+//       resetForm();
+//       setEditingClient(null);
+//     } catch (err) {
+//       console.error(err);
+//       alert("Unable to save client. Please try again.");
+//     } finally {
+//       setSaving(false);
+//     }
+//   }
+
+//   async function removeClient(client: Client) {
+//     const confirmed = window.confirm(`Delete client "${client.name}"?`);
+//     if (!confirmed) return;
+
+//     setClients((current) => current.filter((item) => item.id !== client.id));
+//     setSelectedClient(null);
+//     setShowDetailsModal(false);
+
+//     try {
+//       await deleteClientFromDb(client.id);
+//     } catch (err) {
+//       console.error(err);
+//       try {
+//         const data = await getAllClients();
+//         setClients(data.map(mapToUi));
+//       } catch {
+//         /* ignore */
+//       }
+//     }
+//   }
+
+//   async function updateClientStatus(clientId: string, status: ClientStatus) {
+//     setClients((current) =>
+//       current.map((client) =>
+//         client.id === clientId ? { ...client, status } : client
+//       )
+//     );
+
+//     setSelectedClient((current) =>
+//       current && current.id === clientId ? { ...current, status } : current
+//     );
+
+//     try {
+//       await updateClient(clientId, { status });
+//     } catch (err) {
+//       console.error(err);
+//       try {
+//         const data = await getAllClients();
+//         setClients(data.map(mapToUi));
+//       } catch {
+//         /* ignore */
+//       }
+//     }
+//   }
+
+//   return (
+//     <div className="min-h-screen bg-[#f7f7f4] text-[#252525]">
+//       {/* Header: title + Add Client beside */}
+//       <div className="border-b border-[#e4e2da] bg-white">
+//         <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-5 sm:py-5 lg:px-8">
+//           <div className="flex items-start justify-between gap-3 sm:items-center">
+//             <div className="min-w-0 flex-1">
+//               <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+//                 Clients
+//               </h1>
+//               <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+//                 Manage interior clients, project values and outstanding amounts.
+//                 {loading && (
+//                   <span className="ml-2 text-[#176b5b]">Loading…</span>
+//                 )}
+//               </p>
+//             </div>
+//             <button
+//               type="button"
+//               onClick={openNewClient}
+//               className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#176b5b] px-3 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#125848] sm:gap-2 sm:px-5 sm:py-3 sm:text-sm"
+//             >
+//               <Plus size={16} strokeWidth={2.5} />
+//               <span className="hidden sm:inline">Add Client</span>
+//               <span className="sm:hidden">Add</span>
+//             </button>
+//           </div>
+//         </div>
+//       </div>
+
+//       <main className="mx-auto max-w-[1600px] space-y-4 px-3 py-4 sm:space-y-6 sm:px-5 sm:py-6 lg:px-8">
+//         {/* Summary — 2 per row on mobile */}
+//         <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+//           <SummaryCard
+//             label="Total Clients"
+//             value={loading ? "…" : String(totalClients)}
+//             helper={`${activeClients} active · ${leadClients} leads`}
+//           />
+//           <SummaryCard
+//             label="Active Clients"
+//             value={loading ? "…" : String(activeClients)}
+//             helper="Currently engaged"
+//           />
+//           <SummaryCard
+//             label="Project Value"
+//             value={loading ? "…" : formatCurrency(totalProjectValue)}
+//             helper="Across all clients"
+//           />
+//           <SummaryCard
+//             label="Pending Amount"
+//             value={loading ? "…" : formatCurrency(totalPending)}
+//             helper="Outstanding collections"
+//           />
+//         </section>
+
+//         {/* Tabs */}
+//         <section className="rounded-xl border border-[#e4e2da] bg-white p-1.5 sm:p-2">
+//           <div className="flex gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+//             {tabs.map((tab) => (
+//               <button
+//                 key={tab}
+//                 type="button"
+//                 onClick={() => setActiveTab(tab)}
+//                 className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition sm:px-4 sm:py-2.5 sm:text-sm ${
+//                   activeTab === tab
+//                     ? "bg-[#176b5b] text-white"
+//                     : "text-gray-600 hover:bg-[#f7f7f4]"
+//                 }`}
+//               >
+//                 {tab}
+//               </button>
+//             ))}
+//           </div>
+//         </section>
+
+//         {/* Filters */}
+//         <section className="rounded-xl border border-[#e4e2da] bg-white p-3 sm:p-4">
+//           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+//             <input
+//               value={search}
+//               onChange={(e) => setSearch(e.target.value)}
+//               placeholder="Search client, phone, project..."
+//               className="w-full rounded-lg border border-gray-200 bg-[#fafaf8] px-3 py-2.5 text-sm outline-none focus:border-[#176b5b] sm:max-w-md sm:flex-1"
+//             />
+//             <div className="flex gap-2">
+//               <select
+//                 value={statusFilter}
+//                 onChange={(e) =>
+//                   setStatusFilter(e.target.value as "All" | ClientStatus)
+//                 }
+//                 className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2.5 text-xs outline-none focus:border-[#176b5b] sm:flex-none sm:px-3 sm:text-sm"
+//               >
+//                 <option value="All">All Status</option>
+//                 <option value="Active">Active</option>
+//                 <option value="Lead">Lead</option>
+//                 <option value="Inactive">Inactive</option>
+//               </select>
+//               <select
+//                 value={typeFilter}
+//                 onChange={(e) => setTypeFilter(e.target.value)}
+//                 className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2.5 text-xs outline-none focus:border-[#176b5b] sm:flex-none sm:px-3 sm:text-sm"
+//               >
+//                 <option value="All">All Types</option>
+//                 <option value="Residential">Residential</option>
+//                 <option value="Commercial">Commercial</option>
+//               </select>
+//             </div>
+//           </div>
+//         </section>
+
+//         {/* Directory */}
+//         <section className="overflow-hidden rounded-xl border border-[#e4e2da] bg-white shadow-sm">
+//           <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
+//             <h2 className="font-semibold">Client Directory</h2>
+//             <p className="mt-1 text-xs text-gray-500">
+//               {filteredClients.length} clients
+//             </p>
+//           </div>
+
+//           {/* Desktop table */}
+//           <div className="hidden overflow-x-auto md:block">
+//             <table className="w-full min-w-[1000px] text-left">
+//               <thead className="bg-[#fafaf8] text-xs uppercase tracking-wide text-gray-500">
+//                 <tr>
+//                   <th className="px-5 py-3 font-semibold">Client</th>
+//                   <th className="px-4 py-3 font-semibold">Project</th>
+//                   <th className="px-4 py-3 font-semibold">Value</th>
+//                   <th className="px-4 py-3 font-semibold">Paid</th>
+//                   <th className="px-4 py-3 font-semibold">Pending</th>
+//                   <th className="px-4 py-3 font-semibold">Status</th>
+//                   <th className="px-4 py-3 font-semibold">Last Contact</th>
+//                   <th className="px-4 py-3 text-right font-semibold">Action</th>
+//                 </tr>
+//               </thead>
+//               <tbody className="divide-y divide-[#eeece6]">
+//                 {loading ? (
+//                   <tr>
+//                     <td
+//                       colSpan={8}
+//                       className="px-5 py-12 text-center text-sm text-gray-500"
+//                     >
+//                       Loading clients…
+//                     </td>
+//                   </tr>
+//                 ) : filteredClients.length === 0 ? (
+//                   <tr>
+//                     <td
+//                       colSpan={8}
+//                       className="px-5 py-12 text-center text-sm text-gray-500"
+//                     >
+//                       No clients found.
+//                     </td>
+//                   </tr>
+//                 ) : (
+//                   filteredClients.map((client) => (
+//                     <tr key={client.id} className="hover:bg-[#fafaf8]">
+//                       <td className="px-5 py-4">
+//                         <p className="font-semibold text-gray-900">
+//                           {client.name}
+//                         </p>
+//                         <p className="mt-0.5 text-xs text-gray-500">
+//                           {client.phone}
+//                         </p>
+//                         <p className="text-xs text-gray-400">
+//                           {client.location}
+//                         </p>
+//                       </td>
+//                       <td className="px-4 py-4">
+//                         <p className="text-sm font-medium text-gray-800">
+//                           {client.project}
+//                         </p>
+//                         <p className="text-xs text-gray-400">
+//                           {client.projectType}
+//                         </p>
+//                       </td>
+//                       <td className="px-4 py-4 text-sm font-semibold text-gray-900">
+//                         {formatCurrency(client.projectValue)}
+//                       </td>
+//                       <td className="px-4 py-4 text-sm font-medium text-green-700">
+//                         {formatCurrency(client.paid)}
+//                       </td>
+//                       <td className="px-4 py-4 text-sm font-semibold text-orange-700">
+//                         {formatCurrency(client.pending)}
+//                       </td>
+//                       <td className="px-4 py-4">
+//                         <span
+//                           className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${statusClass(
+//                             client.status
+//                           )}`}
+//                         >
+//                           {client.status}
+//                         </span>
+//                       </td>
+//                       <td className="px-4 py-4 text-sm text-gray-600">
+//                         {client.lastContact}
+//                       </td>
+//                       <td className="px-4 py-4 text-right">
+//                         <div className="flex justify-end gap-2">
+//                           <button
+//                             type="button"
+//                             onClick={() => {
+//                               setSelectedClient(client);
+//                               setShowDetailsModal(true);
+//                             }}
+//                             className="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-[#176b5b] hover:text-[#176b5b]"
+//                           >
+//                             View
+//                           </button>
+//                           <button
+//                             type="button"
+//                             onClick={() => openEditClient(client)}
+//                             className="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+//                           >
+//                             Edit
+//                           </button>
+//                         </div>
+//                       </td>
+//                     </tr>
+//                   ))
+//                 )}
+//               </tbody>
+//             </table>
+//           </div>
+
+//           {/* Mobile cards */}
+//           <div className="space-y-3 p-3 md:hidden">
+//             {loading ? (
+//               <p className="py-10 text-center text-sm text-gray-500">
+//                 Loading clients…
+//               </p>
+//             ) : filteredClients.length === 0 ? (
+//               <p className="py-10 text-center text-sm text-gray-500">
+//                 No clients found.
+//               </p>
+//             ) : (
+//               filteredClients.map((client) => (
+//                 <article
+//                   key={client.id}
+//                   className="rounded-xl border border-[#e4e2da] bg-[#fafaf8] p-3.5"
+//                 >
+//                   <div className="flex items-start justify-between gap-2">
+//                     <div className="min-w-0">
+//                       <p className="truncate font-semibold text-gray-900">
+//                         {client.name}
+//                       </p>
+//                       <p className="mt-0.5 text-xs text-gray-500">
+//                         {client.phone}
+//                       </p>
+//                       <p className="text-xs text-gray-400">{client.location}</p>
+//                     </div>
+//                     <span
+//                       className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${statusClass(
+//                         client.status
+//                       )}`}
+//                     >
+//                       {client.status}
+//                     </span>
+//                   </div>
+//                   <p className="mt-2 text-xs text-gray-600">
+//                     {client.project} · {client.projectType}
+//                   </p>
+//                   <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+//                     <span className="font-semibold text-gray-900">
+//                       {formatCurrency(client.projectValue)}
+//                     </span>
+//                     <span className="text-green-700">
+//                       Paid {formatCurrency(client.paid)}
+//                     </span>
+//                     <span className="text-orange-700">
+//                       Due {formatCurrency(client.pending)}
+//                     </span>
+//                   </div>
+//                   <div className="mt-3 flex gap-2">
+//                     <button
+//                       type="button"
+//                       onClick={() => {
+//                         setSelectedClient(client);
+//                         setShowDetailsModal(true);
+//                       }}
+//                       className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-xs font-medium text-gray-700"
+//                     >
+//                       View
+//                     </button>
+//                     <button
+//                       type="button"
+//                       onClick={() => openEditClient(client)}
+//                       className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-xs font-medium text-gray-700"
+//                     >
+//                       Edit
+//                     </button>
+//                   </div>
+//                 </article>
+//               ))
+//             )}
+//           </div>
+//         </section>
+//       </main>
+
+//       {/* Details modal */}
+//       {showDetailsModal && selectedClient && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
+//           <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+//             <div className="sticky top-0 flex items-center justify-between border-b border-[#e4e2da] bg-white px-4 py-4 sm:px-6">
+//               <div className="min-w-0">
+//                 <p className="text-xs font-semibold text-[#176b5b]">
+//                   {selectedClient.id}
+//                 </p>
+//                 <h2 className="mt-1 truncate text-lg font-bold sm:text-xl">
+//                   {selectedClient.name}
+//                 </h2>
+//               </div>
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setShowDetailsModal(false);
+//                   setSelectedClient(null);
+//                 }}
+//                 className="shrink-0 rounded-lg px-3 py-2 text-gray-500 hover:bg-gray-100"
+//               >
+//                 ✕
+//               </button>
+//             </div>
+
+//             <div className="grid grid-cols-2 gap-2 p-4 sm:gap-3 sm:p-6">
+//               <Info label="Company" value={selectedClient.company || "—"} />
+//               <Info label="Phone" value={selectedClient.phone} />
+//               <Info label="Email" value={selectedClient.email || "—"} />
+//               <Info label="Location" value={selectedClient.location} />
+//               <Info label="Project" value={selectedClient.project} />
+//               <Info label="Type" value={selectedClient.projectType} />
+//               <Info
+//                 label="Project Value"
+//                 value={formatCurrency(selectedClient.projectValue)}
+//               />
+//               <Info label="Paid" value={formatCurrency(selectedClient.paid)} />
+//               <Info
+//                 label="Pending"
+//                 value={formatCurrency(selectedClient.pending)}
+//               />
+//               <Info label="Source" value={selectedClient.source} />
+//               <Info label="Joined" value={selectedClient.joinedDate} />
+//               <Info label="Last Contact" value={selectedClient.lastContact} />
+//             </div>
+
+//             <div className="px-4 pb-2 sm:px-6">
+//               <p className="mb-2 text-xs font-semibold uppercase text-gray-400">
+//                 Status
+//               </p>
+//               <div className="flex flex-wrap gap-2">
+//                 {(["Active", "Lead", "Inactive"] as ClientStatus[]).map(
+//                   (status) => (
+//                     <button
+//                       key={status}
+//                       type="button"
+//                       onClick={() =>
+//                         updateClientStatus(selectedClient.id, status)
+//                       }
+//                       className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+//                         selectedClient.status === status
+//                           ? statusClass(status)
+//                           : "border-gray-200 text-gray-600 hover:bg-gray-50"
+//                       }`}
+//                     >
+//                       {status}
+//                     </button>
+//                   )
+//                 )}
+//               </div>
+//             </div>
+
+//             {selectedClient.notes && (
+//               <div className="mx-4 mb-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-700 sm:mx-6">
+//                 {selectedClient.notes}
+//               </div>
+//             )}
+
+//             <div className="flex flex-wrap gap-2 border-t border-[#e4e2da] px-4 py-4 sm:px-6">
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setShowDetailsModal(false);
+//                   openEditClient(selectedClient);
+//                 }}
+//                 className="rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#125848]"
+//               >
+//                 Edit
+//               </button>
+//               <button
+//                 type="button"
+//                 onClick={() => removeClient(selectedClient)}
+//                 className="rounded-lg border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600"
+//               >
+//                 Delete
+//               </button>
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setShowDetailsModal(false);
+//                   setSelectedClient(null);
+//                 }}
+//                 className="ml-auto rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700"
+//               >
+//                 Close
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Add / Edit floating modal */}
+//       {showClientModal && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
+//           <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+//             <div className="sticky top-0 flex items-center justify-between border-b border-[#e4e2da] bg-white px-4 py-4 sm:px-6">
+//               <h2 className="text-base font-bold sm:text-lg">
+//                 {editingClient ? "Edit Client" : "Add Client"}
+//               </h2>
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setShowClientModal(false);
+//                   setEditingClient(null);
+//                   resetForm();
+//                 }}
+//                 className="rounded-lg px-3 py-2 text-gray-500 hover:bg-gray-100"
+//               >
+//                 ✕
+//               </button>
+//             </div>
+
+//             <div className="grid gap-3 p-4 sm:grid-cols-2 sm:gap-4 sm:p-6">
+//               <Field
+//                 label="Name *"
+//                 value={form.name}
+//                 onChange={(v) => setForm((f) => ({ ...f, name: v }))}
+//               />
+//               <Field
+//                 label="Company"
+//                 value={form.company}
+//                 onChange={(v) => setForm((f) => ({ ...f, company: v }))}
+//               />
+//               <Field
+//                 label="Phone *"
+//                 value={form.phone}
+//                 onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
+//               />
+//               <Field
+//                 label="Email"
+//                 value={form.email}
+//                 onChange={(v) => setForm((f) => ({ ...f, email: v }))}
+//               />
+//               <Field
+//                 label="Location"
+//                 value={form.location}
+//                 onChange={(v) => setForm((f) => ({ ...f, location: v }))}
+//               />
+//               <Field
+//                 label="Project"
+//                 value={form.project}
+//                 onChange={(v) => setForm((f) => ({ ...f, project: v }))}
+//               />
+//               <div>
+//                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                   Project Type
+//                 </label>
+//                 <select
+//                   value={form.projectType}
+//                   onChange={(e) =>
+//                     setForm((f) => ({ ...f, projectType: e.target.value }))
+//                   }
+//                   className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+//                 >
+//                   <option>Residential</option>
+//                   <option>Commercial</option>
+//                 </select>
+//               </div>
+//               <Field
+//                 label="Project Value"
+//                 type="number"
+//                 value={form.projectValue}
+//                 onChange={(v) => setForm((f) => ({ ...f, projectValue: v }))}
+//               />
+//               <div>
+//                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                   Source
+//                 </label>
+//                 <select
+//                   value={form.source}
+//                   onChange={(e) =>
+//                     setForm((f) => ({ ...f, source: e.target.value }))
+//                   }
+//                   className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+//                 >
+//                   <option>Website</option>
+//                   <option>Instagram</option>
+//                   <option>Facebook</option>
+//                   <option>Google</option>
+//                   <option>WhatsApp</option>
+//                   <option>Referral</option>
+//                   <option>Walk-in</option>
+//                   <option>Other</option>
+//                 </select>
+//               </div>
+//               <div className="sm:col-span-2">
+//                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//                   Notes
+//                 </label>
+//                 <textarea
+//                   rows={3}
+//                   value={form.notes}
+//                   onChange={(e) =>
+//                     setForm((f) => ({ ...f, notes: e.target.value }))
+//                   }
+//                   className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+//                 />
+//               </div>
+//             </div>
+
+//             <div className="flex flex-col-reverse gap-2 border-t border-[#e4e2da] bg-[#fafaf8] px-4 py-4 sm:flex-row sm:justify-end sm:gap-3 sm:px-6">
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setShowClientModal(false);
+//                   setEditingClient(null);
+//                   resetForm();
+//                 }}
+//                 className="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700"
+//               >
+//                 Cancel
+//               </button>
+//               <button
+//                 type="button"
+//                 disabled={saving}
+//                 onClick={saveClient}
+//                 className="rounded-lg bg-[#176b5b] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#125848] disabled:opacity-60"
+//               >
+//                 {saving
+//                   ? "Saving…"
+//                   : editingClient
+//                     ? "Save Changes"
+//                     : "Add Client"}
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+// function SummaryCard({
+//   label,
+//   value,
+//   helper,
+// }: {
+//   label: string;
+//   value: string;
+//   helper: string;
+// }) {
+//   return (
+//     <div className="rounded-xl border border-[#e4e2da] bg-white p-3.5 shadow-sm sm:p-5">
+//       <p className="text-xs text-gray-500 sm:text-sm">{label}</p>
+//       <p className="mt-1.5 truncate text-lg font-bold text-gray-900 sm:mt-2 sm:text-2xl">
+//         {value}
+//       </p>
+//       <p className="mt-1 text-[10px] text-gray-400 sm:text-xs">{helper}</p>
+//     </div>
+//   );
+// }
+
+// function Info({ label, value }: { label: string; value: string }) {
+//   return (
+//     <div className="rounded-xl bg-[#fafaf8] p-3">
+//       <p className="text-xs text-gray-400">{label}</p>
+//       <p className="mt-1 break-words text-sm font-semibold text-gray-800">
+//         {value}
+//       </p>
+//     </div>
+//   );
+// }
+
+// function Field({
+//   label,
+//   value,
+//   onChange,
+//   type = "text",
+// }: {
+//   label: string;
+//   value: string;
+//   onChange: (value: string) => void;
+//   type?: string;
+// }) {
+//   return (
+//     <div>
+//       <label className="mb-1.5 block text-sm font-medium text-gray-700">
+//         {label}
+//       </label>
+//       <input
+//         type={type}
+//         value={value}
+//         onChange={(e) => onChange(e.target.value)}
+//         className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+//       />
+//     </div>
+//   );
+// }
+
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -2219,7 +3180,7 @@ import {
   type InteriorClient,
 } from "@/modules/interior/services/clientService";
 import { Timestamp } from "firebase/firestore";
-import { Plus } from "lucide-react";
+import { Plus, Eye, Pencil } from "lucide-react";
 
 type ClientStatus = "Active" | "Lead" | "Inactive";
 
@@ -2241,8 +3202,6 @@ type Client = {
   joinedDate: string;
   notes: string;
 };
-
-const tabs = ["All Clients", "Active", "Leads", "Inactive"] as const;
 
 function formatCurrency(value: number) {
   return `₹${value.toLocaleString("en-IN")}`;
@@ -2303,6 +3262,41 @@ function mapToUi(c: InteriorClient): Client {
   };
 }
 
+function ActionButtons({
+  onView,
+  onEdit,
+  compact,
+}: {
+  onView: () => void;
+  onEdit: () => void;
+  compact?: boolean;
+}) {
+  const btn = compact
+    ? "inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-gray-200 bg-white py-2 text-xs font-medium text-gray-700"
+    : "inline-flex items-center gap-1 rounded-md border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-[#176b5b] hover:text-[#176b5b]";
+
+  return (
+    <div className={compact ? "mt-3 flex gap-2" : "flex justify-end gap-2"}>
+      <button type="button" onClick={onView} className={btn}>
+        <Eye size={12} />
+        View
+      </button>
+      <button
+        type="button"
+        onClick={onEdit}
+        className={
+          compact
+            ? btn
+            : "inline-flex items-center gap-1 rounded-md border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+        }
+      >
+        <Pencil size={12} />
+        Edit
+      </button>
+    </div>
+  );
+}
+
 export default function InteriorClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2311,8 +3305,6 @@ export default function InteriorClientsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | ClientStatus>("All");
   const [typeFilter, setTypeFilter] = useState("All");
-  const [activeTab, setActiveTab] =
-    useState<(typeof tabs)[number]>("All Clients");
 
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -2328,6 +3320,7 @@ export default function InteriorClientsPage() {
     project: "",
     projectType: "Residential",
     projectValue: "",
+    status: "Active" as ClientStatus,
     source: "Website",
     notes: "",
   });
@@ -2365,7 +3358,6 @@ export default function InteriorClientsPage() {
 
   const totalClients = clients.length;
   const activeClients = clients.filter((c) => c.status === "Active").length;
-  const leadClients = clients.filter((c) => c.status === "Lead").length;
   const totalProjectValue = clients.reduce((s, c) => s + c.projectValue, 0);
   const totalPending = clients.reduce((s, c) => s + c.pending, 0);
 
@@ -2388,15 +3380,9 @@ export default function InteriorClientsPage() {
       const matchesType =
         typeFilter === "All" || client.projectType === typeFilter;
 
-      const matchesTab =
-        activeTab === "All Clients" ||
-        (activeTab === "Active" && client.status === "Active") ||
-        (activeTab === "Leads" && client.status === "Lead") ||
-        (activeTab === "Inactive" && client.status === "Inactive");
-
-      return matchesSearch && matchesStatus && matchesType && matchesTab;
+      return matchesSearch && matchesStatus && matchesType;
     });
-  }, [clients, search, statusFilter, typeFilter, activeTab]);
+  }, [clients, search, statusFilter, typeFilter]);
 
   function resetForm() {
     setForm({
@@ -2408,6 +3394,7 @@ export default function InteriorClientsPage() {
       project: "",
       projectType: "Residential",
       projectValue: "",
+      status: "Active",
       source: "Website",
       notes: "",
     });
@@ -2424,12 +3411,13 @@ export default function InteriorClientsPage() {
     setForm({
       name: client.name,
       company: client.company,
-      phone: client.phone,
+      phone: client.phone === "—" ? "" : client.phone,
       email: client.email,
-      location: client.location,
-      project: client.project,
+      location: client.location === "—" ? "" : client.location,
+      project: client.project === "—" ? "" : client.project,
       projectType: client.projectType,
       projectValue: String(client.projectValue),
+      status: client.status,
       source: client.source,
       notes: client.notes,
     });
@@ -2456,6 +3444,7 @@ export default function InteriorClientsPage() {
           project: form.project.trim(),
           projectType: form.projectType,
           projectValue,
+          status: form.status,
           source: form.source,
           notes: form.notes.trim(),
         };
@@ -2486,7 +3475,7 @@ export default function InteriorClientsPage() {
           projectValue,
           paid: 0,
           pending: projectValue,
-          status: "Lead",
+          status: form.status || "Active",
           source: form.source,
           lastContact: today,
           joinedDate: today,
@@ -2499,7 +3488,7 @@ export default function InteriorClientsPage() {
           {
             id,
             ...payload,
-            status: "Lead" as ClientStatus,
+            status: (payload.status as ClientStatus) || "Active",
           },
           ...current,
         ]);
@@ -2563,7 +3552,6 @@ export default function InteriorClientsPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f7f4] text-[#252525]">
-      {/* Header: title + Add Client beside */}
       <div className="border-b border-[#e4e2da] bg-white">
         <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-5 sm:py-5 lg:px-8">
           <div className="flex items-start justify-between gap-3 sm:items-center">
@@ -2592,12 +3580,11 @@ export default function InteriorClientsPage() {
       </div>
 
       <main className="mx-auto max-w-[1600px] space-y-4 px-3 py-4 sm:space-y-6 sm:px-5 sm:py-6 lg:px-8">
-        {/* Summary — 2 per row on mobile */}
         <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           <SummaryCard
             label="Total Clients"
             value={loading ? "…" : String(totalClients)}
-            helper={`${activeClients} active · ${leadClients} leads`}
+            helper={`${activeClients} active`}
           />
           <SummaryCard
             label="Active Clients"
@@ -2616,27 +3603,7 @@ export default function InteriorClientsPage() {
           />
         </section>
 
-        {/* Tabs */}
-        <section className="rounded-xl border border-[#e4e2da] bg-white p-1.5 sm:p-2">
-          <div className="flex gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition sm:px-4 sm:py-2.5 sm:text-sm ${
-                  activeTab === tab
-                    ? "bg-[#176b5b] text-white"
-                    : "text-gray-600 hover:bg-[#f7f7f4]"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {/* Filters */}
+        {/* Filters only — no Active/Leads/Inactive tabs */}
         <section className="rounded-xl border border-[#e4e2da] bg-white p-3 sm:p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
             <input
@@ -2671,7 +3638,6 @@ export default function InteriorClientsPage() {
           </div>
         </section>
 
-        {/* Directory */}
         <section className="overflow-hidden rounded-xl border border-[#e4e2da] bg-white shadow-sm">
           <div className="border-b border-[#e4e2da] px-4 py-3 sm:px-5 sm:py-4">
             <h2 className="font-semibold">Client Directory</h2>
@@ -2680,7 +3646,6 @@ export default function InteriorClientsPage() {
             </p>
           </div>
 
-          {/* Desktop table */}
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1000px] text-left">
               <thead className="bg-[#fafaf8] text-xs uppercase tracking-wide text-gray-500">
@@ -2758,25 +3723,13 @@ export default function InteriorClientsPage() {
                         {client.lastContact}
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedClient(client);
-                              setShowDetailsModal(true);
-                            }}
-                            className="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-[#176b5b] hover:text-[#176b5b]"
-                          >
-                            View
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openEditClient(client)}
-                            className="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                          >
-                            Edit
-                          </button>
-                        </div>
+                        <ActionButtons
+                          onView={() => {
+                            setSelectedClient(client);
+                            setShowDetailsModal(true);
+                          }}
+                          onEdit={() => openEditClient(client)}
+                        />
                       </td>
                     </tr>
                   ))
@@ -2785,7 +3738,6 @@ export default function InteriorClientsPage() {
             </table>
           </div>
 
-          {/* Mobile cards */}
           <div className="space-y-3 p-3 md:hidden">
             {loading ? (
               <p className="py-10 text-center text-sm text-gray-500">
@@ -2833,25 +3785,14 @@ export default function InteriorClientsPage() {
                       Due {formatCurrency(client.pending)}
                     </span>
                   </div>
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedClient(client);
-                        setShowDetailsModal(true);
-                      }}
-                      className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-xs font-medium text-gray-700"
-                    >
-                      View
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openEditClient(client)}
-                      className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-xs font-medium text-gray-700"
-                    >
-                      Edit
-                    </button>
-                  </div>
+                  <ActionButtons
+                    compact
+                    onView={() => {
+                      setSelectedClient(client);
+                      setShowDetailsModal(true);
+                    }}
+                    onEdit={() => openEditClient(client)}
+                  />
                 </article>
               ))
             )}
@@ -2859,7 +3800,6 @@ export default function InteriorClientsPage() {
         </section>
       </main>
 
-      {/* Details modal */}
       {showDetailsModal && selectedClient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
           <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
@@ -2944,8 +3884,9 @@ export default function InteriorClientsPage() {
                   setShowDetailsModal(false);
                   openEditClient(selectedClient);
                 }}
-                className="rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#125848]"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#176b5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#125848]"
               >
+                <Pencil size={14} />
                 Edit
               </button>
               <button
@@ -2970,7 +3911,6 @@ export default function InteriorClientsPage() {
         </div>
       )}
 
-      {/* Add / Edit floating modal */}
       {showClientModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
           <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
@@ -3043,6 +3983,25 @@ export default function InteriorClientsPage() {
                 value={form.projectValue}
                 onChange={(v) => setForm((f) => ({ ...f, projectValue: v }))}
               />
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Status
+                </label>
+                <select
+                  value={form.status}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      status: e.target.value as ClientStatus,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#176b5b]"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Lead">Lead</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
                   Source
