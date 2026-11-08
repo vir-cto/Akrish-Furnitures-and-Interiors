@@ -53,3 +53,10 @@ coverage/
 *.local
 .cache/
 plain.txt
+
+
+# OpenNext / Cloudflare build output
+**/.open-next/
+**/.wrangler/
+apps/web/.open-next/
+apps/web/.wrangler/
