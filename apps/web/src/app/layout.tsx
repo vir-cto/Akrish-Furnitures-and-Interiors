@@ -112,23 +112,106 @@
 // }
 
 
+// import type { Metadata } from "next";
+// import { DM_Sans, Cormorant_Garamond } from "next/font/google";
+// import "./globals.css";
+// import { Providers } from "./providers";
+
+// const dmSans = DM_Sans({
+//   subsets: ["latin"],
+//   variable: "--font-dm-sans",
+//   display: "swap",
+//   weight: ["400", "500", "600", "700"],
+// });
+
+// const cormorant = Cormorant_Garamond({
+//   subsets: ["latin"],
+//   variable: "--font-cormorant",
+//   display: "swap",
+//   weight: ["400", "500", "600", "700"],
+// });
+
+// export const metadata: Metadata = {
+//   title: "Akrish Furniture & Interior",
+//   description: "Furniture and interior solutions",
+// };
+
+// export default function RootLayout({
+//   children,
+// }: {
+//   children: React.ReactNode;
+// }) {
+//   return (
+//     <html
+//       lang="en"
+//       className={`${dmSans.variable} ${cormorant.variable}`}
+//     >
+//       <body className="min-h-screen font-sans antialiased">
+//         <Providers>{children}</Providers>
+//       </body>
+//     </html>
+//   );
+// }
+
+
+
 import type { Metadata } from "next";
-import { DM_Sans, Cormorant_Garamond } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "./providers";
 
-const dmSans = DM_Sans({
-  subsets: ["latin"],
+const dmSans = localFont({
+  src: [
+    {
+      path: "../../public/fonts/DMSans-Regular.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/DMSans-Medium.ttf",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/DMSans-SemiBold.ttf",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/DMSans-Bold.ttf",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   variable: "--font-dm-sans",
   display: "swap",
-  weight: ["400", "500", "600", "700"],
 });
 
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
+const cormorant = localFont({
+  src: [
+    {
+      path: "../../public/fonts/CormorantGaramond-Regular.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/CormorantGaramond-Medium.ttf",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/CormorantGaramond-SemiBold.ttf",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/CormorantGaramond-Bold.ttf",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   variable: "--font-cormorant",
   display: "swap",
-  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
