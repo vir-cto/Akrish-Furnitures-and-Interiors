@@ -1826,6 +1826,326 @@
 // export default AuthContext;
 
 
+// "use client";
+
+// import {
+//   createContext,
+//   useContext,
+//   useEffect,
+//   useMemo,
+//   useState,
+//   type ReactNode,
+// } from "react";
+// import {
+//   onAuthStateChanged,
+//   signInWithEmailAndPassword,
+//   signOut,
+//   type User,
+// } from "firebase/auth";
+// import { doc, getDoc } from "firebase/firestore";
+// import { auth, db } from "@/core/config/firebaseClient";
+
+// export type UserRole =
+//   | "admin"
+//   | "manager"
+//   | "sales"
+//   | "designer"
+//   | "accountant"
+//   | "hr"
+//   | "employee";
+
+// export type ModuleAccess = "interior" | "furniture";
+
+// export interface AuthUser {
+//   id: string;
+//   name: string;
+//   email: string;
+//   role: UserRole;
+//   modules: ModuleAccess[];
+//   avatar?: string;
+// }
+
+// interface AuthContextType {
+//   user: AuthUser | null;
+//   isAuthenticated: boolean;
+//   isLoading: boolean;
+//   login: (email: string, password: string) => Promise<boolean>;
+//   logout: () => Promise<void>;
+//   hasRole: (...roles: UserRole[]) => boolean;
+//   hasModule: (module: ModuleAccess) => boolean;
+//   isAdmin: boolean;
+//   lastError: string | null;
+// }
+
+// const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// export const STAFF_COOKIE_NAME = "erpAuthToken";
+
+// function setStaffSessionCookie(token: string) {
+//   const isHttps =
+//     typeof window !== "undefined" && window.location.protocol === "https:";
+//   const secure = isHttps ? "; Secure" : "";
+//   document.cookie =
+//     `${STAFF_COOKIE_NAME}=${encodeURIComponent(token)}; ` +
+//     `Path=/; Max-Age=${60 * 60 * 24 * 7}; SameSite=Lax${secure}`;
+// }
+
+// function clearStaffSessionCookie() {
+//   const isHttps =
+//     typeof window !== "undefined" && window.location.protocol === "https:";
+//   const secure = isHttps ? "; Secure" : "";
+//   document.cookie =
+//     `${STAFF_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+// }
+
+// function normalizeModules(raw: unknown, role: string): ModuleAccess[] {
+//   if (role === "admin") return ["interior", "furniture"];
+//   if (!Array.isArray(raw)) return [];
+//   return Array.from(
+//     new Set(
+//       raw.filter(
+//         (module): module is ModuleAccess =>
+//           module === "interior" || module === "furniture"
+//       )
+//     )
+//   );
+// }
+
+// const isSupportedRole = (value: string): value is UserRole =>
+//   [
+//     "admin",
+//     "manager",
+//     "sales",
+//     "designer",
+//     "accountant",
+//     "hr",
+//     "employee",
+//   ].includes(value);
+
+// async function buildAuthUser(firebaseUser: User): Promise<AuthUser> {
+//   const email = (firebaseUser.email || "").toLowerCase();
+//   const isSuperAdmin = email === "admin@akrish.in";
+
+//   const userRef = doc(db, "users", firebaseUser.uid);
+//   const userSnap = await getDoc(userRef);
+
+//   if (!userSnap.exists() && !isSuperAdmin) {
+//     throw new Error(
+//       "This account is not registered as ERP staff. Use the website customer login instead."
+//     );
+//   }
+
+//   const data = userSnap.exists() ? userSnap.data() : {};
+
+//   if (String(data.status || "Active").toLowerCase() !== "active") {
+//     throw new Error("Your staff account is inactive.");
+//   }
+
+//   const tokenResult = await firebaseUser.getIdTokenResult(true);
+//   const claims = tokenResult.claims;
+
+//   let roleValue = String(
+//     data.role || claims.role || (isSuperAdmin ? "admin" : "")
+//   ).toLowerCase();
+
+//   if (isSuperAdmin) roleValue = "admin";
+
+//   if (!isSupportedRole(roleValue)) {
+//     throw new Error("Your account does not have a valid staff role.");
+//   }
+
+//   const role: UserRole = roleValue;
+//   const modules = normalizeModules(data.modules ?? claims.modules, role);
+
+//   if (role !== "admin" && modules.length === 0) {
+//     throw new Error(
+//       "No ERP modules have been assigned to this staff account."
+//     );
+//   }
+
+//   const name =
+//     String(data.name || "").trim() ||
+//     firebaseUser.displayName ||
+//     email.split("@")[0] ||
+//     "Staff";
+
+//   const avatar =
+//     typeof data.avatar === "string" ? data.avatar : undefined;
+
+//   return {
+//     id: firebaseUser.uid,
+//     name,
+//     email,
+//     role,
+//     modules: role === "admin" ? ["interior", "furniture"] : modules,
+//     avatar,
+//   };
+// }
+
+// export function AuthProvider({ children }: { children: ReactNode }) {
+//   const [user, setUser] = useState<AuthUser | null>(null);
+//   const [isLoading, setIsLoading] = useState(true);
+//   const [lastError, setLastError] = useState<string | null>(null);
+
+//   useEffect(() => {
+//     let active = true;
+
+//     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+//       if (!active) return;
+
+//       if (!firebaseUser) {
+//         setUser(null);
+//         clearStaffSessionCookie();
+//         setIsLoading(false);
+//         return;
+//       }
+
+//       try {
+//         const email = (firebaseUser.email || "").toLowerCase();
+//         const isSuperAdmin = email === "admin@akrish.in";
+
+//         // Customers are not in `users` — keep Firebase session, no ERP user
+//         if (!isSuperAdmin) {
+//           const userSnap = await getDoc(doc(db, "users", firebaseUser.uid));
+//           if (!userSnap.exists()) {
+//             if (active) {
+//               setUser(null);
+//               clearStaffSessionCookie();
+//               setIsLoading(false);
+//             }
+//             return; // do NOT signOut, do NOT throw
+//           }
+//         }
+
+//         const authUser = await buildAuthUser(firebaseUser);
+//         if (!active) return;
+
+//         const token = await firebaseUser.getIdToken();
+//         setUser(authUser);
+//         setStaffSessionCookie(token);
+//         setLastError(null);
+//       } catch (error) {
+//         // Invalid/inactive staff — clear ERP state only (never signOut)
+//         console.error("ERP authentication validation failed:", error);
+//         if (active) {
+//           setUser(null);
+//           clearStaffSessionCookie();
+//         }
+//       } finally {
+//         if (active) setIsLoading(false);
+//       }
+//     });
+
+//     return () => {
+//       active = false;
+//       unsubscribe();
+//     };
+//   }, []);
+
+//   const login = async (
+//     email: string,
+//     password: string
+//   ): Promise<boolean> => {
+//     setLastError(null);
+//     try {
+//       const result = await signInWithEmailAndPassword(
+//         auth,
+//         email.trim().toLowerCase(),
+//         password
+//       );
+
+//       const authUser = await buildAuthUser(result.user);
+//       const token = await result.user.getIdToken();
+
+//       setUser(authUser);
+//       setStaffSessionCookie(token);
+//       return true;
+//     } catch (error) {
+//       console.error("ERP login failed:", error);
+
+//       const message =
+//         error instanceof Error ? error.message : "Unable to sign in.";
+
+//       const code =
+//         error && typeof error === "object" && "code" in error
+//           ? String((error as { code: string }).code)
+//           : "";
+
+//       if (
+//         code === "auth/invalid-credential" ||
+//         code === "auth/wrong-password" ||
+//         code === "auth/user-not-found" ||
+//         code === "auth/invalid-email" ||
+//         code === "auth/too-many-requests"
+//       ) {
+//         setLastError("Invalid email or password.");
+//       } else {
+//         setLastError(message);
+//       }
+
+//       try {
+//         await signOut(auth);
+//       } catch (signOutError) {
+//         console.error("Failed to clear ERP auth state:", signOutError);
+//       }
+
+//       setUser(null);
+//       clearStaffSessionCookie();
+//       return false;
+//     }
+//   };
+
+//   const logout = async () => {
+//     try {
+//       await signOut(auth);
+//     } finally {
+//       setUser(null);
+//       clearStaffSessionCookie();
+//       setLastError(null);
+//     }
+//   };
+
+//   const hasRole = (...roles: UserRole[]) =>
+//     Boolean(user && roles.includes(user.role));
+
+//   const hasModule = (module: ModuleAccess) => {
+//     if (!user) return false;
+//     if (user.role === "admin") return true;
+//     return user.modules.includes(module);
+//   };
+
+//   const value = useMemo<AuthContextType>(
+//     () => ({
+//       user,
+//       isAuthenticated: Boolean(user),
+//       isLoading,
+//       login,
+//       logout,
+//       hasRole,
+//       hasModule,
+//       isAdmin: user?.role === "admin",
+//       lastError,
+//     }),
+//     [user, isLoading, lastError]
+//   );
+
+//   return (
+//     <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+//   );
+// }
+
+// export function useAuth() {
+//   const context = useContext(AuthContext);
+//   if (!context) {
+//     throw new Error("useAuth must be used inside an AuthProvider");
+//   }
+//   return context;
+// }
+
+// export default AuthContext;
+
+
+
 "use client";
 
 import {
@@ -1836,14 +2156,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut,
-  type User,
-} from "firebase/auth";
+import { type User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "@/core/config/firebaseClient";
+import {
+  getErpAuth,
+  getErpDb,
+  erpSignIn,
+  erpSignOut,
+  erpOnAuthStateChanged,
+} from "@/core/config/firebaseClient";
 
 export type UserRole =
   | "admin"
@@ -1925,6 +2246,7 @@ const isSupportedRole = (value: string): value is UserRole =>
 async function buildAuthUser(firebaseUser: User): Promise<AuthUser> {
   const email = (firebaseUser.email || "").toLowerCase();
   const isSuperAdmin = email === "admin@akrish.in";
+  const db = getErpDb();
 
   const userRef = doc(db, "users", firebaseUser.uid);
   const userSnap = await getDoc(userRef);
@@ -1990,7 +2312,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = erpOnAuthStateChanged(async (firebaseUser) => {
       if (!active) return;
 
       if (!firebaseUser) {
@@ -2003,8 +2325,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const email = (firebaseUser.email || "").toLowerCase();
         const isSuperAdmin = email === "admin@akrish.in";
+        const db = getErpDb();
 
-        // Customers are not in `users` — keep Firebase session, no ERP user
         if (!isSuperAdmin) {
           const userSnap = await getDoc(doc(db, "users", firebaseUser.uid));
           if (!userSnap.exists()) {
@@ -2013,7 +2335,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               clearStaffSessionCookie();
               setIsLoading(false);
             }
-            return; // do NOT signOut, do NOT throw
+            return;
           }
         }
 
@@ -2025,7 +2347,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStaffSessionCookie(token);
         setLastError(null);
       } catch (error) {
-        // Invalid/inactive staff — clear ERP state only (never signOut)
         console.error("ERP authentication validation failed:", error);
         if (active) {
           setUser(null);
@@ -2048,12 +2369,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ): Promise<boolean> => {
     setLastError(null);
     try {
-      const result = await signInWithEmailAndPassword(
-        auth,
-        email.trim().toLowerCase(),
-        password
-      );
-
+      const result = await erpSignIn(email.trim().toLowerCase(), password);
       const authUser = await buildAuthUser(result.user);
       const token = await result.user.getIdToken();
 
@@ -2084,7 +2400,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        await signOut(auth);
+        await erpSignOut();
       } catch (signOutError) {
         console.error("Failed to clear ERP auth state:", signOutError);
       }
@@ -2097,7 +2413,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await signOut(auth);
+      await erpSignOut();
     } finally {
       setUser(null);
       clearStaffSessionCookie();

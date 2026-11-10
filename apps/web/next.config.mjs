@@ -149,25 +149,81 @@
 // export default nextConfig;
 
 
+// /** @type {import('next').NextConfig} */
+// const nextConfig = {
+//   // basePath removed — ERP is deployed at domain root
+//   reactStrictMode: true,
+
+//   images: {
+//     remotePatterns: [
+//       { protocol: "https", hostname: "images.unsplash.com" },
+//       { protocol: "https", hostname: "plus.unsplash.com" },
+//       { protocol: "https", hostname: "firebasestorage.googleapis.com" },
+//       { protocol: "https", hostname: "akrish-collective-erp.firebasestorage.app" },
+//     ],
+//   },
+
+//   experimental: {
+//     serverActions: {
+//       bodySizeLimit: "10mb",
+//     },
+//   },
+// };
+
+// export default nextConfig;
+
+
+// /** @type {import('next').NextConfig} */
+// const nextConfig = {
+//   reactStrictMode: true,
+//   images: {
+//     unoptimized: true,
+//     remotePatterns: [
+//       { protocol: "https", hostname: "images.unsplash.com" },
+//       { protocol: "https", hostname: "plus.unsplash.com" },
+//       { protocol: "https", hostname: "firebasestorage.googleapis.com" },
+//       { protocol: "https", hostname: "akrish-collective-erp.firebasestorage.app" },
+//     ],
+//   },
+//   experimental: {
+//     serverActions: {
+//       bodySizeLimit: "10mb",
+//     },
+//   },
+// };
+
+// export default nextConfig;
+
+
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // basePath removed — ERP is deployed at domain root
   reactStrictMode: true,
-
   images: {
+    unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "plus.unsplash.com" },
       { protocol: "https", hostname: "firebasestorage.googleapis.com" },
-      { protocol: "https", hostname: "akrish-collective-erp.firebasestorage.app" },
+      {
+        protocol: "https",
+        hostname: "akrish-collective-erp.firebasestorage.app",
+      },
     ],
   },
-
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",
     },
   },
+  // Keep Firebase out of the Worker server bundle where possible
+  serverExternalPackages: [
+    "firebase",
+    "@firebase/app",
+    "@firebase/auth",
+    "@firebase/firestore",
+    "@firebase/storage",
+  ],
 };
 
 export default nextConfig;

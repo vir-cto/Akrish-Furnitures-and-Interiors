@@ -1,6 +1,6 @@
 name = "akrish-furnitures-and-interiors"
 main = ".open-next/worker.js"
-compatibility_date = "2025-10-08"
+compatibility_date = "2025-10-15"
 compatibility_flags = ["nodejs_compat"]
 
 [assets]

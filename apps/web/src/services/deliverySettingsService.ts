@@ -46,7 +46,121 @@
 // }
 
 
-import { db } from "@/lib/firebase";
+// import { db } from "@/lib/firebase";
+// import { doc, getDoc } from "firebase/firestore";
+
+// export type DeliverySettings = {
+//   shippingCharge: number;
+//   freeShippingMin: number;
+//   defaultLeadTimeDays: number;
+//   ageingDiscountDays: number;
+// };
+
+// const DOC = doc(db, "furniture_settings", "delivery");
+
+// export const DEFAULT_DELIVERY_SETTINGS: DeliverySettings = {
+//   shippingCharge: 250,
+//   freeShippingMin: 5000,
+//   defaultLeadTimeDays: 7,
+//   ageingDiscountDays: 7,
+// };
+
+// function clampAgeingDays(n: unknown): number {
+//   return Math.min(365, Math.max(1, Number(n) || 7));
+// }
+
+// export async function getDeliverySettings(): Promise<DeliverySettings> {
+//   try {
+//     const snap = await getDoc(DOC);
+//     if (!snap.exists()) return { ...DEFAULT_DELIVERY_SETTINGS };
+
+//     const d = snap.data();
+//     return {
+//       shippingCharge: Math.max(0, Number(d.shippingCharge) || 0),
+//       freeShippingMin: Math.max(0, Number(d.freeShippingMin) || 0),
+//       defaultLeadTimeDays: Math.min(
+//         365,
+//         Math.max(1, Number(d.defaultLeadTimeDays) || 7)
+//       ),
+//       ageingDiscountDays: clampAgeingDays(d.ageingDiscountDays),
+//     };
+//   } catch (err) {
+//     console.error("getDeliverySettings failed:", err);
+//     return { ...DEFAULT_DELIVERY_SETTINGS };
+//   }
+// }
+
+// export function calcShippingFromSettings(
+//   subtotal: number,
+//   settings: DeliverySettings
+// ): number {
+//   if (settings.freeShippingMin > 0 && subtotal >= settings.freeShippingMin) {
+//     return 0;
+//   }
+//   return Math.max(0, Number(settings.shippingCharge) || 0);
+// }
+
+
+
+
+// import { db } from "@/lib/firebase";
+// import { doc, getDoc } from "firebase/firestore";
+
+// export type DeliverySettings = {
+//   shippingCharge: number;
+//   freeShippingMin: number;
+//   defaultLeadTimeDays: number;
+//   ageingDiscountDays: number;
+// };
+
+// export const DEFAULT_DELIVERY_SETTINGS: DeliverySettings = {
+//   shippingCharge: 250,
+//   freeShippingMin: 5000,
+//   defaultLeadTimeDays: 7,
+//   ageingDiscountDays: 7,
+// };
+
+// function deliveryRef() {
+//   return doc(db, "furniture_settings", "delivery");
+// }
+
+// function clampAgeingDays(n: unknown): number {
+//   return Math.min(365, Math.max(1, Number(n) || 7));
+// }
+
+// export async function getDeliverySettings(): Promise<DeliverySettings> {
+//   try {
+//     const snap = await getDoc(deliveryRef());
+//     if (!snap.exists()) return { ...DEFAULT_DELIVERY_SETTINGS };
+
+//     const d = snap.data();
+//     return {
+//       shippingCharge: Math.max(0, Number(d.shippingCharge) || 0),
+//       freeShippingMin: Math.max(0, Number(d.freeShippingMin) || 0),
+//       defaultLeadTimeDays: Math.min(
+//         365,
+//         Math.max(1, Number(d.defaultLeadTimeDays) || 7)
+//       ),
+//       ageingDiscountDays: clampAgeingDays(d.ageingDiscountDays),
+//     };
+//   } catch (err) {
+//     console.error("getDeliverySettings failed:", err);
+//     return { ...DEFAULT_DELIVERY_SETTINGS };
+//   }
+// }
+
+// export function calcShippingFromSettings(
+//   subtotal: number,
+//   settings: DeliverySettings
+// ): number {
+//   if (settings.freeShippingMin > 0 && subtotal >= settings.freeShippingMin) {
+//     return 0;
+//   }
+//   return Math.max(0, Number(settings.shippingCharge) || 0);
+// }
+
+
+import { getClientDb } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 export type DeliverySettings = {
@@ -56,8 +170,6 @@ export type DeliverySettings = {
   ageingDiscountDays: number;
 };
 
-const DOC = doc(db, "furniture_settings", "delivery");
-
 export const DEFAULT_DELIVERY_SETTINGS: DeliverySettings = {
   shippingCharge: 250,
   freeShippingMin: 5000,
@@ -65,13 +177,17 @@ export const DEFAULT_DELIVERY_SETTINGS: DeliverySettings = {
   ageingDiscountDays: 7,
 };
 
+function deliveryRef() {
+  return doc(getClientDb(), "furniture_settings", "delivery");
+}
+
 function clampAgeingDays(n: unknown): number {
   return Math.min(365, Math.max(1, Number(n) || 7));
 }
 
 export async function getDeliverySettings(): Promise<DeliverySettings> {
   try {
-    const snap = await getDoc(DOC);
+    const snap = await getDoc(deliveryRef());
     if (!snap.exists()) return { ...DEFAULT_DELIVERY_SETTINGS };
 
     const d = snap.data();
@@ -99,4 +215,3 @@ export function calcShippingFromSettings(
   }
   return Math.max(0, Number(settings.shippingCharge) || 0);
 }
- 

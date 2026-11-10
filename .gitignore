@@ -60,3 +60,10 @@ plain.txt
 **/.wrangler/
 apps/web/.open-next/
 apps/web/.wrangler/
+"" 
+"# Local Cloudflare / OpenNext secrets" 
+"apps/web/.dev.vars" 
+"**/.dev.vars" 
+".env" 
+".env.*" 
+"!.env.example" 

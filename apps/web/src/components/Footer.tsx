@@ -1398,21 +1398,260 @@
 
 
 
+// "use client";
+
+// import Link from "next/link";
+// import { useEffect, useState } from "react";
+// import {
+//   Facebook,
+//   Instagram,
+//   Linkedin,
+//   Mail,
+//   MapPin,
+//   Phone,
+//   Twitter,
+// } from "lucide-react";
+// import { collection, getDocs } from "firebase/firestore";
+// import { db } from "@/lib/firebase";
+
+// interface CategoryItem {
+//   title: string;
+//   href: string;
+// }
+
+// export default function Footer() {
+//   const currentYear = new Date().getFullYear();
+//   const [categories, setCategories] = useState<CategoryItem[]>([]);
+
+//   useEffect(() => {
+//     const fetchCategories = async () => {
+//       try {
+//         const snapshot = await getDocs(collection(db, "furniture_products"));
+//         const categorySet = new Set<string>();
+
+//         snapshot.docs.forEach((docSnap) => {
+//           const data = docSnap.data();
+//           const status = String(data.status || "In Stock");
+//           const active = data.active !== false && status !== "Inactive";
+//           if (!active) return;
+//           const category = data.category;
+//           if (category && typeof category === "string") {
+//             categorySet.add(category.trim());
+//           }
+//         });
+
+//         setCategories(
+//           Array.from(categorySet)
+//             .sort()
+//             .slice(0, 6)
+//             .map((cat) => ({
+//               title: cat,
+//               href: `/products?category=${encodeURIComponent(cat)}`,
+//             }))
+//         );
+//       } catch (err) {
+//         console.error("Failed to load footer categories:", err);
+//       }
+//     };
+
+//     fetchCategories();
+//   }, []);
+
+//   return (
+//     <footer className="bg-[#1a1814] text-white">
+//       <div className="border-b border-white/10">
+//         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 py-8 sm:flex-row sm:items-center sm:px-6 lg:px-8">
+//           <div>
+//             <p className="font-display text-xl font-semibold text-white sm:text-2xl">
+//               Stay in the loop
+//             </p>
+//             <p className="mt-1 text-sm text-white/50">
+//               New arrivals and exclusive offers — no spam.
+//             </p>
+//           </div>
+//         </div>
+//       </div>
+
+//       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+//         <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-12">
+//           {/* Brand */}
+//           <div className="max-w-xs shrink-0">
+//             <Link href="/" className="flex items-center gap-2.5">
+//               {/* eslint-disable-next-line @next/next/no-img-element */}
+//               <img
+//                 src="/Akrish.jpg"
+//                 alt="Akrish"
+//                 className="h-10 w-10 rounded-full object-cover ring-1 ring-white/20"
+//               />
+//               <div>
+//                 <p className="font-display text-lg font-semibold leading-none">
+//                   Akrish
+//                 </p>
+//                 <p className="mt-1 text-[9px] font-medium uppercase tracking-[0.16em] text-[#b8956c]">
+//                   Furniture &amp; Interior
+//                 </p>
+//               </div>
+//             </Link>
+//             <p className="mt-4 text-sm leading-6 text-white/50">
+//               Considered furniture for modern homes and workspaces — built to
+//               last, designed to feel calm.
+//             </p>
+//             {/* <div className="mt-5 flex items-center gap-1.5">
+//               {[
+//                 { icon: Facebook, label: "Facebook" },
+//                 { icon: Instagram, label: "Instagram" },
+//                 { icon: Twitter, label: "Twitter" },
+//                 { icon: Linkedin, label: "LinkedIn" },
+//               ].map(({ icon: Icon, label }) => (
+//                 <a
+//                   key={label}
+//                   href="#"
+//                   aria-label={label}
+//                   className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition hover:bg-[#b8956c]"
+//                 >
+//                   <Icon size={15} />
+//                 </a>
+//               ))}
+//             </div> */}
+//           </div>
+
+//           {/* Link columns */}
+//           <div className="grid flex-1 grid-cols-2 gap-8 sm:grid-cols-4 sm:gap-8">
+//             <div>
+//               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90">
+//                 Shop
+//               </p>
+//               <ul className="mt-3 space-y-2.5 text-sm text-white/50">
+//                 <li>
+//                   <Link href="/products" className="hover:text-white">
+//                     All products
+//                   </Link>
+//                 </li>
+//                 {categories.map((cat) => (
+//                   <li key={cat.title}>
+//                     <Link href={cat.href} className="hover:text-white">
+//                       {cat.title}
+//                     </Link>
+//                   </li>
+//                 ))}
+//               </ul>
+//             </div>
+
+//             <div>
+//               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90">
+//                 Company
+//               </p>
+//               <ul className="mt-3 space-y-2.5 text-sm text-white/50">
+//                 <li>
+//                   <Link href="/" className="hover:text-white">
+//                     Home
+//                   </Link>
+//                 </li>
+//                 <li>
+//                   <Link href="/about" className="hover:text-white">
+//                     About us
+//                   </Link>
+//                 </li>
+//                 <li>
+//                   <Link href="/services" className="hover:text-white">
+//                     Services
+//                   </Link>
+//                 </li>
+//                 <li>
+//                   <Link href="/contact" className="hover:text-white">
+//                     Contact
+//                   </Link>
+//                 </li>
+//               </ul>
+//             </div>
+
+//             {/* Account — Staff / ERP (like Admin Login in reference) */}
+//             <div>
+//               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90">
+//                 Account
+//               </p>
+//               <ul className="mt-3 space-y-2.5 text-sm text-white/50">
+//                 <li>
+//                   <Link href="/sign-in" className="hover:text-white">
+//                     Customer login
+//                   </Link>
+//                 </li>
+//                 <li>
+//                   <Link href="/register" className="hover:text-white">
+//                     Create account
+//                   </Link>
+//                 </li>
+//                 {/* <li>
+//                   <Link href="/account/orders" className="hover:text-white">
+//                     My orders
+//                   </Link>
+//                 </li> */}
+//                 <li>
+//                   <Link
+//                     href="/login"
+//                     className="font-medium text-[#b8956c] hover:text-white"
+//                   >
+//                     ERP / Admin panel
+//                   </Link>
+//                 </li>
+//                 {/* <li>
+//                   <Link href="/login" className="hover:text-white">
+//                     ERP / Admin panel
+//                   </Link>
+//                 </li> */}
+//               </ul>
+//             </div>
+
+//             <div>
+//               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90">
+//                 Get in touch
+//               </p>
+//               <ul className="mt-3 space-y-3 text-sm text-white/50">
+//                 <li className="flex items-start gap-2">
+//                   <MapPin size={14} className="mt-0.5 shrink-0 text-[#b8956c]" />
+//                   <span>Guntur, Andhra Pradesh</span>
+//                 </li>
+//                 <li>
+//                   <a
+//                     href="tel:+919876543210"
+//                     className="flex items-center gap-2 hover:text-white"
+//                   >
+//                     <Phone size={14} className="shrink-0 text-[#b8956c]" />
+//                     +91 98765 43210
+//                   </a>
+//                 </li>
+//                 <li>
+//                   <a
+//                     href="mailto:hello@akrish.in"
+//                     className="flex items-center gap-2 hover:text-white"
+//                   >
+//                     <Mail size={14} className="shrink-0 text-[#b8956c]" />
+//                     hello@akrish.in
+//                   </a>
+//                 </li>
+//               </ul>
+//             </div>
+//           </div>
+//         </div>
+
+//         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/35 sm:flex-row">
+//           <p>© {currentYear} Akrish Furniture &amp; Interior</p>
+//           <p className="text-white/30">Crafted for modern living</p>
+//         </div>
+//       </div>
+//     </footer>
+//   );
+// }
+
+
+
 "use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  Facebook,
-  Instagram,
-  Linkedin,
-  Mail,
-  MapPin,
-  Phone,
-  Twitter,
-} from "lucide-react";
+import { Mail, MapPin, Phone } from "lucide-react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getClientDb } from "@/lib/firebase";
 
 interface CategoryItem {
   title: string;
@@ -1426,6 +1665,7 @@ export default function Footer() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
+        const db = getClientDb();
         const snapshot = await getDocs(collection(db, "furniture_products"));
         const categorySet = new Set<string>();
 
@@ -1474,7 +1714,6 @@ export default function Footer() {
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
         <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-12">
-          {/* Brand */}
           <div className="max-w-xs shrink-0">
             <Link href="/" className="flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1496,26 +1735,8 @@ export default function Footer() {
               Considered furniture for modern homes and workspaces — built to
               last, designed to feel calm.
             </p>
-            {/* <div className="mt-5 flex items-center gap-1.5">
-              {[
-                { icon: Facebook, label: "Facebook" },
-                { icon: Instagram, label: "Instagram" },
-                { icon: Twitter, label: "Twitter" },
-                { icon: Linkedin, label: "LinkedIn" },
-              ].map(({ icon: Icon, label }) => (
-                <a
-                  key={label}
-                  href="#"
-                  aria-label={label}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition hover:bg-[#b8956c]"
-                >
-                  <Icon size={15} />
-                </a>
-              ))}
-            </div> */}
           </div>
 
-          {/* Link columns */}
           <div className="grid flex-1 grid-cols-2 gap-8 sm:grid-cols-4 sm:gap-8">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90">
@@ -1565,7 +1786,6 @@ export default function Footer() {
               </ul>
             </div>
 
-            {/* Account — Staff / ERP (like Admin Login in reference) */}
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90">
                 Account
@@ -1581,11 +1801,6 @@ export default function Footer() {
                     Create account
                   </Link>
                 </li>
-                {/* <li>
-                  <Link href="/account/orders" className="hover:text-white">
-                    My orders
-                  </Link>
-                </li> */}
                 <li>
                   <Link
                     href="/login"
@@ -1594,11 +1809,6 @@ export default function Footer() {
                     ERP / Admin panel
                   </Link>
                 </li>
-                {/* <li>
-                  <Link href="/login" className="hover:text-white">
-                    ERP / Admin panel
-                  </Link>
-                </li> */}
               </ul>
             </div>
 

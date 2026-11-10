@@ -80,21 +80,35 @@
 // }
 
 
+// "use client";
+
+// import { usePathname } from "next/navigation";
+// import ERPLayout from "@/core/components/ShellLayout";
+
+// export default function ErpRouteLayout({
+//   children,
+// }: {
+//   children: React.ReactNode;
+// }) {
+//   const pathname = usePathname();
+
+//   if (pathname === "/erp" || pathname === "/erp/") {
+//     return <>{children}</>;
+//   }
+
+//   return <ERPLayout>{children}</ERPLayout>;
+// }
+
+
+
 "use client";
 
-import { usePathname } from "next/navigation";
-import ERPLayout from "@/core/components/ShellLayout";
+import { AuthProvider } from "@/core/auth/AuthContext";
 
-export default function ErpRouteLayout({
+export default function ErpLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-
-  if (pathname === "/erp" || pathname === "/erp/") {
-    return <>{children}</>;
-  }
-
-  return <ERPLayout>{children}</ERPLayout>;
+  return <AuthProvider>{children}</AuthProvider>;
 }
