@@ -9185,9 +9185,862 @@
 
 
 
+// "use client";
+
+// import Link from "next/link";
+// import { useEffect, useMemo, useState } from "react";
+// import {
+//   ArrowRight,
+//   ChevronRight,
+//   Heart,
+//   Loader2,
+//   Plus,
+//   Sofa,
+//   Leaf,
+//   Hammer,
+//   RotateCcw,
+//   Star,
+// } from "lucide-react";
+
+// interface FeaturedProduct {
+//   id: string;
+//   name: string;
+//   category: string;
+//   description: string;
+//   price: number;
+//   listPrice: number;
+//   discountPercent: number;
+//   hasDiscount: boolean;
+//   image?: string;
+//   imageUrl?: string;
+//   featured?: boolean;
+//   isNew?: boolean;
+//   rating?: number;
+// }
+
+// interface CategoryItem {
+//   title: string;
+//   count: number;
+//   href: string;
+//   image?: string;
+// }
+
+// type AuthUser = { uid: string } | null;
+
+// /** Living-room furniture hero */
+// const HERO_IMAGE =
+//   "https://images.unsplash.com/photo-1618220179428-22790b461013?auto=format&fit=crop&w=1400&q=85";
+
+// /** Furniture craftsmanship — wood workshop */
+// const CRAFT_IMAGE =
+//   "https://plus.unsplash.com/premium_photo-1663013470139-9bc103e5c52c?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D";
+
+// const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
+//   "Living Room":
+//     "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=800&q=80",
+//   Bedroom:
+//     "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80",
+//   Dining:
+//     "https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=800&q=80",
+//   "Dining Room":
+//     "https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=800&q=80",
+//   Office:
+//     "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80",
+//   default:
+//     "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80",
+// };
+
+// const WISHLIST_KEY = "wishlist";
+// const CART_KEY = "cart";
+
+// function formatCurrency(value: number) {
+//   return new Intl.NumberFormat("en-IN", {
+//     style: "currency",
+//     currency: "INR",
+//     maximumFractionDigits: 0,
+//   }).format(value);
+// }
+
+// function categoryImage(title: string, fromProduct?: string) {
+//   if (fromProduct) return fromProduct;
+//   return CATEGORY_FALLBACK_IMAGES[title] || CATEGORY_FALLBACK_IMAGES.default;
+// }
+
+// function parseFirebaseRating(data: Record<string, unknown>): number | undefined {
+//   const raw =
+//     data.rating ??
+//     data.avgRating ??
+//     data.averageRating ??
+//     data.stars ??
+//     data.reviewRating;
+
+//   if (raw === undefined || raw === null || raw === "") return undefined;
+
+//   const n = Number(raw);
+//   if (!Number.isFinite(n) || n <= 0) return undefined;
+
+//   return Math.min(5, Math.max(0, Math.round(n * 10) / 10));
+// }
+
+// function readWishlistIds(): string[] {
+//   try {
+//     const raw = localStorage.getItem(WISHLIST_KEY);
+//     if (!raw) return [];
+//     const parsed = JSON.parse(raw);
+//     if (Array.isArray(parsed)) {
+//       return parsed
+//         .map((x) =>
+//           typeof x === "string" ? x : String(x?.productId || x?.id || "")
+//         )
+//         .filter(Boolean);
+//     }
+//   } catch {
+//     /* ignore */
+//   }
+//   return [];
+// }
+
+// function writeWishlistIds(ids: string[]) {
+//   try {
+//     localStorage.setItem(WISHLIST_KEY, JSON.stringify(ids));
+//     window.dispatchEvent(new Event("wishlistUpdated"));
+//   } catch {
+//     /* ignore */
+//   }
+// }
+
+// function addLocalCartItem(product: FeaturedProduct) {
+//   try {
+//     const raw = localStorage.getItem(CART_KEY);
+//     let cart: Array<Record<string, unknown>> = [];
+//     if (raw) {
+//       const parsed = JSON.parse(raw);
+//       cart = Array.isArray(parsed) ? parsed : parsed?.items || [];
+//     }
+//     const idx = cart.findIndex(
+//       (i) => String(i.productId || i.id || "") === product.id
+//     );
+//     if (idx >= 0) {
+//       const qty = Number(cart[idx].quantity || 1) + 1;
+//       cart[idx] = { ...cart[idx], quantity: qty };
+//     } else {
+//       cart.push({
+//         id: product.id,
+//         productId: product.id,
+//         name: product.name,
+//         price: product.price,
+//         listPrice: product.listPrice,
+//         discountPercent: product.hasDiscount ? product.discountPercent : 0,
+//         quantity: 1,
+//         image: product.image || product.imageUrl || "",
+//         category: product.category,
+//       });
+//     }
+//     localStorage.setItem(CART_KEY, JSON.stringify(cart));
+//     window.dispatchEvent(new Event("cartUpdated"));
+//   } catch (e) {
+//     console.error(e);
+//   }
+// }
+
+// function StarRow({ rating }: { rating: number }) {
+//   const full = Math.floor(rating);
+//   const half = rating - full >= 0.5;
+//   return (
+//     <div className="flex items-center gap-0.5" title={`${rating} / 5`}>
+//       {Array.from({ length: 5 }).map((_, i) => {
+//         const filled = i < full || (i === full && half);
+//         return (
+//           <Star
+//             key={i}
+//             size={12}
+//             className={
+//               filled ? "fill-amber-400 text-amber-400" : "text-[#e5dfd4]"
+//             }
+//             strokeWidth={1.5}
+//           />
+//         );
+//       })}
+//     </div>
+//   );
+// }
+
+// export default function HomePage() {
+//   const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>(
+//     []
+//   );
+//   const [categories, setCategories] = useState<CategoryItem[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [filter, setFilter] = useState("All");
+//   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
+//   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+//   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
+//   const [authUser, setAuthUser] = useState<AuthUser>(null);
+
+//   // Auth — Firebase only in browser
+//   useEffect(() => {
+//     let unsub: (() => void) | undefined;
+
+//     void (async () => {
+//       try {
+//         const { getClientAuth } = await import("@/lib/firebase");
+//         const { onAuthStateChanged } = await import("firebase/auth");
+//         unsub = onAuthStateChanged(getClientAuth(), (u) =>
+//           setAuthUser(u ? { uid: u.uid } : null)
+//         );
+//       } catch (err) {
+//         console.error("Auth init failed:", err);
+//       }
+//     })();
+
+//     return () => {
+//       unsub?.();
+//     };
+//   }, []);
+
+//   useEffect(() => {
+//     setWishlistIds(readWishlistIds());
+//     const sync = () => setWishlistIds(readWishlistIds());
+//     window.addEventListener("wishlistUpdated", sync);
+//     window.addEventListener("storage", sync);
+//     return () => {
+//       window.removeEventListener("wishlistUpdated", sync);
+//       window.removeEventListener("storage", sync);
+//     };
+//   }, []);
+
+//   // Products — Firebase only in browser
+//   useEffect(() => {
+//     const fetchData = async () => {
+//       try {
+//         setLoading(true);
+
+//         const { getClientDb } = await import("@/lib/firebase");
+//         const { collection, getDocs } = await import("firebase/firestore");
+//         const { canApplyAgeingDiscount, getEffectiveSellingPrice } =
+//           await import("@/services/cartService");
+
+//         const snapshot = await getDocs(
+//           collection(getClientDb(), "furniture_products")
+//         );
+//         const now = Date.now();
+//         const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+
+//         const allProducts = snapshot.docs
+//           .map((docSnap) => {
+//             const data = docSnap.data() as Record<string, unknown>;
+//             const status = String(data.status || "In Stock");
+//             const active = data.active !== false && status !== "Inactive";
+
+//             const listPrice = Number(data.sellingPrice ?? data.price ?? 0);
+//             const discountPercent = Math.min(
+//               100,
+//               Math.max(0, Number(data.discountPercent) || 0)
+//             );
+//             const hasDiscount = canApplyAgeingDiscount({
+//               createdAt: data.createdAt as
+//                 | { toMillis?: () => number }
+//                 | null
+//                 | undefined,
+//               publishedAt: data.publishedAt as
+//                 | { toMillis?: () => number }
+//                 | null
+//                 | undefined,
+//               discountPercent,
+//             });
+//             const effectivePrice = getEffectiveSellingPrice(
+//               listPrice,
+//               discountPercent,
+//               hasDiscount
+//             );
+//             const img = String(data.imageUrl || data.image || "").trim();
+//             const createdAt = data.createdAt as
+//               | { toMillis?: () => number }
+//               | undefined;
+//             const publishedAt = data.publishedAt as
+//               | { toMillis?: () => number }
+//               | undefined;
+//             const createdMs =
+//               typeof createdAt?.toMillis === "function"
+//                 ? createdAt.toMillis()
+//                 : typeof publishedAt?.toMillis === "function"
+//                   ? publishedAt.toMillis()
+//                   : 0;
+//             const isNew = createdMs > 0 && now - createdMs < thirtyDays;
+//             const rating = parseFirebaseRating(data);
+//             const description = String(
+//               data.shortDescription || data.description || ""
+//             ).trim();
+
+//             return {
+//               id: docSnap.id,
+//               name: String(data.name || "Product"),
+//               category: String(data.category || "Other"),
+//               description:
+//                 description.slice(0, 90) +
+//                 (description.length > 90 ? "…" : ""),
+//               price: effectivePrice,
+//               listPrice,
+//               discountPercent: hasDiscount ? discountPercent : 0,
+//               hasDiscount,
+//               image: img,
+//               imageUrl: img,
+//               featured: data.featured === true,
+//               isNew,
+//               rating,
+//               active,
+//             };
+//           })
+//           .filter((p) => p.active);
+
+//         const categoryMap: Record<string, { count: number; image?: string }> =
+//           {};
+//         allProducts.forEach((p) => {
+//           if (!p.category) return;
+//           if (!categoryMap[p.category]) {
+//             categoryMap[p.category] = {
+//               count: 0,
+//               image: p.image || undefined,
+//             };
+//           }
+//           categoryMap[p.category].count += 1;
+//           if (!categoryMap[p.category].image && p.image) {
+//             categoryMap[p.category].image = p.image;
+//           }
+//         });
+
+//         setCategories(
+//           Object.entries(categoryMap)
+//             .map(([title, { count, image }]) => ({
+//               title,
+//               count,
+//               href: `/products?category=${encodeURIComponent(title)}`,
+//               image,
+//             }))
+//             .sort((a, b) => b.count - a.count)
+//         );
+
+//         let featured = allProducts.filter((p) => p.featured).slice(0, 6);
+//         if (featured.length < 6) {
+//           const remaining = allProducts
+//             .filter((p) => !p.featured)
+//             .slice(0, 6 - featured.length);
+//           featured = [...featured, ...remaining];
+//         }
+//         setFeaturedProducts(featured.slice(0, 6));
+//       } catch (err) {
+//         console.error("Failed to load homepage data:", err);
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+
+//     void fetchData();
+//   }, []);
+
+//   const filterTabs = useMemo(() => {
+//     const cats = Array.from(
+//       new Set(featuredProducts.map((p) => p.category).filter(Boolean))
+//     );
+//     return ["All", ...cats];
+//   }, [featuredProducts]);
+
+//   const filteredFeatured = useMemo(() => {
+//     if (filter === "All") return featuredProducts;
+//     return featuredProducts.filter((p) => p.category === filter);
+//   }, [featuredProducts, filter]);
+
+//   const totalProducts = categories.reduce((sum, c) => sum + c.count, 0);
+//   const displayCategories = categories.slice(0, 4);
+
+//   function toggleWishlist(e: React.MouseEvent, id: string) {
+//     e.preventDefault();
+//     e.stopPropagation();
+//     setWishlistIds((prev) => {
+//       const next = prev.includes(id)
+//         ? prev.filter((x) => x !== id)
+//         : [...prev, id];
+//       writeWishlistIds(next);
+//       return next;
+//     });
+//   }
+
+//   async function handleAdd(e: React.MouseEvent, product: FeaturedProduct) {
+//     e.preventDefault();
+//     e.stopPropagation();
+
+//     if (addingIds.has(product.id)) return;
+
+//     setAddingIds((s) => new Set(s).add(product.id));
+
+//     try {
+//       if (authUser?.uid) {
+//         const { addToCart } = await import("@/services/cartService");
+//         await addToCart(authUser.uid, {
+//           productId: product.id,
+//           name: product.name,
+//           price: product.price,
+//           listPrice: product.listPrice,
+//           discountPercent: product.hasDiscount ? product.discountPercent : 0,
+//           quantity: 1,
+//           image: product.image || product.imageUrl || "",
+//           category: product.category,
+//         });
+//       } else {
+//         addLocalCartItem(product);
+//       }
+
+//       window.dispatchEvent(new Event("cartUpdated"));
+
+//       setAddedIds((s) => new Set(s).add(product.id));
+//       window.setTimeout(() => {
+//         setAddedIds((s) => {
+//           const n = new Set(s);
+//           n.delete(product.id);
+//           return n;
+//         });
+//       }, 1600);
+//     } catch (err) {
+//       console.error("Add to cart failed:", err);
+//       addLocalCartItem(product);
+//       setAddedIds((s) => new Set(s).add(product.id));
+//     } finally {
+//       setAddingIds((s) => {
+//         const n = new Set(s);
+//         n.delete(product.id);
+//         return n;
+//       });
+//     }
+//   }
+
+//   return (
+//     <main className="min-h-screen bg-[#faf8f4]">
+//       {/* ========== HERO ========== */}
+//       <section className="relative overflow-hidden bg-gradient-to-br from-[#faf8f4] via-[#faf8f4] to-[#f5f0e8]">
+//         <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_12.25rem] items-start gap-3 px-5 py-8 sm:grid-cols-[minmax(0,1fr)_9.25rem] sm:gap-5 sm:px-8 sm:py-10 lg:min-h-[min(480px,70vh)] lg:grid-cols-2 lg:items-stretch lg:gap-0 lg:px-0 lg:py-0">
+//           <div className="flex min-w-0 flex-col justify-center lg:px-12 lg:py-12 xl:pl-16">
+//             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8a847c]">
+//               New collection
+//             </p>
+//             <h1 className="font-display mt-3 text-[2.2rem] font-medium leading-[1.08] tracking-tight text-[#1a1a1a] sm:mt-4 sm:text-5xl lg:text-[3.1rem] xl:text-[3.5rem]">
+//               Timeless
+//               <br />
+//               <span className="text-[#b8956c]">Furniture</span>
+//               <br />
+//               for Living
+//             </h1>
+//             <p className="mt-4 max-w-[22rem] text-[13px] leading-6 text-[#6b6560] sm:max-w-sm sm:text-sm sm:leading-7">
+//               Handcrafted pieces built with premium sustainable materials
+//               designed to elevate your home and endure through the years.
+//             </p>
+//             <div className="mt-6 flex flex-wrap items-center gap-3">
+//               <Link
+//                 href="/products"
+//                 className="inline-flex h-11 items-center gap-2 rounded-full bg-[#1a1a1a] px-5 text-sm font-semibold text-white transition hover:bg-[#2c2a26] sm:h-12 sm:px-6"
+//               >
+//                 Shop Collection
+//                 <ArrowRight size={15} />
+//               </Link>
+//               <Link
+//                 href="/about"
+//                 className="inline-flex h-11 items-center rounded-full border border-[#d4cdc2] bg-transparent px-5 text-sm font-semibold text-[#1a1a1a] transition hover:border-[#b8956c] hover:bg-white/50 sm:h-12 sm:px-6"
+//               >
+//                 Our Story
+//               </Link>
+//             </div>
+//             <div className="mt-8 flex flex-wrap gap-8 sm:mt-10 sm:gap-12">
+//               <div>
+//                 <p className="text-xl font-semibold tracking-tight text-[#1a1a1a] sm:text-2xl">
+//                   2.4k+
+//                 </p>
+//                 <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-[#8a847c]">
+//                   Happy customers
+//                 </p>
+//               </div>
+//               <div>
+//                 <p className="text-xl font-semibold tracking-tight text-[#1a1a1a] sm:text-2xl">
+//                   {loading ? "…" : `${Math.max(totalProducts, 340)}+`}
+//                 </p>
+//                 <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-[#8a847c]">
+//                   Unique pieces
+//                 </p>
+//               </div>
+//               <div>
+//                 <p className="text-xl font-semibold tracking-tight text-[#1a1a1a] sm:text-2xl">
+//                   15yr
+//                 </p>
+//                 <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-[#8a847c]">
+//                   Craftsmanship
+//                 </p>
+//               </div>
+//             </div>
+//           </div>
+
+//           <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl sm:aspect-[3/4] sm:rounded-3xl lg:aspect-auto lg:min-h-full lg:rounded-none lg:self-stretch">
+//             {/* eslint-disable-next-line @next/next/no-img-element */}
+//             <img
+//               src={HERO_IMAGE}
+//               alt="Timeless furniture for living"
+//               className="absolute inset-0 h-full w-full object-cover object-center"
+//             />
+//             <div className="pointer-events-none absolute inset-y-0 left-0 hidden w-16 bg-gradient-to-r from-[#faf8f4] to-transparent lg:block" />
+//           </div>
+//         </div>
+//       </section>
+
+//       {/* ========== Shop by category ========== */}
+//       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+//         <div className="flex items-end justify-between gap-4">
+//           <div>
+//             <h2 className="font-display text-2xl font-semibold text-[#1a1a1a] sm:text-3xl">
+//               Shop by Category
+//             </h2>
+//             <p className="mt-1.5 text-sm text-[#6b6560]">
+//               Find pieces that fit every room.
+//             </p>
+//           </div>
+//           <Link
+//             href="/products"
+//             className="hidden items-center gap-1 text-sm font-medium text-[#b8956c] hover:text-[#8b7355] sm:inline-flex"
+//           >
+//             View all categories
+//             <ChevronRight size={16} />
+//           </Link>
+//         </div>
+
+//         {loading ? (
+//           <div className="mt-8 flex justify-center">
+//             <Loader2 className="h-7 w-7 animate-spin text-[#b8956c]" />
+//           </div>
+//         ) : displayCategories.length > 0 ? (
+//           <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-6 sm:gap-5 lg:grid-cols-4">
+//             {displayCategories.map((category) => (
+//               <Link
+//                 key={category.title}
+//                 href={category.href}
+//                 className="group relative overflow-hidden rounded-2xl bg-[#ebe4d8] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+//               >
+//                 <div className="aspect-[3/4] overflow-hidden sm:aspect-[4/5]">
+//                   {/* eslint-disable-next-line @next/next/no-img-element */}
+//                   <img
+//                     src={categoryImage(category.title, category.image)}
+//                     alt={category.title}
+//                     className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+//                   />
+//                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+//                 </div>
+
+//                 <span className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-[#1a1a1a] shadow-sm backdrop-blur transition group-hover:bg-white sm:h-9 sm:w-9">
+//                   <ArrowRight size={14} className="sm:h-4 sm:w-4" />
+//                 </span>
+
+//                 <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
+//                   <h3 className="text-sm font-semibold text-white sm:text-base">
+//                     {category.title}
+//                   </h3>
+//                   <p className="mt-0.5 text-xs text-white/80">
+//                     {category.count} piece{category.count !== 1 ? "s" : ""}
+//                   </p>
+//                 </div>
+//               </Link>
+//             ))}
+//           </div>
+//         ) : (
+//           <div className="mt-6 rounded-2xl border border-dashed border-[#e8e2d8] bg-white/50 py-12 text-center text-sm text-[#6b6560]">
+//             No categories yet.
+//           </div>
+//         )}
+
+//         <div className="mt-4 text-center sm:hidden">
+//           <Link
+//             href="/products"
+//             className="inline-flex items-center gap-1 text-sm font-medium text-[#b8956c]"
+//           >
+//             View all categories
+//             <ChevronRight size={16} />
+//           </Link>
+//         </div>
+//       </section>
+
+//       {/* ========== Best sellers ========== */}
+//       <section className="border-y border-[#e8e2d8]/80 bg-[#faf8f4]">
+//         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+//           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+//             <div>
+//               <h2 className="font-display text-2xl font-semibold text-[#1a1a1a] sm:text-3xl">
+//                 Our Best Sellers
+//               </h2>
+//               <p className="mt-1.5 text-sm text-[#6b6560]">
+//                 Selected pieces for modern homes.
+//               </p>
+//             </div>
+//             <Link
+//               href="/products"
+//               className="hidden items-center gap-1 text-sm font-medium text-[#b8956c] hover:text-[#8b7355] sm:inline-flex"
+//             >
+//               View all products
+//               <ArrowRight size={15} />
+//             </Link>
+//           </div>
+
+//           {!loading && filterTabs.length > 1 && (
+//             <div className="mt-4 flex gap-2 overflow-x-auto pb-1 sm:mt-5 sm:flex-wrap sm:overflow-visible">
+//               {filterTabs.map((tab) => {
+//                 const active = filter === tab;
+//                 return (
+//                   <button
+//                     key={tab}
+//                     type="button"
+//                     onClick={() => setFilter(tab)}
+//                     className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition sm:px-4 sm:py-2 sm:text-sm ${
+//                       active
+//                         ? "bg-[#1a1a1a] text-white"
+//                         : "border border-[#e0d9ce] bg-white text-[#5c564e] hover:border-[#b8956c]"
+//                     }`}
+//                   >
+//                     {tab}
+//                   </button>
+//                 );
+//               })}
+//             </div>
+//           )}
+
+//           {loading ? (
+//             <div className="mt-8 flex justify-center">
+//               <Loader2 className="h-8 w-8 animate-spin text-[#b8956c]" />
+//             </div>
+//           ) : filteredFeatured.length > 0 ? (
+//             <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-6 sm:gap-5 md:grid-cols-3">
+//               {filteredFeatured.map((product) => {
+//                 const wishlisted = wishlistIds.includes(product.id);
+//                 const justAdded = addedIds.has(product.id);
+//                 const isAdding = addingIds.has(product.id);
+//                 const hasRating =
+//                   typeof product.rating === "number" && product.rating > 0;
+
+//                 return (
+//                   <Link
+//                     key={product.id}
+//                     href={`/products/${product.id}`}
+//                     className="group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+//                   >
+//                     <div className="relative aspect-[4/3] overflow-hidden bg-[#f5f0e8]">
+//                       {product.image || product.imageUrl ? (
+//                         // eslint-disable-next-line @next/next/no-img-element
+//                         <img
+//                           src={product.image || product.imageUrl}
+//                           alt={product.name}
+//                           className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+//                         />
+//                       ) : (
+//                         <div className="flex h-full items-center justify-center">
+//                           <Sofa
+//                             size={40}
+//                             className="text-[#e8e2d8]"
+//                             strokeWidth={1}
+//                           />
+//                         </div>
+//                       )}
+
+//                       <div className="absolute left-2.5 top-2.5 flex flex-col gap-1.5 sm:left-3 sm:top-3">
+//                         {product.hasDiscount ? (
+//                           <span className="rounded-full bg-[#c45c4a] px-2 py-0.5 text-[10px] font-bold text-white sm:px-2.5 sm:py-1">
+//                             −{product.discountPercent}%
+//                           </span>
+//                         ) : product.featured ? (
+//                           <span className="rounded-full bg-[#e8a54b] px-2 py-0.5 text-[10px] font-bold text-white sm:px-2.5 sm:py-1">
+//                             Hot
+//                           </span>
+//                         ) : product.isNew ? (
+//                           <span className="rounded-full bg-[#3d8b7a] px-2 py-0.5 text-[10px] font-bold text-white sm:px-2.5 sm:py-1">
+//                             New
+//                           </span>
+//                         ) : null}
+//                       </div>
+
+//                       <button
+//                         type="button"
+//                         aria-label={
+//                           wishlisted
+//                             ? "Remove from wishlist"
+//                             : "Add to wishlist"
+//                         }
+//                         onClick={(e) => toggleWishlist(e, product.id)}
+//                         className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-[#6b6560] shadow-sm backdrop-blur transition hover:text-[#c45c4a] sm:right-3 sm:top-3 sm:h-9 sm:w-9"
+//                       >
+//                         <Heart
+//                           size={15}
+//                           className={
+//                             wishlisted
+//                               ? "fill-[#c45c4a] text-[#c45c4a]"
+//                               : ""
+//                           }
+//                           strokeWidth={1.75}
+//                         />
+//                       </button>
+//                     </div>
+
+//                     <div className="flex flex-1 flex-col p-3 sm:p-4">
+//                       <div className="flex items-start justify-between gap-2">
+//                         <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#b8956c]">
+//                           {product.category}
+//                         </p>
+//                         {hasRating && (
+//                           <StarRow rating={product.rating as number} />
+//                         )}
+//                       </div>
+
+//                       <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-[#1a1a1a] sm:text-[15px]">
+//                         {product.name}
+//                       </h3>
+
+//                       {product.description ? (
+//                         <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-[#8a847c] sm:text-xs">
+//                           {product.description}
+//                         </p>
+//                       ) : null}
+
+//                       <div className="mt-auto flex items-end justify-between gap-2 pt-3">
+//                         <div>
+//                           {product.hasDiscount ? (
+//                             <>
+//                               <p className="text-[11px] text-[#8a847c] line-through sm:text-xs">
+//                                 {formatCurrency(product.listPrice)}
+//                               </p>
+//                               <p className="text-base font-semibold text-[#1a1a1a] sm:text-lg">
+//                                 {formatCurrency(product.price)}
+//                               </p>
+//                             </>
+//                           ) : (
+//                             <p className="text-base font-semibold text-[#1a1a1a] sm:text-lg">
+//                               {formatCurrency(product.price)}
+//                             </p>
+//                           )}
+//                         </div>
+
+//                         <button
+//                           type="button"
+//                           aria-label="Add to cart"
+//                           disabled={isAdding}
+//                           onClick={(e) => void handleAdd(e, product)}
+//                           className={`flex h-8 w-8 items-center justify-center rounded-full text-white transition sm:h-9 sm:w-9 ${
+//                             justAdded
+//                               ? "bg-emerald-600"
+//                               : "bg-[#1a1a1a] hover:bg-[#2c2a26]"
+//                           } disabled:opacity-60`}
+//                         >
+//                           {isAdding ? (
+//                             <Loader2 size={14} className="animate-spin" />
+//                           ) : (
+//                             <Plus size={16} strokeWidth={2.5} />
+//                           )}
+//                         </button>
+//                       </div>
+//                     </div>
+//                   </Link>
+//                 );
+//               })}
+//             </div>
+//           ) : (
+//             <div className="mt-6 rounded-2xl border border-dashed border-[#e8e2d8] bg-white py-12 text-center text-sm text-[#6b6560]">
+//               No products in this filter.{" "}
+//               <button
+//                 type="button"
+//                 onClick={() => setFilter("All")}
+//                 className="font-semibold text-[#1a1a1a]"
+//               >
+//                 Show all →
+//               </button>
+//             </div>
+//           )}
+
+//           <div className="mt-5 text-center sm:hidden">
+//             <Link
+//               href="/products"
+//               className="inline-flex items-center gap-1 text-sm font-medium text-[#b8956c]"
+//             >
+//               View all products
+//               <ArrowRight size={15} />
+//             </Link>
+//           </div>
+//         </div>
+//       </section>
+
+//       {/* ========== Story / Craftsmanship ========== */}
+//       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+//         <div className="grid items-center gap-8 overflow-hidden rounded-[1.5rem] border border-[#e8e2d8] bg-white lg:grid-cols-2 lg:gap-0">
+//           <div className="relative aspect-[4/3] lg:aspect-auto lg:min-h-[320px]">
+//             {/* eslint-disable-next-line @next/next/no-img-element */}
+//             <img
+//               src={CRAFT_IMAGE}
+//               alt="Craftsmanship — woodworking and furniture making"
+//               className="absolute inset-0 h-full w-full object-cover"
+//             />
+//           </div>
+//           <div className="p-6 sm:p-10 lg:p-12">
+//             <h2 className="font-display text-2xl font-semibold leading-snug text-[#1a1a1a] sm:text-3xl">
+//               Furniture should tell a story
+//             </h2>
+//             <p className="mt-3 text-sm leading-6 text-[#6b6560] sm:text-[15px]">
+//               At Akrish, every piece is considered — materials, proportion, and
+//               how it will live in your home for years.
+//             </p>
+//             <ul className="mt-6 space-y-3">
+//               {[
+//                 { icon: Leaf, text: "Sustainably sourced materials" },
+//                 { icon: Hammer, text: "Master craftsmanship" },
+//                 { icon: RotateCcw, text: "Thoughtful, lasting design" },
+//               ].map(({ icon: Icon, text }) => (
+//                 <li
+//                   key={text}
+//                   className="flex items-center gap-3 text-sm text-[#1a1a1a]"
+//                 >
+//                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f5f0e8] text-[#b8956c]">
+//                     <Icon size={15} strokeWidth={1.5} />
+//                   </span>
+//                   {text}
+//                 </li>
+//               ))}
+//             </ul>
+//             <Link
+//               href="/about"
+//               className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[#b8956c] hover:text-[#8b7355]"
+//             >
+//               Read our story
+//               <ArrowRight size={15} />
+//             </Link>
+//           </div>
+//         </div>
+//       </section>
+
+//       {/* ========== CTA ========== */}
+//       <section className="border-t border-[#e8e2d8] bg-white">
+//         <div className="mx-auto max-w-6xl px-4 py-10 text-center sm:px-6 sm:py-12 lg:px-8">
+//           <h2 className="font-display text-2xl font-semibold text-[#1a1a1a] sm:text-3xl">
+//             Ready to transform your space?
+//           </h2>
+//           <p className="mx-auto mt-2 max-w-md text-sm text-[#6b6560]">
+//             Explore the collection and find pieces that feel like home.
+//           </p>
+//           <Link
+//             href="/products"
+//             className="mt-6 inline-flex min-h-[48px] items-center gap-2 rounded-full bg-[#1a1a1a] px-8 py-3 text-sm font-semibold text-white transition hover:bg-[#2c2a26]"
+//           >
+//             Shop furniture
+//             <ArrowRight size={16} />
+//           </Link>
+//         </div>
+//       </section>
+//     </main>
+//   );
+// }
+
+
+
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
@@ -9227,11 +10080,9 @@ interface CategoryItem {
 
 type AuthUser = { uid: string } | null;
 
-/** Living-room furniture hero */
 const HERO_IMAGE =
   "https://images.unsplash.com/photo-1618220179428-22790b461013?auto=format&fit=crop&w=1400&q=85";
 
-/** Furniture craftsmanship — wood workshop */
 const CRAFT_IMAGE =
   "https://plus.unsplash.com/premium_photo-1663013470139-9bc103e5c52c?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D";
 
@@ -9250,7 +10101,6 @@ const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
     "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80",
 };
 
-const WISHLIST_KEY = "wishlist";
 const CART_KEY = "cart";
 
 function formatCurrency(value: number) {
@@ -9280,33 +10130,6 @@ function parseFirebaseRating(data: Record<string, unknown>): number | undefined 
   if (!Number.isFinite(n) || n <= 0) return undefined;
 
   return Math.min(5, Math.max(0, Math.round(n * 10) / 10));
-}
-
-function readWishlistIds(): string[] {
-  try {
-    const raw = localStorage.getItem(WISHLIST_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed
-        .map((x) =>
-          typeof x === "string" ? x : String(x?.productId || x?.id || "")
-        )
-        .filter(Boolean);
-    }
-  } catch {
-    /* ignore */
-  }
-  return [];
-}
-
-function writeWishlistIds(ids: string[]) {
-  try {
-    localStorage.setItem(WISHLIST_KEY, JSON.stringify(ids));
-    window.dispatchEvent(new Event("wishlistUpdated"));
-  } catch {
-    /* ignore */
-  }
 }
 
 function addLocalCartItem(product: FeaturedProduct) {
@@ -9366,6 +10189,7 @@ function StarRow({ rating }: { rating: number }) {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>(
     []
   );
@@ -9373,11 +10197,11 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("All");
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
+  const [wishBusyId, setWishBusyId] = useState<string | null>(null);
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
   const [authUser, setAuthUser] = useState<AuthUser>(null);
 
-  // Auth — Firebase only in browser
   useEffect(() => {
     let unsub: (() => void) | undefined;
 
@@ -9398,18 +10222,35 @@ export default function HomePage() {
     };
   }, []);
 
+  // Load wishlist from Firebase (same source as /wishlist)
   useEffect(() => {
-    setWishlistIds(readWishlistIds());
-    const sync = () => setWishlistIds(readWishlistIds());
-    window.addEventListener("wishlistUpdated", sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener("wishlistUpdated", sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, []);
+    let cancelled = false;
 
-  // Products — Firebase only in browser
+    async function syncWishlist() {
+      if (!authUser?.uid) {
+        if (!cancelled) setWishlistIds([]);
+        return;
+      }
+      try {
+        const { getWishlist } = await import("@/services/wishlistService");
+        const list = await getWishlist(authUser.uid);
+        if (!cancelled) {
+          setWishlistIds((list?.items || []).map((i) => i.productId));
+        }
+      } catch (err) {
+        console.error("Wishlist sync failed:", err);
+        if (!cancelled) setWishlistIds([]);
+      }
+    }
+
+    void syncWishlist();
+    window.addEventListener("wishlistUpdated", syncWishlist);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("wishlistUpdated", syncWishlist);
+    };
+  }, [authUser?.uid]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -9553,16 +10394,49 @@ export default function HomePage() {
   const totalProducts = categories.reduce((sum, c) => sum + c.count, 0);
   const displayCategories = categories.slice(0, 4);
 
-  function toggleWishlist(e: React.MouseEvent, id: string) {
+  async function toggleWishlist(
+    e: React.MouseEvent,
+    product: FeaturedProduct
+  ) {
     e.preventDefault();
     e.stopPropagation();
-    setWishlistIds((prev) => {
-      const next = prev.includes(id)
-        ? prev.filter((x) => x !== id)
-        : [...prev, id];
-      writeWishlistIds(next);
-      return next;
-    });
+
+    if (!authUser?.uid) {
+      router.push("/sign-in?redirect=/");
+      return;
+    }
+
+    if (wishBusyId === product.id) return;
+
+    const isOn = wishlistIds.includes(product.id);
+    setWishBusyId(product.id);
+
+    try {
+      const { addToWishlist, removeFromWishlist } = await import(
+        "@/services/wishlistService"
+      );
+
+      if (isOn) {
+        await removeFromWishlist(authUser.uid, product.id);
+        setWishlistIds((prev) => prev.filter((x) => x !== product.id));
+      } else {
+        await addToWishlist(authUser.uid, {
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image || product.imageUrl || "",
+          category: product.category,
+        });
+        setWishlistIds((prev) =>
+          prev.includes(product.id) ? prev : [...prev, product.id]
+        );
+      }
+      window.dispatchEvent(new Event("wishlistUpdated"));
+    } catch (err) {
+      console.error("Wishlist toggle failed:", err);
+    } finally {
+      setWishBusyId(null);
+    }
   }
 
   async function handleAdd(e: React.MouseEvent, product: FeaturedProduct) {
@@ -9615,7 +10489,6 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-[#faf8f4]">
-      {/* ========== HERO ========== */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#faf8f4] via-[#faf8f4] to-[#f5f0e8]">
         <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_12.25rem] items-start gap-3 px-5 py-8 sm:grid-cols-[minmax(0,1fr)_9.25rem] sm:gap-5 sm:px-8 sm:py-10 lg:min-h-[min(480px,70vh)] lg:grid-cols-2 lg:items-stretch lg:gap-0 lg:px-0 lg:py-0">
           <div className="flex min-w-0 flex-col justify-center lg:px-12 lg:py-12 xl:pl-16">
@@ -9688,7 +10561,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ========== Shop by category ========== */}
       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <div className="flex items-end justify-between gap-4">
           <div>
@@ -9762,7 +10634,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ========== Best sellers ========== */}
       <section className="border-y border-[#e8e2d8]/80 bg-[#faf8f4]">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -9815,6 +10686,7 @@ export default function HomePage() {
                 const wishlisted = wishlistIds.includes(product.id);
                 const justAdded = addedIds.has(product.id);
                 const isAdding = addingIds.has(product.id);
+                const wishBusy = wishBusyId === product.id;
                 const hasRating =
                   typeof product.rating === "number" && product.rating > 0;
 
@@ -9865,18 +10737,23 @@ export default function HomePage() {
                             ? "Remove from wishlist"
                             : "Add to wishlist"
                         }
-                        onClick={(e) => toggleWishlist(e, product.id)}
-                        className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-[#6b6560] shadow-sm backdrop-blur transition hover:text-[#c45c4a] sm:right-3 sm:top-3 sm:h-9 sm:w-9"
+                        disabled={wishBusy}
+                        onClick={(e) => void toggleWishlist(e, product)}
+                        className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-[#6b6560] shadow-sm backdrop-blur transition hover:text-[#c45c4a] disabled:opacity-60 sm:right-3 sm:top-3 sm:h-9 sm:w-9"
                       >
-                        <Heart
-                          size={15}
-                          className={
-                            wishlisted
-                              ? "fill-[#c45c4a] text-[#c45c4a]"
-                              : ""
-                          }
-                          strokeWidth={1.75}
-                        />
+                        {wishBusy ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Heart
+                            size={15}
+                            className={
+                              wishlisted
+                                ? "fill-[#c45c4a] text-[#c45c4a]"
+                                : ""
+                            }
+                            strokeWidth={1.75}
+                          />
+                        )}
                       </button>
                     </div>
 
@@ -9966,7 +10843,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ========== Story / Craftsmanship ========== */}
       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <div className="grid items-center gap-8 overflow-hidden rounded-[1.5rem] border border-[#e8e2d8] bg-white lg:grid-cols-2 lg:gap-0">
           <div className="relative aspect-[4/3] lg:aspect-auto lg:min-h-[320px]">
@@ -10013,7 +10889,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ========== CTA ========== */}
       <section className="border-t border-[#e8e2d8] bg-white">
         <div className="mx-auto max-w-6xl px-4 py-10 text-center sm:px-6 sm:py-12 lg:px-8">
           <h2 className="font-display text-2xl font-semibold text-[#1a1a1a] sm:text-3xl">
