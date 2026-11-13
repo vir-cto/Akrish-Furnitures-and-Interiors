@@ -616,7 +616,7 @@ export default function ContactPage() {
     setError("");
 
     try {
-      await addDoc(collection(db, "furniture_enquiries"), {
+      await addDoc(collection(db(), "furniture_enquiries"), {
         customerName: form.name.trim(),
         email: form.email.trim(),
         phone: form.phone.trim() || "",

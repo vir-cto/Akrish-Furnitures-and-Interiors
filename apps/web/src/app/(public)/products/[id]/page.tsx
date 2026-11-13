@@ -17663,7 +17663,7 @@ export default function ProductDetailPage() {
   const mainImageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
+    const unsub = onAuthStateChanged(auth(), (user) => {
       setAuthUid(user?.uid ?? null);
       setAuthReady(true);
     });
@@ -17683,7 +17683,7 @@ export default function ProductDetailPage() {
       setLoading(true);
       setError("");
       try {
-        const snap = await getDoc(doc(db, "furniture_products", productId));
+        const snap = await getDoc(doc(db(), "furniture_products", productId));
         if (cancelled) return;
 
         if (!snap.exists()) {
@@ -17868,7 +17868,7 @@ export default function ProductDetailPage() {
     async function loadRelated() {
       try {
         const q = query(
-          collection(db, "furniture_products"),
+          collection(db(), "furniture_products"),
           where("category", "==", product!.category),
           limit(8)
         );

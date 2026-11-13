@@ -5,7 +5,7 @@
 //   orderBy,
 //   Timestamp,
 // } from "firebase/firestore";
-// import { db } from "@/core/config/firebaseClient";
+// import { db() } from "@/core/config/firebaseClient";
 
 // export type InteriorProject = {
 //   id: string;
@@ -107,13 +107,13 @@ const FALLBACK = "projects";
 async function fetchCollection(name: string): Promise<InteriorProject[]> {
   try {
     const snap = await getDocs(
-      query(collection(db, name), orderBy("createdAt", "desc"))
+      query(collection(db(), name), orderBy("createdAt", "desc"))
     );
     return snap.docs.map(
       (d) => ({ id: d.id, ...d.data() } as InteriorProject)
     );
   } catch {
-    const snap = await getDocs(collection(db, name));
+    const snap = await getDocs(collection(db(), name));
     return snap.docs.map(
       (d) => ({ id: d.id, ...d.data() } as InteriorProject)
     );
@@ -129,7 +129,7 @@ export async function getAllInteriorProjects(): Promise<InteriorProject[]> {
 export async function createProject(
   data: Omit<InteriorProject, "id" | "createdAt" | "updatedAt">
 ): Promise<string> {
-  const ref = await addDoc(collection(db, PRIMARY), {
+  const ref = await addDoc(collection(db(), PRIMARY), {
     ...data,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -142,12 +142,12 @@ export async function updateProject(
   data: Partial<InteriorProject>
 ): Promise<void> {
   try {
-    await updateDoc(doc(db, PRIMARY, id), {
+    await updateDoc(doc(db(), PRIMARY, id), {
       ...data,
       updatedAt: serverTimestamp(),
     });
   } catch {
-    await updateDoc(doc(db, FALLBACK, id), {
+    await updateDoc(doc(db(), FALLBACK, id), {
       ...data,
       updatedAt: serverTimestamp(),
     });
@@ -156,8 +156,8 @@ export async function updateProject(
 
 export async function deleteProject(id: string): Promise<void> {
   try {
-    await deleteDoc(doc(db, PRIMARY, id));
+    await deleteDoc(doc(db(), PRIMARY, id));
   } catch {
-    await deleteDoc(doc(db, FALLBACK, id));
+    await deleteDoc(doc(db(), FALLBACK, id));
   }
 }

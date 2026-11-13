@@ -3107,7 +3107,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
   const [displayName, setDisplayName] = useState("Account");
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
+    const unsub = onAuthStateChanged(auth(), (user) => {
       if (!user) {
         setUserLabel("A");
         setDisplayName("Account");
@@ -3134,7 +3134,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
   }, [open]);
 
   const handleLogout = async () => {
-    await signOut(auth);
+    await signOut(auth());
     setOpen(false);
     router.push("/");
   };

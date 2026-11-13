@@ -130,7 +130,7 @@ export async function getApprovedReviewsForProduct(
 ): Promise<FurnitureReview[]> {
   if (!productId) return [];
 
-  const q = query(collection(db, COL), where("productId", "==", productId));
+  const q = query(collection(db(), COL), where("productId", "==", productId));
 
   const snap = await getDocs(q);
   const list = snap.docs
@@ -164,7 +164,7 @@ export async function submitProductReview(input: {
     throw new Error("Please write a short review (at least 3 characters).");
   }
 
-  const ref = await addDoc(collection(db, COL), {
+  const ref = await addDoc(collection(db(), COL), {
     productId: input.productId,
     productName: input.productName || "",
     userId: input.userId,

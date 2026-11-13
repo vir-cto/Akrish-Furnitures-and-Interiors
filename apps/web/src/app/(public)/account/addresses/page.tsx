@@ -1791,7 +1791,7 @@ export default function AddressesPage() {
 
   // Auth from Firebase only (no localStorage)
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
+    const unsub = onAuthStateChanged(auth(), (user) => {
       if (user?.email) {
         setUserEmail(user.email.toLowerCase());
         setUserName(user.displayName || "");
@@ -1814,7 +1814,7 @@ export default function AddressesPage() {
       setError("");
       try {
         const q = query(
-          collection(db, "customer_addresses"),
+          collection(db(), "customer_addresses"),
           where("userEmail", "==", userEmail)
         );
         const snapshot = await getDocs(q);
@@ -1896,7 +1896,7 @@ export default function AddressesPage() {
 
   const reloadAddresses = async (email: string) => {
     const q = query(
-      collection(db, "customer_addresses"),
+      collection(db(), "customer_addresses"),
       where("userEmail", "==", email)
     );
     const snapshot = await getDocs(q);
@@ -1971,7 +1971,7 @@ export default function AddressesPage() {
         );
         await Promise.all(
           others.map((a) =>
-            updateDoc(doc(db, "customer_addresses", a.id), {
+            updateDoc(doc(db(), "customer_addresses", a.id), {
               isDefault: false,
               updatedAt: serverTimestamp(),
             })
@@ -1980,9 +1980,9 @@ export default function AddressesPage() {
       }
 
       if (editingId) {
-        await updateDoc(doc(db, "customer_addresses", editingId), payload);
+        await updateDoc(doc(db(), "customer_addresses", editingId), payload);
       } else {
-        await addDoc(collection(db, "customer_addresses"), {
+        await addDoc(collection(db(), "customer_addresses"), {
           ...payload,
           createdAt: serverTimestamp(),
         });
@@ -2005,11 +2005,11 @@ export default function AddressesPage() {
     if (!userEmail) return;
 
     try {
-      await deleteDoc(doc(db, "customer_addresses", id));
+      await deleteDoc(doc(db(), "customer_addresses", id));
       let updated = addresses.filter((a) => a.id !== id);
 
       if (updated.length > 0 && !updated.some((a) => a.isDefault)) {
-        await updateDoc(doc(db, "customer_addresses", updated[0].id), {
+        await updateDoc(doc(db(), "customer_addresses", updated[0].id), {
           isDefault: true,
           updatedAt: serverTimestamp(),
         });
@@ -2029,7 +2029,7 @@ export default function AddressesPage() {
     try {
       await Promise.all(
         addresses.map((a) =>
-          updateDoc(doc(db, "customer_addresses", a.id), {
+          updateDoc(doc(db(), "customer_addresses", a.id), {
             isDefault: a.id === id,
             updatedAt: serverTimestamp(),
           })

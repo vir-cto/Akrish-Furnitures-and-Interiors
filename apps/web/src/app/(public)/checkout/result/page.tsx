@@ -633,7 +633,7 @@ function ResultInner() {
             }
           }
 
-          const user = auth.currentUser;
+          const user = auth().currentUser;
           if (user) {
             try {
               await clearCart(user.uid);
@@ -643,7 +643,7 @@ function ResultInner() {
             }
           } else {
             await new Promise<void>((resolve) => {
-              const unsub = onAuthStateChanged(auth, async (u) => {
+              const unsub = onAuthStateChanged(auth(), async (u) => {
                 unsub();
                 if (u) {
                   try {

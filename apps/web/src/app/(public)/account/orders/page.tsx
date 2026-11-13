@@ -1979,7 +1979,7 @@ export default function OrdersPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const unsub = onAuthStateChanged(auth, async (user) => {
+    const unsub = onAuthStateChanged(auth(), async (user) => {
       if (cancelled) return;
       if (!user) {
         setUserId(null);

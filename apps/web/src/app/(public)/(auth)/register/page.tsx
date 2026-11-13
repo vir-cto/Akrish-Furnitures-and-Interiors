@@ -3654,7 +3654,7 @@ export default function CustomerRegisterPage() {
       const fullName = `${firstName} ${lastName}`.trim();
 
       const cred = await createUserWithEmailAndPassword(
-        auth,
+        auth(),
         email,
         form.password
       );
@@ -3670,7 +3670,7 @@ export default function CustomerRegisterPage() {
         photoURL: cred.user.photoURL || "",
       });
 
-      await signOut(auth);
+      await signOut(auth());
 
       setSuccess(true);
       setForm({

@@ -24,7 +24,7 @@ export async function upsertCustomerFromAuth(data: {
   const uid = data.uid.trim();
   if (!uid) throw new Error("uid is required");
 
-  const ref = doc(db, COLLECTION, uid);
+  const ref = doc(db(), COLLECTION, uid);
   const snap = await getDoc(ref);
 
   const base = {

@@ -136,7 +136,7 @@ export const DEFAULT_DELIVERY_SETTINGS: DeliverySettings = {
 };
 
 function deliveryRef() {
-  return doc(db, "furniture_settings", "delivery");
+  return doc(db(), "furniture_settings", "delivery");
 }
 
 function clampAgeingDays(n: unknown): number {

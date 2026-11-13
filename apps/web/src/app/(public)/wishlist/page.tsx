@@ -1086,7 +1086,7 @@ export default function WishlistPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
+    const unsub = onAuthStateChanged(auth(), (user) => {
       setAuthUid(user?.uid ?? null);
       setAuthReady(true);
     });

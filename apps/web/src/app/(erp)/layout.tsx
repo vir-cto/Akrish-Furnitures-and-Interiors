@@ -101,14 +101,33 @@
 
 
 
+// "use client";
+
+// import { AuthProvider } from "@/core/auth/AuthContext";
+
+// export default function ErpLayout({
+//   children,
+// }: {
+//   children: React.ReactNode;
+// }) {
+//   return <AuthProvider>{children}</AuthProvider>;
+// }
+
+
+
 "use client";
 
 import { AuthProvider } from "@/core/auth/AuthContext";
+import ERPLayout from "@/core/components/ShellLayout";
 
-export default function ErpLayout({
+export default function ErpRootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <AuthProvider>{children}</AuthProvider>;
+  return (
+    <AuthProvider>
+      <ERPLayout>{children}</ERPLayout>
+    </AuthProvider>
+  );
 }

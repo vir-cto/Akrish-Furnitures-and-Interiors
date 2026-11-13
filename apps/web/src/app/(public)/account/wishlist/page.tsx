@@ -1491,7 +1491,7 @@ export default function WishlistPage() {
   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
+    const unsub = onAuthStateChanged(auth(), (user) => {
       setAuthUid(user?.uid ?? null);
       setAuthReady(true);
     });

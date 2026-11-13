@@ -957,7 +957,67 @@
 // >>>>>>> cbc663f (Fix Workers 500: bundle Firestore browser build)
 
 
-"use client";
+// "use client";
+
+// import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
+// import { getAuth, type Auth } from "firebase/auth";
+// import { getFirestore, type Firestore } from "firebase/firestore";
+// import { getStorage, type FirebaseStorage } from "firebase/storage";
+
+// const firebaseConfig = {
+//   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
+//   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
+//   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
+//   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
+//   messagingSenderId:
+//     process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
+//   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
+// };
+
+// const isBrowser = typeof window !== "undefined";
+
+// function createApp(): FirebaseApp {
+//   if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+//     console.error(
+//       "[Firebase] Missing Firebase configuration. Check Cloudflare build variables."
+//     );
+//   }
+
+//   const existing = getApps().find((a) => a.name === "[DEFAULT]");
+//   if (existing) return existing;
+
+//   return initializeApp(firebaseConfig);
+// }
+
+// // Client SDK services are browser-only. On the server (SSR on Workers) they are
+// // never constructed; any server-side use must go through fetch / REST instead.
+// const app = createApp();
+
+// export const auth = (isBrowser ? getAuth(app) : null) as unknown as Auth;
+// export const db = (isBrowser ? getFirestore(app) : null) as unknown as Firestore;
+// export const storage = (isBrowser
+//   ? getStorage(app)
+//   : null) as unknown as FirebaseStorage;
+
+// export { app };
+
+// export function getClientApp(): FirebaseApp {
+//   return app;
+// }
+
+// export function getClientAuth(): Auth {
+//   return auth;
+// }
+
+// export function getClientDb(): Firestore {
+//   return db;
+// }
+
+// export function getClientStorage(): FirebaseStorage {
+//   return storage;
+// }
+
+
 
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
@@ -974,45 +1034,77 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
 };
 
-const isBrowser = typeof window !== "undefined";
+let _app: FirebaseApp | null = null;
+let _auth: Auth | null = null;
+let _db: Firestore | null = null;
+let _storage: FirebaseStorage | null = null;
 
-function createApp(): FirebaseApp {
-  if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-    console.error(
-      "[Firebase] Missing Firebase configuration. Check Cloudflare build variables."
+function assertBrowser(): void {
+  if (typeof window === "undefined") {
+    throw new Error(
+      "[Firebase] Client SDK is browser-only. Call getClient* inside useEffect or event handlers."
     );
   }
+}
+
+function assertConfig(): void {
+  if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+    throw new Error(
+      "[Firebase] Missing NEXT_PUBLIC_FIREBASE_* env vars (check .env.local / Cloudflare vars)."
+    );
+  }
+}
+
+function createApp(): FirebaseApp {
+  assertBrowser();
+  assertConfig();
 
   const existing = getApps().find((a) => a.name === "[DEFAULT]");
   if (existing) return existing;
-
   return initializeApp(firebaseConfig);
 }
 
-// Client SDK services are browser-only. On the server (SSR on Workers) they are
-// never constructed; any server-side use must go through fetch / REST instead.
-const app = createApp();
-
-export const auth = (isBrowser ? getAuth(app) : null) as unknown as Auth;
-export const db = (isBrowser ? getFirestore(app) : null) as unknown as Firestore;
-export const storage = (isBrowser
-  ? getStorage(app)
-  : null) as unknown as FirebaseStorage;
-
-export { app };
-
+/** Firebase App (browser only, lazy) */
 export function getClientApp(): FirebaseApp {
-  return app;
+  if (!_app) _app = createApp();
+  return _app;
 }
 
+/** Auth (browser only, lazy) */
 export function getClientAuth(): Auth {
-  return auth;
+  if (!_auth) _auth = getAuth(getClientApp());
+  return _auth;
 }
 
+/** Firestore (browser only, lazy) — always a real Firestore instance */
 export function getClientDb(): Firestore {
-  return db;
+  if (!_db) _db = getFirestore(getClientApp());
+  return _db;
 }
 
+/** Storage (browser only, lazy) */
 export function getClientStorage(): FirebaseStorage {
-  return storage;
+  if (!_storage) _storage = getStorage(getClientApp());
+  return _storage;
+}
+
+/**
+ * Back-compat for older code that still imports { auth, db, storage }.
+ * These are getters implemented as functions so they never return null.
+ * Prefer getClientAuth / getClientDb / getClientStorage in new code.
+ *
+ * Usage must still be inside the browser:
+ *   collection(getClientDb(), "furniture_products")
+ *   onAuthStateChanged(getClientAuth(), ...)
+ */
+export function auth(): Auth {
+  return getClientAuth();
+}
+
+export function db(): Firestore {
+  return getClientDb();
+}
+
+export function storage(): FirebaseStorage {
+  return getClientStorage();
 }

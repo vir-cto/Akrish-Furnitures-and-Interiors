@@ -46,7 +46,7 @@ const CATALOG_COLLECTION = "catalog";
  * Get all products from the catalog.
  */
 export async function getCatalogProducts(): Promise<CatalogProduct[]> {
-  const catalogRef = collection(db, CATALOG_COLLECTION);
+  const catalogRef = collection(db(), CATALOG_COLLECTION);
 
   const snapshot = await getDocs(catalogRef);
 
@@ -95,7 +95,7 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
 export async function getActiveCatalogProducts(): Promise<
   CatalogProduct[]
 > {
-  const catalogRef = collection(db, CATALOG_COLLECTION);
+  const catalogRef = collection(db(), CATALOG_COLLECTION);
 
   const productQuery = query(
     catalogRef,
@@ -150,7 +150,7 @@ export async function getCatalogProduct(
   }
 
   const productRef = doc(
-    db,
+    db(),
     CATALOG_COLLECTION,
     productId
   );
@@ -208,7 +208,7 @@ export async function getCatalogProductByCode(
     throw new Error("Product code is required");
   }
 
-  const catalogRef = collection(db, CATALOG_COLLECTION);
+  const catalogRef = collection(db(), CATALOG_COLLECTION);
 
   const productQuery = query(
     catalogRef,
@@ -270,7 +270,7 @@ export async function getProductsByCategory(
     return getCatalogProducts();
   }
 
-  const catalogRef = collection(db, CATALOG_COLLECTION);
+  const catalogRef = collection(db(), CATALOG_COLLECTION);
 
   const productQuery = query(
     catalogRef,
@@ -321,7 +321,7 @@ export async function getProductsByCategory(
 export async function getFeaturedProducts(): Promise<
   CatalogProduct[]
 > {
-  const catalogRef = collection(db, CATALOG_COLLECTION);
+  const catalogRef = collection(db(), CATALOG_COLLECTION);
 
   const productQuery = query(
     catalogRef,
@@ -402,7 +402,7 @@ export async function searchCatalogProducts(
 export async function createCatalogProduct(
   product: Omit<CatalogProduct, "id">
 ): Promise<string> {
-  const catalogRef = collection(db, CATALOG_COLLECTION);
+  const catalogRef = collection(db(), CATALOG_COLLECTION);
 
   const productData = {
     ...product,
@@ -442,7 +442,7 @@ export async function updateCatalogProduct(
   }
 
   const productRef = doc(
-    db,
+    db(),
     CATALOG_COLLECTION,
     productId
   );
@@ -468,7 +468,7 @@ export async function deleteCatalogProduct(
   }
 
   const productRef = doc(
-    db,
+    db(),
     CATALOG_COLLECTION,
     productId
   );

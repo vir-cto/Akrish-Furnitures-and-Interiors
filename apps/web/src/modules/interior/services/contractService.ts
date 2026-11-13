@@ -40,13 +40,13 @@ const FALLBACK = "contracts";
 async function fetchCollection(name: string): Promise<InteriorContract[]> {
   try {
     const snap = await getDocs(
-      query(collection(db, name), orderBy("createdAt", "desc"))
+      query(collection(db(), name), orderBy("createdAt", "desc"))
     );
     return snap.docs.map(
       (d) => ({ id: d.id, ...d.data() } as InteriorContract)
     );
   } catch {
-    const snap = await getDocs(collection(db, name));
+    const snap = await getDocs(collection(db(), name));
     return snap.docs.map(
       (d) => ({ id: d.id, ...d.data() } as InteriorContract)
     );
@@ -62,7 +62,7 @@ export async function getAllContracts(): Promise<InteriorContract[]> {
 export async function createContract(
   data: Omit<InteriorContract, "id" | "createdAt" | "updatedAt">
 ): Promise<string> {
-  const ref = await addDoc(collection(db, PRIMARY), {
+  const ref = await addDoc(collection(db(), PRIMARY), {
     ...data,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -75,12 +75,12 @@ export async function updateContract(
   data: Partial<InteriorContract>
 ): Promise<void> {
   try {
-    await updateDoc(doc(db, PRIMARY, id), {
+    await updateDoc(doc(db(), PRIMARY, id), {
       ...data,
       updatedAt: serverTimestamp(),
     });
   } catch {
-    await updateDoc(doc(db, FALLBACK, id), {
+    await updateDoc(doc(db(), FALLBACK, id), {
       ...data,
       updatedAt: serverTimestamp(),
     });
@@ -89,8 +89,8 @@ export async function updateContract(
 
 export async function deleteContract(id: string): Promise<void> {
   try {
-    await deleteDoc(doc(db, PRIMARY, id));
+    await deleteDoc(doc(db(), PRIMARY, id));
   } catch {
-    await deleteDoc(doc(db, FALLBACK, id));
+    await deleteDoc(doc(db(), FALLBACK, id));
   }
 }

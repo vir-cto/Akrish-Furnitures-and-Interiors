@@ -153,7 +153,7 @@ const firebaseConfig = {
 };
 
 export async function getAllStaffUsers(): Promise<StaffUserDoc[]> {
-  const snap = await getDocs(collection(db, COLLECTION));
+  const snap = await getDocs(collection(db(), COLLECTION));
   return snap.docs.map(
     (d) =>
       ({
@@ -169,7 +169,7 @@ export async function updateStaffUser(
   data: Partial<StaffUserDoc>
 ): Promise<void> {
   const { id: _id, ...rest } = data as StaffUserDoc & { id?: string };
-  await updateDoc(doc(db, COLLECTION, id), {
+  await updateDoc(doc(db(), COLLECTION, id), {
     ...rest,
     updatedAt: serverTimestamp(),
   });
@@ -209,7 +209,7 @@ export async function createStaffUser(input: {
     );
     const uid = cred.user.uid;
 
-    await setDoc(doc(db, COLLECTION, uid), {
+    await setDoc(doc(db(), COLLECTION, uid), {
       uid,
       name,
       email,
@@ -244,7 +244,7 @@ export async function upsertStaffProfile(
   }
 ): Promise<void> {
   await setDoc(
-    doc(db, COLLECTION, uid),
+    doc(db(), COLLECTION, uid),
     {
       uid,
       name: data.name.trim(),

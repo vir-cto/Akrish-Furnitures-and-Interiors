@@ -10991,7 +10991,8 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import { useAuth } from "@/core/auth/AuthContext";
-import { db } from "@/core/config/firebaseClient";
+// import { db } from "@/core/config/firebaseClient";
+import { getErpDb } from "@/core/config/firebaseClient";
 import {
   markEnquiryNotificationSeen,
   markEnquiryNotificationsSeen,
@@ -11007,6 +11008,7 @@ type NavItem = {
 type ErpModule = "interior" | "furniture";
 
 const MODULE_STORAGE_KEY = "akrish_active_module";
+// const db = getErpDb();
 
 const navigation: NavItem[] = [
   { label: "Dashboard", href: "/interior/dashboard", icon: "▦" },
@@ -11296,18 +11298,94 @@ export default function ERPLayout({
     }
   }, [isLoading, user, pathname, canInterior, canFurniture, router]);
 
-  useEffect(() => {
+  // useEffect(() => {
+  //   if (!canFurniture) {
+  //     setNotifications([]);
+  //     setNotifOpen(false);
+  //     return;
+  //   }
+
+  //   let unsub: (() => void) | undefined;
+
+  //   try {
+  //     const q = query(
+  //       collection(db, ENQUIRIES_COLLECTION),
+  //       orderBy("createdAt", "desc"),
+  //       limit(25)
+  //     );
+
+  //     unsub = onSnapshot(
+  //       q,
+  //       (snapshot) => {
+  //         const items: NotificationItem[] = [];
+
+  //         snapshot.forEach((docSnap) => {
+  //           const data = docSnap.data();
+  //           const status = String(data.status || "New").trim().toLowerCase();
+  //           const seen = data.notificationSeen === true;
+
+  //           if (status !== "new") return;
+  //           if (seen) return;
+
+  //           const name =
+  //             String(data.customerName || data.name || "Customer").trim() ||
+  //             "Customer";
+  //           const product = String(
+  //             data.productName || data.productCode || ""
+  //           ).trim();
+  //           const source = String(data.source || "Website").trim();
+  //           const message = String(data.message || "").trim();
+
+  //           items.push({
+  //             id: `enq-${docSnap.id}`,
+  //             enquiryId: docSnap.id,
+  //             title: "New enquiry",
+  //             body: product
+  //               ? `${name} · ${product}${source ? ` · ${source}` : ""}`
+  //               : message
+  //                 ? `${name}: ${message.slice(0, 60)}${
+  //                     message.length > 60 ? "…" : ""
+  //                   }`
+  //                 : `${name} sent a contact request${
+  //                     source ? ` (${source})` : ""
+  //                   }`,
+  //             href: "/furniture/enquiries",
+  //             time: formatRelativeTime(data.createdAt),
+  //             read: false,
+  //           });
+  //         });
+
+  //         setNotifications(items);
+  //       },
+  //       (err) => {
+  //         console.error("Enquiry notifications listener error:", err);
+  //       }
+  //     );
+  //   } catch (err) {
+  //     console.error("Failed to start enquiry notifications:", err);
+  //   }
+
+  //   return () => {
+  //     unsub?.();
+  //   };
+  // }, [canFurniture]);
+
+    useEffect(() => {
     if (!canFurniture) {
       setNotifications([]);
       setNotifOpen(false);
       return;
     }
 
+    if (typeof window === "undefined") return;
+
     let unsub: (() => void) | undefined;
 
     try {
+      const firestore = getErpDb();
+
       const q = query(
-        collection(db, ENQUIRIES_COLLECTION),
+        collection(firestore, ENQUIRIES_COLLECTION),
         orderBy("createdAt", "desc"),
         limit(25)
       );

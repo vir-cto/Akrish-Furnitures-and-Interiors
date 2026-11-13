@@ -671,6 +671,123 @@
 
 
 
+// import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
+// import {
+//   getAuth,
+//   initializeAuth,
+//   browserSessionPersistence,
+//   signInWithEmailAndPassword as fbSignIn,
+//   signOut as fbSignOut,
+//   onAuthStateChanged as fbOnAuthStateChanged,
+//   type Auth,
+//   type User,
+//   type NextOrObserver,
+//   type ErrorFn,
+//   type CompleteFn,
+//   type Unsubscribe,
+// } from "firebase/auth";
+// import { getFirestore, type Firestore } from "firebase/firestore";
+// import { getStorage, type FirebaseStorage } from "firebase/storage";
+
+// const firebaseConfig = {
+//   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
+//   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
+//   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
+//   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
+//   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
+//   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
+// };
+
+// const ERP_APP_NAME = "akrish-erp-staff";
+
+// function assertBrowser() {
+//   if (typeof window === "undefined") {
+//     throw new Error(
+//       "[Firebase ERP] Browser-only. Use inside useEffect / client handlers."
+//     );
+//   }
+// }
+
+// function assertConfig() {
+//   if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+//     throw new Error(
+//       "[Firebase ERP] Missing NEXT_PUBLIC_FIREBASE_* env vars."
+//     );
+//   }
+// }
+
+// function getErpApp(): FirebaseApp {
+//   assertBrowser();
+//   assertConfig();
+//   const existing = getApps().find((a) => a.name === ERP_APP_NAME);
+//   return existing ?? initializeApp(firebaseConfig, ERP_APP_NAME);
+// }
+
+// function createStaffAuth(erpApp: FirebaseApp): Auth {
+//   try {
+//     return initializeAuth(erpApp, {
+//       persistence: browserSessionPersistence,
+//     });
+//   } catch {
+//     return getAuth(erpApp);
+//   }
+// }
+
+// let _app: FirebaseApp | null = null;
+// let _auth: Auth | null = null;
+// let _db: Firestore | null = null;
+// let _storage: FirebaseStorage | null = null;
+
+// export function getErpFirebaseApp(): FirebaseApp {
+//   if (!_app) _app = getErpApp();
+//   return _app;
+// }
+
+// export function getErpAuth(): Auth {
+//   if (!_auth) _auth = createStaffAuth(getErpFirebaseApp());
+//   return _auth;
+// }
+
+// export function getErpDb(): Firestore {
+//   if (!_db) _db = getFirestore(getErpFirebaseApp());
+//   return _db;
+// }
+
+// export function getErpStorage(): FirebaseStorage {
+//   if (!_storage) _storage = getStorage(getErpFirebaseApp());
+//   return _storage;
+// }
+
+// /** Prefer these helpers in login / AuthContext */
+// export async function erpSignIn(email: string, password: string) {
+//   return fbSignIn(getErpAuth(), email, password);
+// }
+
+// export async function erpSignOut() {
+//   return fbSignOut(getErpAuth());
+// }
+
+// export function erpOnAuthStateChanged(
+//   next: NextOrObserver<User>,
+//   error?: ErrorFn,
+//   completed?: CompleteFn
+// ): Unsubscribe {
+//   return fbOnAuthStateChanged(getErpAuth(), next, error, completed);
+// }
+
+// /** Lightweight compatibility object for older call sites */
+// export const auth = {
+//   get currentUser(): User | null {
+//     if (typeof window === "undefined") return null;
+//     return getErpAuth().currentUser;
+//   },
+// };
+
+// export const db = null as unknown as Firestore;
+// export const storage = null as unknown as FirebaseStorage;
+// export const firebaseApp = null as unknown as FirebaseApp;
+
+
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import {
   getAuth,
@@ -758,7 +875,12 @@ export function getErpStorage(): FirebaseStorage {
   return _storage;
 }
 
-/** Prefer these helpers in login / AuthContext */
+/** Aliases used by some modules */
+export const getClientDb = getErpDb;
+export const getClientAuth = getErpAuth;
+export const getClientStorage = getErpStorage;
+export const getClientApp = getErpFirebaseApp;
+
 export async function erpSignIn(email: string, password: string) {
   return fbSignIn(getErpAuth(), email, password);
 }
@@ -775,14 +897,27 @@ export function erpOnAuthStateChanged(
   return fbOnAuthStateChanged(getErpAuth(), next, error, completed);
 }
 
-/** Lightweight compatibility object for older call sites */
+/** Auth compatibility (safe getters) */
 export const auth = {
   get currentUser(): User | null {
     if (typeof window === "undefined") return null;
-    return getErpAuth().currentUser;
+    try {
+      return getErpAuth().currentUser;
+    } catch {
+      return null;
+    }
   },
 };
 
-export const db = null as unknown as Firestore;
-export const storage = null as unknown as FirebaseStorage;
-export const firebaseApp = null as unknown as FirebaseApp;
+/**
+ * Do NOT export null as Firestore.
+ * Old code that imported { db } must switch to getErpDb().
+ * These throw if misused so bugs are obvious.
+ */
+export function db(): Firestore {
+  return getErpDb();
+}
+
+export function storage(): FirebaseStorage {
+  return getErpStorage();
+}

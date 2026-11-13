@@ -488,7 +488,7 @@ export default function ComparePage() {
         const enriched = await Promise.all(
           stored.map(async (item) => {
             try {
-              const snap = await getDoc(doc(db, "furniture_products", item.id));
+              const snap = await getDoc(doc(db(), "furniture_products", item.id));
               if (!snap.exists()) return item;
               const data = snap.data() as Record<string, unknown>;
               const listPrice = Number(data.sellingPrice ?? data.price ?? 0);

@@ -219,11 +219,11 @@ export function toExpenseTimestamp(
 export async function getAllExpenses(): Promise<FurnitureExpense[]> {
   try {
     const snap = await getDocs(
-      query(collection(db, COLLECTION), orderBy("date", "desc"))
+      query(collection(db(), COLLECTION), orderBy("date", "desc"))
     );
     return snap.docs.map((d) => ({ id: d.id, ...d.data() } as FurnitureExpense));
   } catch {
-    const snap = await getDocs(collection(db, COLLECTION));
+    const snap = await getDocs(collection(db(), COLLECTION));
     const list = snap.docs.map(
       (d) => ({ id: d.id, ...d.data() } as FurnitureExpense)
     );
@@ -277,7 +277,7 @@ export async function createExpense(
     updatedAt: serverTimestamp(),
   };
 
-  const ref = await addDoc(collection(db, COLLECTION), payload);
+  const ref = await addDoc(collection(db(), COLLECTION), payload);
   return ref.id;
 }
 
@@ -300,5 +300,5 @@ export async function updateExpense(
     patch.paidAmount = Number(data.paidAmount) || 0;
   }
 
-  await updateDoc(doc(db, COLLECTION, id), patch);
+  await updateDoc(doc(db(), COLLECTION, id), patch);
 }

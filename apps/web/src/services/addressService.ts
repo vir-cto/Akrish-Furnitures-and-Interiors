@@ -33,7 +33,7 @@ export async function getAddressesByEmail(
 
   const normalized = email.toLowerCase().trim();
   const q = query(
-    collection(db, COLLECTION),
+    collection(db(), COLLECTION),
     where("userEmail", "==", normalized)
   );
   const snapshot = await getDocs(q);

@@ -1632,6 +1632,323 @@
 // }
 
 
+// "use client";
+
+// import Link from "next/link";
+// import { FormEvent, useEffect, useState } from "react";
+// import { Check, Lock, Loader2 } from "lucide-react";
+// import { onAuthStateChanged, updateProfile } from "firebase/auth";
+// import { doc, getDoc, updateDoc } from "firebase/firestore";
+// import { auth, db } from "@/lib/firebase";
+
+// interface ProfileForm {
+//   firstName: string;
+//   lastName: string;
+//   email: string;
+//   phone: string;
+//   gender: "Male" | "Female" | "";
+// }
+
+// export default function ProfilePage() {
+//   const [uid, setUid] = useState<string | null>(null);
+//   const [checkingAuth, setCheckingAuth] = useState(true);
+//   const [form, setForm] = useState<ProfileForm>({
+//     firstName: "",
+//     lastName: "",
+//     email: "",
+//     phone: "",
+//     gender: "",
+//   });
+//   const [saved, setSaved] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const [editingPersonal, setEditingPersonal] = useState(false);
+//   const [editingEmail, setEditingEmail] = useState(false);
+//   const [editingPhone, setEditingPhone] = useState(false);
+
+//   useEffect(() => {
+//     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+//       if (!firebaseUser) {
+//         setUid(null);
+//         setCheckingAuth(false);
+//         return;
+//       }
+
+//       setUid(firebaseUser.uid);
+
+//       try {
+//         const snap = await getDoc(
+//           doc(db, "furniture_customers", firebaseUser.uid)
+//         );
+//         if (snap.exists()) {
+//           const data = snap.data();
+//           const nameParts = String(data.name || "").trim().split(" ");
+//           setForm({
+//             firstName: nameParts[0] || "",
+//             lastName: nameParts.slice(1).join(" ") || "",
+//             email: String(data.email || firebaseUser.email || ""),
+//             phone: String(data.phone || ""),
+//             gender: (data.gender as "Male" | "Female" | "") || "",
+//           });
+//         } else {
+//           const nameParts = (firebaseUser.displayName || "")
+//             .trim()
+//             .split(" ");
+//           setForm({
+//             firstName: nameParts[0] || "",
+//             lastName: nameParts.slice(1).join(" ") || "",
+//             email: firebaseUser.email || "",
+//             phone: "",
+//             gender: "",
+//           });
+//         }
+//       } catch (err) {
+//         console.error(err);
+//       } finally {
+//         setCheckingAuth(false);
+//       }
+//     });
+
+//     return () => unsub();
+//   }, []);
+
+//   const updateField = (field: keyof ProfileForm, value: string) => {
+//     setForm((prev) => ({ ...prev, [field]: value }));
+//     setSaved(false);
+//   };
+
+//   const handleSave = async (e?: FormEvent) => {
+//     e?.preventDefault();
+//     if (!uid) return;
+
+//     setLoading(true);
+//     try {
+//       const fullName = `${form.firstName} ${form.lastName}`.trim();
+
+//       await updateDoc(doc(db, "furniture_customers", uid), {
+//         name: fullName,
+//         email: form.email.trim().toLowerCase(),
+//         phone: form.phone.trim(),
+//         gender: form.gender,
+//       });
+
+//       if (auth.currentUser) {
+//         await updateProfile(auth.currentUser, { displayName: fullName });
+//       }
+
+//       setSaved(true);
+//       setEditingPersonal(false);
+//       setEditingEmail(false);
+//       setEditingPhone(false);
+//     } catch (err) {
+//       console.error(err);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   if (checkingAuth) {
+//     return (
+//       <div className="flex min-h-[320px] items-center justify-center">
+//         <Loader2 className="h-6 w-6 animate-spin text-[#b8956c]" />
+//       </div>
+//     );
+//   }
+
+//   if (!uid) {
+//     return (
+//       <div className="flex min-h-[420px] flex-col items-center justify-center px-6 py-12 text-center">
+//         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f3ebe0] text-[#b8956c]">
+//           <Lock size={24} />
+//         </div>
+//         <h2 className="mt-5 font-display text-xl font-semibold text-[#1a1a1a]">
+//           Please sign in
+//         </h2>
+//         <p className="mt-2 max-w-sm text-sm text-[#6b6560]">
+//           You need to sign in to view and manage your account profile.
+//         </p>
+//         <div className="mt-6 flex gap-3">
+//           <Link
+//             href="/sign-in"
+//             className="rounded-full bg-[#1a1a1a] px-6 py-2.5 text-sm font-semibold text-white"
+//           >
+//             Sign in
+//           </Link>
+//           <Link
+//             href="/register"
+//             className="rounded-full border border-[#e8e2d8] bg-white px-6 py-2.5 text-sm font-semibold text-[#1a1a1a]"
+//           >
+//             Create account
+//           </Link>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   const inputClass =
+//     "w-full rounded-xl border border-[#e8e2d8] bg-[#faf8f4] px-3 py-2.5 text-sm outline-none transition disabled:cursor-not-allowed disabled:bg-[#f0ebe3] focus:border-[#b8956c] focus:bg-white";
+
+//   return (
+//     <div>
+//       <div className="border-b border-[#f0ebe3] pb-6">
+//         <div className="flex items-center justify-between">
+//           <h2 className="font-display text-lg font-semibold text-[#1a1a1a]">
+//             Personal information
+//           </h2>
+//           <button
+//             type="button"
+//             onClick={() => setEditingPersonal(!editingPersonal)}
+//             className="text-sm font-semibold text-[#b8956c] hover:text-[#8b7355]"
+//           >
+//             {editingPersonal ? "Cancel" : "Edit"}
+//           </button>
+//         </div>
+
+//         <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4">
+//           <div>
+//             <label className="mb-1.5 block text-xs font-medium text-[#8a847c]">
+//               First name
+//             </label>
+//             <input
+//               type="text"
+//               value={form.firstName}
+//               disabled={!editingPersonal}
+//               onChange={(e) => updateField("firstName", e.target.value)}
+//               placeholder="First name"
+//               className={inputClass}
+//             />
+//           </div>
+//           <div>
+//             <label className="mb-1.5 block text-xs font-medium text-[#8a847c]">
+//               Last name
+//             </label>
+//             <input
+//               type="text"
+//               value={form.lastName}
+//               disabled={!editingPersonal}
+//               onChange={(e) => updateField("lastName", e.target.value)}
+//               placeholder="Last name"
+//               className={inputClass}
+//             />
+//           </div>
+//         </div>
+
+//         <div className="mt-5">
+//           <p className="mb-2 text-sm text-[#6b6560]">Your gender</p>
+//           <div className="flex gap-6">
+//             <label className="flex items-center gap-2 text-sm text-[#1a1a1a]">
+//               <input
+//                 type="radio"
+//                 name="gender"
+//                 checked={form.gender === "Male"}
+//                 disabled={!editingPersonal}
+//                 onChange={() => updateField("gender", "Male")}
+//                 className="accent-[#b8956c]"
+//               />
+//               Male
+//             </label>
+//             <label className="flex items-center gap-2 text-sm text-[#1a1a1a]">
+//               <input
+//                 type="radio"
+//                 name="gender"
+//                 checked={form.gender === "Female"}
+//                 disabled={!editingPersonal}
+//                 onChange={() => updateField("gender", "Female")}
+//                 className="accent-[#b8956c]"
+//               />
+//               Female
+//             </label>
+//           </div>
+//         </div>
+
+//         {editingPersonal && (
+//           <button
+//             type="button"
+//             onClick={() => handleSave()}
+//             disabled={loading}
+//             className="mt-5 rounded-full bg-[#1a1a1a] px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+//           >
+//             {loading ? "Saving…" : "Save"}
+//           </button>
+//         )}
+//       </div>
+
+//       <div className="border-b border-[#f0ebe3] py-6">
+//         <div className="flex items-center justify-between">
+//           <h2 className="font-display text-lg font-semibold text-[#1a1a1a]">
+//             Email address
+//           </h2>
+//           <button
+//             type="button"
+//             onClick={() => setEditingEmail(!editingEmail)}
+//             className="text-sm font-semibold text-[#b8956c] hover:text-[#8b7355]"
+//           >
+//             {editingEmail ? "Cancel" : "Edit"}
+//           </button>
+//         </div>
+//         <input
+//           type="email"
+//           value={form.email}
+//           disabled={!editingEmail}
+//           onChange={(e) => updateField("email", e.target.value)}
+//           className={`mt-4 max-w-md ${inputClass}`}
+//         />
+//         {editingEmail && (
+//           <button
+//             type="button"
+//             onClick={() => handleSave()}
+//             disabled={loading}
+//             className="mt-4 rounded-full bg-[#1a1a1a] px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+//           >
+//             {loading ? "Saving…" : "Save"}
+//           </button>
+//         )}
+//       </div>
+
+//       <div className="border-b border-[#f0ebe3] py-6">
+//         <div className="flex items-center justify-between">
+//           <h2 className="font-display text-lg font-semibold text-[#1a1a1a]">
+//             Mobile number
+//           </h2>
+//           <button
+//             type="button"
+//             onClick={() => setEditingPhone(!editingPhone)}
+//             className="text-sm font-semibold text-[#b8956c] hover:text-[#8b7355]"
+//           >
+//             {editingPhone ? "Cancel" : "Edit"}
+//           </button>
+//         </div>
+//         <input
+//           type="tel"
+//           value={form.phone}
+//           disabled={!editingPhone}
+//           onChange={(e) => updateField("phone", e.target.value)}
+//           placeholder="+91 XXXXX XXXXX"
+//           className={`mt-4 max-w-md ${inputClass}`}
+//         />
+//         {editingPhone && (
+//           <button
+//             type="button"
+//             onClick={() => handleSave()}
+//             disabled={loading}
+//             className="mt-4 rounded-full bg-[#1a1a1a] px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+//           >
+//             {loading ? "Saving…" : "Save"}
+//           </button>
+//         )}
+//       </div>
+
+//       {saved && (
+//         <div className="flex items-center gap-2 pt-4 text-sm font-medium text-emerald-700">
+//           <Check size={16} />
+//           Profile updated successfully
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+
+
 "use client";
 
 import Link from "next/link";
@@ -1639,7 +1956,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Check, Lock, Loader2 } from "lucide-react";
 import { onAuthStateChanged, updateProfile } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { getClientAuth, getClientDb } from "@/lib/firebase";
 
 interface ProfileForm {
   firstName: string;
@@ -1666,6 +1983,9 @@ export default function ProfilePage() {
   const [editingPhone, setEditingPhone] = useState(false);
 
   useEffect(() => {
+    const auth = getClientAuth();
+    const db = getClientDb();
+
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) {
         setUid(null);
@@ -1722,6 +2042,8 @@ export default function ProfilePage() {
 
     setLoading(true);
     try {
+      const auth = getClientAuth();
+      const db = getClientDb();
       const fullName = `${form.firstName} ${form.lastName}`.trim();
 
       await updateDoc(doc(db, "furniture_customers", uid), {

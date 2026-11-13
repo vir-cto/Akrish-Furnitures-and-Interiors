@@ -188,7 +188,7 @@ function cleanItem(
 
 export async function getWishlist(userId: string): Promise<Wishlist | null> {
   if (!userId) throw new Error("User ID is required");
-  const ref = doc(db, COLLECTION, userId);
+  const ref = doc(db(), COLLECTION, userId);
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
   const data = snap.data();
@@ -212,7 +212,7 @@ export async function addToWishlist(
 ): Promise<Wishlist> {
   if (!userId) throw new Error("User ID is required");
   const newItem = cleanItem(item);
-  const ref = doc(db, COLLECTION, userId);
+  const ref = doc(db(), COLLECTION, userId);
   const snap = await getDoc(ref);
   let items: WishlistItem[] = [];
   if (snap.exists()) {
@@ -234,7 +234,7 @@ export async function removeFromWishlist(
   productId: string
 ): Promise<Wishlist> {
   if (!userId) throw new Error("User ID is required");
-  const ref = doc(db, COLLECTION, userId);
+  const ref = doc(db(), COLLECTION, userId);
   const snap = await getDoc(ref);
   if (!snap.exists()) {
     return { id: userId, userId, items: [] };

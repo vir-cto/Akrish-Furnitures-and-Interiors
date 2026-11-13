@@ -129,13 +129,13 @@ const FALLBACK = "employees";
 async function fetchCollection(name: string): Promise<InteriorEmployee[]> {
   try {
     const snap = await getDocs(
-      query(collection(db, name), orderBy("createdAt", "desc"))
+      query(collection(db(), name), orderBy("createdAt", "desc"))
     );
     return snap.docs.map(
       (d) => ({ id: d.id, ...d.data() } as InteriorEmployee)
     );
   } catch {
-    const snap = await getDocs(collection(db, name));
+    const snap = await getDocs(collection(db(), name));
     return snap.docs.map(
       (d) => ({ id: d.id, ...d.data() } as InteriorEmployee)
     );
@@ -189,7 +189,7 @@ export function generateNextEmployeeId(
 export async function createEmployee(
   data: Omit<InteriorEmployee, "id" | "createdAt" | "updatedAt">
 ): Promise<string> {
-  const ref = await addDoc(collection(db, PRIMARY), {
+  const ref = await addDoc(collection(db(), PRIMARY), {
     ...data,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -202,12 +202,12 @@ export async function updateEmployee(
   data: Partial<InteriorEmployee>
 ): Promise<void> {
   try {
-    await updateDoc(doc(db, PRIMARY, id), {
+    await updateDoc(doc(db(), PRIMARY, id), {
       ...data,
       updatedAt: serverTimestamp(),
     });
   } catch {
-    await updateDoc(doc(db, FALLBACK, id), {
+    await updateDoc(doc(db(), FALLBACK, id), {
       ...data,
       updatedAt: serverTimestamp(),
     });
@@ -216,8 +216,8 @@ export async function updateEmployee(
 
 export async function deleteEmployee(id: string): Promise<void> {
   try {
-    await deleteDoc(doc(db, PRIMARY, id));
+    await deleteDoc(doc(db(), PRIMARY, id));
   } catch {
-    await deleteDoc(doc(db, FALLBACK, id));
+    await deleteDoc(doc(db(), FALLBACK, id));
   }
 }

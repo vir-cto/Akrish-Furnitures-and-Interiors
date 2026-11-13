@@ -1597,7 +1597,7 @@ export async function getHoliday(
 ): Promise<InteriorHoliday | null> {
   try {
     const snap = await getDocs(
-      query(collection(db, HOLIDAYS), where("date", "==", date))
+      query(collection(db(), HOLIDAYS), where("date", "==", date))
     );
     if (snap.empty) return null;
     const d = snap.docs[0]!;
@@ -1629,7 +1629,7 @@ export async function markHoliday(
   note = ""
 ): Promise<void> {
   await setDoc(
-    doc(db, HOLIDAYS, date),
+    doc(db(), HOLIDAYS, date),
     {
       id: date,
       date,
@@ -1643,12 +1643,12 @@ export async function markHoliday(
 }
 
 export async function unmarkHoliday(date: string): Promise<void> {
-  await deleteDoc(doc(db, HOLIDAYS, date));
+  await deleteDoc(doc(db(), HOLIDAYS, date));
 }
 
 export async function getAllHolidays(): Promise<InteriorHoliday[]> {
   try {
-    const snap = await getDocs(collection(db, HOLIDAYS));
+    const snap = await getDocs(collection(db(), HOLIDAYS));
     return snap.docs
       .map(
         (d) =>
@@ -1684,7 +1684,7 @@ export async function getAttendanceByDate(
   async function fetchForDate(col: string): Promise<InteriorAttendance[]> {
     try {
       const snap = await getDocs(
-        query(collection(db, col), where("date", "==", date))
+        query(collection(db(), col), where("date", "==", date))
       );
       return snap.docs.map(
         (d) => ({ id: d.id, ...d.data() } as InteriorAttendance)
@@ -1778,9 +1778,9 @@ export async function upsertAttendance(
   };
 
   try {
-    await setDoc(doc(db, PRIMARY, id), payload, { merge: true });
+    await setDoc(doc(db(), PRIMARY, id), payload, { merge: true });
   } catch {
-    await setDoc(doc(db, FALLBACK, id), payload, { merge: true });
+    await setDoc(doc(db(), FALLBACK, id), payload, { merge: true });
   }
 }
 
@@ -1789,7 +1789,7 @@ export async function getAllAttendanceHistory(): Promise<InteriorAttendance[]> {
 
   async function pull(col: string) {
     try {
-      const snap = await getDocs(collection(db, col));
+      const snap = await getDocs(collection(db(), col));
       for (const d of snap.docs) {
         const row = { id: d.id, ...d.data() } as InteriorAttendance;
         if (!row.date) continue;
@@ -1854,7 +1854,7 @@ export async function ensurePastAbsentsForMonth(
     let existing: InteriorAttendance[] = [];
     try {
       const snap = await getDocs(
-        query(collection(db, PRIMARY), where("date", "==", date))
+        query(collection(db(), PRIMARY), where("date", "==", date))
       );
       existing = snap.docs.map(
         (d) => ({ id: d.id, ...d.data() } as InteriorAttendance)

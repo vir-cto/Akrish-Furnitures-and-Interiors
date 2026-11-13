@@ -40,7 +40,7 @@ export async function getPayrollByMonth(
 ): Promise<InteriorPayroll[]> {
   try {
     const snap = await getDocs(
-      query(collection(db, PRIMARY), where("month", "==", month))
+      query(collection(db(), PRIMARY), where("month", "==", month))
     );
     if (!snap.empty) {
       return snap.docs.map(
@@ -53,7 +53,7 @@ export async function getPayrollByMonth(
 
   try {
     const snap = await getDocs(
-      query(collection(db, FALLBACK), where("month", "==", month))
+      query(collection(db(), FALLBACK), where("month", "==", month))
     );
     if (!snap.empty) {
       return snap.docs.map(
@@ -96,7 +96,7 @@ export async function upsertPayroll(
 
   try {
     await setDoc(
-      doc(db, PRIMARY, id),
+      doc(db(), PRIMARY, id),
       {
         ...record,
         id,
@@ -107,7 +107,7 @@ export async function upsertPayroll(
     );
   } catch {
     await setDoc(
-      doc(db, FALLBACK, id),
+      doc(db(), FALLBACK, id),
       {
         ...record,
         id,
@@ -130,8 +130,8 @@ export async function updatePayrollStatus(
     updatedAt: serverTimestamp(),
   };
   try {
-    await updateDoc(doc(db, PRIMARY, id), data);
+    await updateDoc(doc(db(), PRIMARY, id), data);
   } catch {
-    await updateDoc(doc(db, FALLBACK, id), data);
+    await updateDoc(doc(db(), FALLBACK, id), data);
   }
 }

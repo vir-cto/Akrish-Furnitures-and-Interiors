@@ -9958,7 +9958,7 @@ async function isStaffAccount(uid: string, email: string): Promise<boolean> {
   const normalized = (email || "").toLowerCase().trim();
   if (normalized === "admin@akrish.in") return true;
   try {
-    const staffSnap = await getDoc(doc(db, "users", uid));
+    const staffSnap = await getDoc(doc(db(), "users", uid));
     if (!staffSnap.exists()) return false;
     const role = String(staffSnap.data()?.role || "").toLowerCase();
     return STAFF_ROLES.has(role);
@@ -10024,14 +10024,14 @@ function CustomerSignInForm() {
       }
 
       const cred = await signInWithEmailAndPassword(
-        auth,
+        auth(),
         email,
         form.password
       );
       const uid = cred.user.uid;
 
       if (await isStaffAccount(uid, email)) {
-        await signOut(auth);
+        await signOut(auth());
         setShowSignupHint(true);
         setError(
           "No customer account found for this email. Create an account to shop with us."
@@ -10050,7 +10050,7 @@ function CustomerSignInForm() {
       let phone = "";
       let gender = "";
 
-      const customerSnap = await getDoc(doc(db, "furniture_customers", uid));
+      const customerSnap = await getDoc(doc(db(), "furniture_customers", uid));
       if (customerSnap.exists()) {
         const data = customerSnap.data();
         if (data.name) name = String(data.name);

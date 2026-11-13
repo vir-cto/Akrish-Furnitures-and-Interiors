@@ -678,7 +678,7 @@ export default function ProductReviews({ productId, productName }: Props) {
   });
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
+    const unsub = onAuthStateChanged(auth(), (user) => {
       setAuthUid(user?.uid ?? null);
       const name =
         user?.displayName ||
@@ -698,7 +698,7 @@ export default function ProductReviews({ productId, productName }: Props) {
     try {
       const snap = await getDocs(
         query(
-          collection(db, COLLECTION),
+          collection(db(), COLLECTION),
           where("productId", "==", productId),
           orderBy("createdAt", "desc")
         )
@@ -712,7 +712,7 @@ export default function ProductReviews({ productId, productName }: Props) {
       try {
         const snap = await getDocs(
           query(
-            collection(db, COLLECTION),
+            collection(db(), COLLECTION),
             where("productId", "==", productId)
           )
         );
@@ -774,7 +774,7 @@ export default function ProductReviews({ productId, productName }: Props) {
 
     setSaving(true);
     try {
-      await addDoc(collection(db, COLLECTION), {
+      await addDoc(collection(db(), COLLECTION), {
         productId,
         productName,
         userId: authUid,

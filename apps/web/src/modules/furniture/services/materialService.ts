@@ -10,7 +10,8 @@ import {
   serverTimestamp,
   Timestamp,
 } from "firebase/firestore";
-import { db } from "@/core/config/firebaseClient";
+// import { db } from "@/core/config/firebaseClient";
+import { getErpDb } from "@/core/config/firebaseClient";
 
 export type FurnitureMaterial = {
   id: string;
@@ -24,6 +25,9 @@ export type FurnitureMaterial = {
 };
 
 const COLLECTION = "furniture_materials";
+function db() {
+  return getErpDb();
+}
 
 function toSlug(name: string): string {
   return name
@@ -36,7 +40,7 @@ function toSlug(name: string): string {
 export async function getAllMaterials(): Promise<FurnitureMaterial[]> {
   const snap = await getDocs(
     // query(collection(db, COLLECTION), orderBy("sortOrder", "asc"))
-    query(collection(db, COLLECTION), orderBy("name", "asc"))
+    query(collection(db(), COLLECTION), orderBy("name", "asc"))
   );
   return snap.docs.map(
     (d) => ({ id: d.id, ...d.data() }) as FurnitureMaterial
@@ -47,7 +51,7 @@ export async function createMaterial(
   data: Omit<FurnitureMaterial, "id" | "createdAt" | "updatedAt">
 ): Promise<string> {
   const name = data.name.trim();
-  const ref = await addDoc(collection(db, COLLECTION), {
+  const ref = await addDoc(collection(db(), COLLECTION), {
     name,
     slug: data.slug?.trim() || toSlug(name),
     description: data.description?.trim() || "",
@@ -76,9 +80,9 @@ export async function updateMaterial(
   if (data.status !== undefined) payload.status = data.status;
   if (data.sortOrder !== undefined) payload.sortOrder = data.sortOrder;
 
-  await updateDoc(doc(db, COLLECTION, id), payload);
+  await updateDoc(doc(db(), COLLECTION, id), payload);
 }
 
 export async function deleteMaterial(id: string): Promise<void> {
-  await deleteDoc(doc(db, COLLECTION, id));
+  await deleteDoc(doc(db(), COLLECTION, id));
 }

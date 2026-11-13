@@ -373,13 +373,13 @@ const FALLBACK = "quotations";
 async function fetchCollection(name: string): Promise<InteriorQuotation[]> {
   try {
     const snap = await getDocs(
-      query(collection(db, name), orderBy("createdAt", "desc"))
+      query(collection(db(), name), orderBy("createdAt", "desc"))
     );
     return snap.docs.map(
       (d) => ({ id: d.id, ...d.data() } as InteriorQuotation)
     );
   } catch {
-    const snap = await getDocs(collection(db, name));
+    const snap = await getDocs(collection(db(), name));
     return snap.docs.map(
       (d) => ({ id: d.id, ...d.data() } as InteriorQuotation)
     );
@@ -396,7 +396,7 @@ export async function getQuotationById(
   id: string
 ): Promise<InteriorQuotation | null> {
   try {
-    const snap = await getDoc(doc(db, PRIMARY, id));
+    const snap = await getDoc(doc(db(), PRIMARY, id));
     if (snap.exists()) {
       return { id: snap.id, ...snap.data() } as InteriorQuotation;
     }
@@ -404,7 +404,7 @@ export async function getQuotationById(
     /* try fallback */
   }
   try {
-    const snap = await getDoc(doc(db, FALLBACK, id));
+    const snap = await getDoc(doc(db(), FALLBACK, id));
     if (snap.exists()) {
       return { id: snap.id, ...snap.data() } as InteriorQuotation;
     }
@@ -417,7 +417,7 @@ export async function getQuotationById(
 export async function createQuotation(
   data: Omit<InteriorQuotation, "id" | "createdAt" | "updatedAt">
 ): Promise<string> {
-  const ref = await addDoc(collection(db, PRIMARY), {
+  const ref = await addDoc(collection(db(), PRIMARY), {
     ...data,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -430,12 +430,12 @@ export async function updateQuotation(
   data: Partial<InteriorQuotation>
 ): Promise<void> {
   try {
-    await updateDoc(doc(db, PRIMARY, id), {
+    await updateDoc(doc(db(), PRIMARY, id), {
       ...data,
       updatedAt: serverTimestamp(),
     });
   } catch {
-    await updateDoc(doc(db, FALLBACK, id), {
+    await updateDoc(doc(db(), FALLBACK, id), {
       ...data,
       updatedAt: serverTimestamp(),
     });
@@ -444,8 +444,8 @@ export async function updateQuotation(
 
 export async function deleteQuotation(id: string): Promise<void> {
   try {
-    await deleteDoc(doc(db, PRIMARY, id));
+    await deleteDoc(doc(db(), PRIMARY, id));
   } catch {
-    await deleteDoc(doc(db, FALLBACK, id));
+    await deleteDoc(doc(db(), FALLBACK, id));
   }
 }

@@ -3657,7 +3657,7 @@ export async function resolveCartLeadTimeDays(
 
     try {
       if (item.productId) {
-        const snap = await getDoc(doc(db, PRODUCTS_COLLECTION, item.productId));
+        const snap = await getDoc(doc(db(), PRODUCTS_COLLECTION, item.productId));
         if (snap.exists()) {
           const data = snap.data();
           const days = parseLeadTimeDays(
@@ -3796,7 +3796,7 @@ async function findFurnitureProduct(item: {
   name?: string;
 }): Promise<{ id: string; stock: number; reorderLevel: number } | null> {
   if (item.productId) {
-    const byId = await getDoc(doc(db, PRODUCTS_COLLECTION, item.productId));
+    const byId = await getDoc(doc(db(), PRODUCTS_COLLECTION, item.productId));
     if (byId.exists()) {
       const d = byId.data();
       return {
@@ -3812,7 +3812,7 @@ async function findFurnitureProduct(item: {
 
   for (const field of ["sku", "code"] as const) {
     const q1 = query(
-      collection(db, PRODUCTS_COLLECTION),
+      collection(db(), PRODUCTS_COLLECTION),
       where(field, "==", name),
       limit(1)
     );
@@ -3829,7 +3829,7 @@ async function findFurnitureProduct(item: {
   }
 
   const qName = query(
-    collection(db, PRODUCTS_COLLECTION),
+    collection(db(), PRODUCTS_COLLECTION),
     where("name", "==", name),
     limit(1)
   );
@@ -3844,7 +3844,7 @@ async function findFurnitureProduct(item: {
     };
   }
 
-  const all = await getDocs(collection(db, PRODUCTS_COLLECTION));
+  const all = await getDocs(collection(db(), PRODUCTS_COLLECTION));
   const lower = name.toLowerCase();
   for (const d of all.docs) {
     const data = d.data();
@@ -3885,7 +3885,7 @@ export async function deductStockForItems(
     if (next <= 0) status = "Out of Stock";
     else if (next <= product.reorderLevel) status = "Low Stock";
 
-    await updateDoc(doc(db, PRODUCTS_COLLECTION, product.id), {
+    await updateDoc(doc(db(), PRODUCTS_COLLECTION, product.id), {
       stock: next,
       status,
       updatedAt: Timestamp.now(),
@@ -4013,11 +4013,11 @@ export async function createOrder(checkout: CheckoutData): Promise<Order> {
   };
 
   const websiteRef = await addDoc(
-    collection(db, ORDERS_COLLECTION),
+    collection(db(), ORDERS_COLLECTION),
     websiteOrderData
   );
 
-  await addDoc(collection(db, ERP_ORDERS_COLLECTION), {
+  await addDoc(collection(db(), ERP_ORDERS_COLLECTION), {
     ...erpOrderData,
     websiteOrderId: websiteRef.id,
   });
@@ -4030,7 +4030,7 @@ export async function createOrder(checkout: CheckoutData): Promise<Order> {
 
 export async function getOrder(orderId: string): Promise<Order | null> {
   if (!orderId) throw new Error("Order ID is required");
-  const snapshot = await getDoc(doc(db, ORDERS_COLLECTION, orderId));
+  const snapshot = await getDoc(doc(db(), ORDERS_COLLECTION, orderId));
   if (!snapshot.exists()) return null;
   return { id: snapshot.id, ...snapshot.data() } as Order;
 }
@@ -4038,7 +4038,7 @@ export async function getOrder(orderId: string): Promise<Order | null> {
 export async function getUserOrders(userId: string): Promise<Order[]> {
   if (!userId) throw new Error("User ID is required");
   const snapshot = await getDocs(
-    query(collection(db, ORDERS_COLLECTION), where("userId", "==", userId))
+    query(collection(db(), ORDERS_COLLECTION), where("userId", "==", userId))
   );
   return snapshot.docs
     .map((d) => ({ id: d.id, ...d.data() }) as Order)
@@ -4050,7 +4050,7 @@ export async function updateOrderStatus(
   orderStatus: OrderStatus
 ): Promise<void> {
   if (!orderId) throw new Error("Order ID is required");
-  await updateDoc(doc(db, ORDERS_COLLECTION, orderId), {
+  await updateDoc(doc(db(), ORDERS_COLLECTION, orderId), {
     orderStatus,
     updatedAt: Timestamp.now(),
   });
@@ -4072,16 +4072,16 @@ export async function updatePaymentStatus(
     payload.status = "Cancelled";
   }
 
-  await updateDoc(doc(db, ORDERS_COLLECTION, orderId), payload);
+  await updateDoc(doc(db(), ORDERS_COLLECTION, orderId), payload);
 
   try {
     const q = query(
-      collection(db, ERP_ORDERS_COLLECTION),
+      collection(db(), ERP_ORDERS_COLLECTION),
       where("websiteOrderId", "==", orderId)
     );
     const erpSnap = await getDocs(q);
     for (const d of erpSnap.docs) {
-      await updateDoc(doc(db, ERP_ORDERS_COLLECTION, d.id), {
+      await updateDoc(doc(db(), ERP_ORDERS_COLLECTION, d.id), {
         paymentStatus,
         ...(paymentStatus === "Failed"
           ? { status: "Cancelled", orderStatus: "Cancelled" }
@@ -4097,7 +4097,7 @@ export async function updatePaymentStatus(
 export async function markOrderAsPaid(orderId: string): Promise<void> {
   if (!orderId) throw new Error("Order ID is required");
 
-  const snap = await getDoc(doc(db, ORDERS_COLLECTION, orderId));
+  const snap = await getDoc(doc(db(), ORDERS_COLLECTION, orderId));
   if (!snap.exists()) throw new Error("Order not found");
 
   const data = snap.data();
@@ -4116,7 +4116,7 @@ export async function markOrderAsPaid(orderId: string): Promise<void> {
     }
   }
 
-  await updateDoc(doc(db, ORDERS_COLLECTION, orderId), {
+  await updateDoc(doc(db(), ORDERS_COLLECTION, orderId), {
     paymentStatus: "Paid",
     paid: total,
     orderStatus: "Confirmed",
@@ -4126,7 +4126,7 @@ export async function markOrderAsPaid(orderId: string): Promise<void> {
 
   try {
     const q = query(
-      collection(db, ERP_ORDERS_COLLECTION),
+      collection(db(), ERP_ORDERS_COLLECTION),
       where("websiteOrderId", "==", orderId)
     );
     const erpSnap = await getDocs(q);
@@ -4134,7 +4134,7 @@ export async function markOrderAsPaid(orderId: string): Promise<void> {
       const erpTotal = Number(
         d.data()?.total ?? d.data()?.amount ?? d.data()?.totalAmount ?? total
       );
-      await updateDoc(doc(db, ERP_ORDERS_COLLECTION, d.id), {
+      await updateDoc(doc(db(), ERP_ORDERS_COLLECTION, d.id), {
         paymentStatus: "Paid",
         paid: erpTotal,
         status: "Confirmed",
@@ -4152,12 +4152,12 @@ export async function cancelOrder(orderId: string): Promise<void> {
   await updateOrderStatus(orderId, "Cancelled");
   try {
     const q = query(
-      collection(db, ERP_ORDERS_COLLECTION),
+      collection(db(), ERP_ORDERS_COLLECTION),
       where("websiteOrderId", "==", orderId)
     );
     const snap = await getDocs(q);
     for (const d of snap.docs) {
-      await updateDoc(doc(db, ERP_ORDERS_COLLECTION, d.id), {
+      await updateDoc(doc(db(), ERP_ORDERS_COLLECTION, d.id), {
         status: "Cancelled",
         orderStatus: "Cancelled",
         updatedAt: Timestamp.now(),
@@ -4185,7 +4185,7 @@ export async function deliverOrder(orderId: string): Promise<void> {
 }
 
 export async function getAllOrders(): Promise<Order[]> {
-  const snapshot = await getDocs(collection(db, ORDERS_COLLECTION));
+  const snapshot = await getDocs(collection(db(), ORDERS_COLLECTION));
   return snapshot.docs.map((d) => ({
     id: d.id,
     ...d.data(),
@@ -4196,7 +4196,7 @@ export async function getOrdersByStatus(
   status: OrderStatus
 ): Promise<Order[]> {
   const snapshot = await getDocs(
-    query(collection(db, ORDERS_COLLECTION), where("orderStatus", "==", status))
+    query(collection(db(), ORDERS_COLLECTION), where("orderStatus", "==", status))
   );
   return snapshot.docs.map((d) => ({
     id: d.id,

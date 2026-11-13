@@ -3984,7 +3984,7 @@ export default function CartPage() {
   useEffect(() => {
     let cancelled = false;
 
-    const unsub = onAuthStateChanged(auth, async (user) => {
+    const unsub = onAuthStateChanged(auth(), async (user) => {
       if (cancelled) return;
 
       if (!user) {
@@ -4022,11 +4022,11 @@ export default function CartPage() {
       try {
         const snap = await getDocs(
           query(
-            collection(db, "furniture_products"),
+            collection(db(), "furniture_products"),
             where("status", "==", "Published"),
             limit(12)
           )
-        ).catch(async () => getDocs(collection(db, "furniture_products")));
+        ).catch(async () => getDocs(collection(db(), "furniture_products")));
 
         if (cancelled) return;
 

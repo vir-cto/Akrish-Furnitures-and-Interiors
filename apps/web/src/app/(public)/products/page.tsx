@@ -12967,7 +12967,7 @@ function ProductsPageContent() {
   const [cartMap, setCartMap] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
+    const unsub = onAuthStateChanged(auth(), (user) => {
       setAuthUid(user?.uid ?? null);
     });
     return () => unsub();
@@ -13015,7 +13015,7 @@ function ProductsPageContent() {
       try {
         setLoading(true);
         setError("");
-        const snapshot = await getDocs(collection(db, "furniture_products"));
+        const snapshot = await getDocs(collection(db(), "furniture_products"));
         const list: Product[] = snapshot.docs
           .map((docSnap) => {
             const data = docSnap.data() as Record<string, unknown>;
