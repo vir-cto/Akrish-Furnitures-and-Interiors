@@ -196,6 +196,17 @@
 
 
 
+
+import path from "node:path";
+import { createRequire } from "node:module";
+
+const req = createRequire(path.join(process.cwd(), "package.json"));
+const firestoreBrowserEntry = path.join(
+  path.dirname(req.resolve("@firebase/firestore/package.json")),
+  "dist",
+  "index.esm.js"
+);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -205,25 +216,23 @@ const nextConfig = {
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "plus.unsplash.com" },
       { protocol: "https", hostname: "firebasestorage.googleapis.com" },
-      {
-        protocol: "https",
-        hostname: "akrish-collective-erp.firebasestorage.app",
-      },
+      { protocol: "https", hostname: "akrish-collective-erp.firebasestorage.app" },
     ],
   },
   experimental: {
-    serverActions: {
-      bodySizeLimit: "10mb",
-    },
+    serverActions: { bodySizeLimit: "10mb" },
   },
-  // Keep Firebase out of the Worker server bundle where possible
-  serverExternalPackages: [
-    "firebase",
-    "@firebase/app",
-    "@firebase/auth",
-    "@firebase/firestore",
-    "@firebase/storage",
-  ],
+  // Firebase must be BUNDLED (not external) so the browser build of Firestore
+  // is used. The "node" build pulls in gRPC + protobufjs, which needs new Function().
+  webpack(config, { isServer }) {
+    if (isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        "@firebase/firestore$": firestoreBrowserEntry,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
