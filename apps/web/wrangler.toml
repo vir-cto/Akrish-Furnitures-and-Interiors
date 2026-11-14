@@ -11,16 +11,4 @@ binding = "ASSETS"
 [observability]
 enabled = true
 
-[vars]
-CASHFREE_CLIENT_ID = "TEST11228529ff790c9adfe6d82261d292582211"
-CASHFREE_ENV = "sandbox"
-NEXT_PUBLIC_CASHFREE_ENV = "sandbox"
 
-NEXT_PUBLIC_FIREBASE_API_KEY = "AIzaSyAHcn8jZ5uK_x7clbQAOGAs2KIYdSMseFY"
-NEXT_PUBLIC_FIREBASE_APP_ID = "1:309709340408:web:f77b3c13a7738d1cb3850d"
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN = "akrish-collective-erp.firebaseapp.com"
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = "309709340408"
-NEXT_PUBLIC_FIREBASE_PROJECT_ID = "akrish-collective-erp"
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET = "akrish-collective-erp.firebasestorage.app"
-
-NEXT_PUBLIC_SITE_URL = "http://localhost:3000"
